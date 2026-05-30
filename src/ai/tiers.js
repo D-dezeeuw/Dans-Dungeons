@@ -4,7 +4,7 @@
 // Defaults are sensible OpenRouter models; the player can override in the UI.
 
 export const DEFAULT_MODELS = {
-  tiny:   'openai/gpt-4o-mini',    // classifier — runs every turn (cheap, fast)
-  medium: 'anthropic/claude-sonnet-4-5', // narrator — quality matters
-  large:  'anthropic/claude-opus-4',     // world gen — not used in Phase 3
+  tiny:   'google/gemini-3.1-flash-lite',  // classifier — runs every turn (cheap, fast)
+  medium: 'deepseek/deepseek-v4-pro',      // narrator — quality matters
+  large:  'anthropic/claude-opus-4',       // world gen — not used in Phase 3
 };

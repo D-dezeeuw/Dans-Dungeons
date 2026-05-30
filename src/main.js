@@ -146,9 +146,20 @@ async function playLoop() {
     UI.clearChips();
     UI.setThinking(true);
 
+    // Set up streaming: first chunk hides the "thinking" indicator and creates
+    // the GM entry that subsequent chunks append into.
+    let streamEl = null;
+    function onChunk(text) {
+      if (!streamEl) {
+        UI.setThinking(false);
+        streamEl = UI.beginStreamEntry('gm');
+      }
+      UI.appendStreamChunk(streamEl, text);
+    }
+
     let result;
     try {
-      result = await processTurn(raw);
+      result = await processTurn(raw, onChunk);
     } catch (e) {
       UI.setThinking(false);
       UI.appendEntry('error', `Error: ${e.message}`);
@@ -161,7 +172,8 @@ async function playLoop() {
     tick();
 
     UI.setThinking(false);
-    if (result?.narration) UI.appendEntry('gm', result.narration);
+    // If streaming rendered the narration progressively, skip the static append.
+    if (!streamEl && result?.narration) UI.appendEntry('gm', result.narration);
     UI.appendEntry('system', '');
 
     UI.updateDebugPanel(result?._debug);

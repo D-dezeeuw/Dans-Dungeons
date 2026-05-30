@@ -63,6 +63,22 @@ export function appendEntry(role, text) {
   return el;
 }
 
+// beginStreamEntry + appendStreamChunk: progressive GM narration display.
+// beginStreamEntry creates an empty entry element; appendStreamChunk appends
+// each arriving token so the text grows in place as the stream arrives.
+export function beginStreamEntry(role) {
+  const el = document.createElement('div');
+  el.className = `entry entry-${role}`;
+  transcriptEl().appendChild(el);
+  el.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  return el;
+}
+
+export function appendStreamChunk(el, chunk) {
+  el.textContent += chunk;
+  el.scrollIntoView({ behavior: 'smooth', block: 'end' });
+}
+
 export function setThinking(on) {
   const ID = 'thinking-indicator';
   if (on) {

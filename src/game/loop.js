@@ -279,7 +279,7 @@ function appendTranscript(playerText, gmText) {
 
 // ─── Main turn ────────────────────────────────────────────────────────────────
 
-export async function processTurn(playerInput) {
+export async function processTurn(playerInput, onNarrationChunk) {
   // Snapshot scene BEFORE any mutations.
   const scene = buildScene();
 
@@ -303,7 +303,7 @@ export async function processTurn(playerInput) {
   const pcUnconscious  = goblinResult?.hit ? goblinResult.pcNewHp <= 0
                                            : (appState.party?.pc?.record?.hpCurrent ?? 1) <= 0;
 
-  // 4. Narrate (AI) — awaiting allows ticks to fire; we don't read state here.
+  // 4. Narrate (AI) — streams tokens via onNarrationChunk for progressive display.
   const narratorResp = await narrate(
     {
       playerAction: playerInput,
@@ -314,6 +314,7 @@ export async function processTurn(playerInput) {
     },
     scene,
     appState.transcript ?? [],
+    onNarrationChunk,
   );
 
   // 5. Commit everything to Spektrum at once.

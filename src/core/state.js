@@ -4,6 +4,8 @@
 // All top-level appState paths are initialised here so the shape is
 // always predictable regardless of restore order.
 
+import { DEFAULT_MODELS } from '../ai/tiers.js';
+
 import {
   appState,
   setValue,
@@ -31,10 +33,7 @@ const DEFAULTS = {
   ai: {
     baseUrl: 'https://openrouter.ai/api/v1',
     key: '',
-    models: {
-      tiny:   'openai/gpt-4o-mini',
-      medium: 'anthropic/claude-sonnet-4-5',
-    },
+    models: { ...DEFAULT_MODELS },
     totalTokens: 0,
     totalCostUsd: 0,
   },
