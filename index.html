@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dungeons &amp; Dans</title>
+  <link rel="stylesheet" href="src/ui/style.css">
+
+  <!--
+    Dev import map.
+    Served via: npm run serve  →  python3 -m http.server 8000 --directory ../..
+    Navigate to: http://localhost:8000/2026n/Dungeons-and-Dans/
+
+    Spektrum  → local sibling at /2024/Spektrum/spektrum.js
+    bag-of-holding → local sibling at /2026n/bag-of-holding/index.js
+
+    On release both swap to pinned unpkg URLs with SRI hashes.
+  -->
+  <script type="importmap">
+  {
+    "imports": {
+      "spektrum":       "/2024/Spektrum/spektrum.js",
+      "bag-of-holding": "/2026n/bag-of-holding/index.js"
+    }
+  }
+  </script>
+</head>
+<body>
+  <div id="app">
+
+    <header id="chrome">
+      <span id="title">⚔ Dungeons &amp; Dans</span>
+      <span id="turn-counter"></span>
+      <span id="cost-meter" title="Estimated AI cost this session"></span>
+    </header>
+
+    <main id="game">
+      <div id="transcript" role="log" aria-live="polite" aria-atomic="false"></div>
+
+      <aside id="sidebar">
+        <div id="pc-stats"></div>
+        <div id="enemy-stats"></div>
+        <div id="action-chips"></div>
+        <div id="character-chips"></div>
+        <div id="skill-chips"></div>
+        <div id="debug-panel"></div>
+      </aside>
+    </main>
+
+    <footer id="input-row">
+      <span id="prompt-indicator">&gt;</span>
+      <input
+        id="cmd"
+        type="text"
+        autocomplete="off"
+        spellcheck="false"
+        placeholder="What do you do?"
+        aria-label="Command input"
+      >
+    </footer>
+
+  </div>
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>

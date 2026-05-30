@@ -1,0 +1,13 @@
+{
+  "name": "dansdungeons",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Text-based, AI-driven D&D type game. 100% client-side, DaN's Dungeons is hostable on GitHub Pages.",
+  "scripts": {
+    "serve": "python3 -m http.server 8000 --directory ../..",
+    "test": "node --test tests/"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}
