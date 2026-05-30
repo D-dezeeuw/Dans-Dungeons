@@ -96,6 +96,18 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
   border-left-color: transparent;
 }
 
+@media (max-width: 767px) {
+  #sidebar:not(.collapsed) {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 100vw;
+    z-index: 10;
+    border-left: none;
+  }
+}
+
 /* ─── Sidebar toggle button ──────────────────────────────── */
 #sidebar-toggle {
   margin-left: 0.75rem;
