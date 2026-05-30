@@ -177,39 +177,51 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
 .chip:hover { background: var(--chip-hover); border-color: var(--system); }
 .chip:active { background: var(--border); }
 
-/* ─── Debug panel ────────────────────────────────────────── */
-#debug-panel {
-  border-top: 1px solid var(--border);
-  padding-top: 0.5rem;
-  overflow-y: auto;
-  max-height: 200px;
-  font-size: 11px;
+/* ─── Footer ─────────────────────────────────────────────── */
+#footer {
   flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--border);
+  background: var(--bg-mid);
 }
+
+/* ─── Debug panel (horizontal sections row) ──────────────── */
+#debug-panel {
+  display: flex;
+  flex-direction: row;
+  gap: 2rem;
+  padding: 0.35rem 1rem;
+  font-size: 11px;
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+}
+
+#debug-panel:empty { display: none; }
+
+#debug-panel::-webkit-scrollbar { height: 3px; }
+#debug-panel::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+.dbg-section  { flex-shrink: 0; }
 
 .dbg-sep {
   color: var(--border);
   font-size: 10px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  margin-top: 0.5rem;
-  margin-bottom: 0.1rem;
+  margin-bottom: 0.15rem;
 }
-.dbg-sep:first-child { margin-top: 0; }
 
-.dbg-row      { color: var(--system); line-height: 1.5; white-space: pre; }
+.dbg-row      { color: var(--system); line-height: 1.45; white-space: pre; }
 .dbg-row.hit  { color: var(--hp-ok); }
 .dbg-row.miss { color: var(--hp-low); }
-.dbg-row.dim  { color: #383838; font-style: italic; white-space: normal; }
+.dbg-row.dim  { color: #383838; font-style: italic; white-space: normal; max-width: 180px; }
 
 /* ─── Input row ──────────────────────────────────────────── */
 #input-row {
   display: flex;
   align-items: center;
   padding: 0.5rem 1rem;
-  border-top: 1px solid var(--border);
-  background: var(--bg-mid);
-  flex-shrink: 0;
   gap: 0.5rem;
 }
 

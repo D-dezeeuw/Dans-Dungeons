@@ -150,59 +150,59 @@ export function updateDebugPanel(debug) {
   if (!debug) { el.innerHTML = ''; return; }
 
   const { classified, resolved, goblinResult } = debug;
-  const rows = [];
 
-  const sep = (label) => rows.push({ sep: true, text: label });
-  const row = (text, cls = '') => rows.push({ sep: false, text, cls });
+  // Each section becomes a flex column in the horizontal footer strip.
+  const sections = [];
+  function sec(label) { const s = { label, rows: [] }; sections.push(s); return s; }
 
-  // Classifier
-  sep('intent');
-  row(`${classified.intent}${classified.target_id ? ' → ' + classified.target_id : ''}`);
-  if (classified.skill) row(`skill: ${classified.skill}`);
-  if (classified.dc != null) row(`dc: ${classified.dc}`);
-  if (classified.reason) row(classified.reason, 'dim');
+  // ── Classifier ────────────────────────────────────────────────────────────
+  const cs = sec('intent');
+  cs.rows.push({ text: `${classified.intent}${classified.target_id ? ' → ' + classified.target_id : ''}` });
+  if (classified.direction) cs.rows.push({ text: `dir: ${classified.direction}` });
+  if (classified.skill)     cs.rows.push({ text: `skill: ${classified.skill}` });
+  if (classified.dc != null) cs.rows.push({ text: `dc: ${classified.dc}` });
+  if (classified.reason)    cs.rows.push({ text: classified.reason, cls: 'dim' });
 
-  // PC action
+  // ── PC action ─────────────────────────────────────────────────────────────
   if (resolved.intent === 'attack') {
-    sep('pc attack');
-    row(resolved.weaponName);
+    const s = sec('pc attack');
+    s.rows.push({ text: resolved.weaponName });
     const bonus = resolved.totalHit - resolved.d20;
-    row(`d20  ${resolved.d20}  +${bonus}  → ${resolved.totalHit}`);
+    s.rows.push({ text: `d20  ${resolved.d20}  +${bonus}  → ${resolved.totalHit}` });
     const label = resolved.crit ? 'CRIT ✓' : resolved.fumble ? 'FUMBLE ✗' : resolved.hit ? 'HIT ✓' : 'MISS ✗';
-    row(`AC   ${resolved.targetAC}  ${label}`, resolved.hit && !resolved.fumble ? 'hit' : 'miss');
+    s.rows.push({ text: `AC   ${resolved.targetAC}  ${label}`, cls: resolved.hit && !resolved.fumble ? 'hit' : 'miss' });
     if (resolved.hit) {
-      row(`dmg  ${resolved.damage}`);
-      row(`${resolved.targetName}  ${resolved.targetPrevHp} → ${resolved.targetNewHp}${resolved.targetDead ? '  ✗' : ''}`);
+      s.rows.push({ text: `dmg  ${resolved.damage}` });
+      s.rows.push({ text: `${resolved.targetName}  ${resolved.targetPrevHp} → ${resolved.targetNewHp}${resolved.targetDead ? '  ✗' : ''}` });
     }
   } else if (resolved.intent === 'skill') {
-    sep(`skill: ${resolved.skill} (${resolved.ability})`);
+    const s = sec(`skill: ${resolved.skill} (${resolved.ability})`);
     const bonus = resolved.abilMod + resolved.profBonus;
-    row(`d20  ${resolved.d20}  +${bonus}  → ${resolved.total}`);
-    row(`DC   ${resolved.dc}  ${resolved.success ? 'PASS ✓' : 'FAIL ✗'}`, resolved.success ? 'hit' : 'miss');
+    s.rows.push({ text: `d20  ${resolved.d20}  +${bonus}  → ${resolved.total}` });
+    s.rows.push({ text: `DC   ${resolved.dc}  ${resolved.success ? 'PASS ✓' : 'FAIL ✗'}`, cls: resolved.success ? 'hit' : 'miss' });
   } else {
-    sep('pc action');
-    row(resolved.intent);
-    if (resolved.reason) row(resolved.reason, 'dim');
+    const s = sec('pc action');
+    s.rows.push({ text: resolved.intent });
+    if (resolved.reason) s.rows.push({ text: resolved.reason, cls: 'dim' });
   }
 
-  // Goblin retaliation
+  // ── Enemy retaliation ─────────────────────────────────────────────────────
   if (goblinResult) {
-    sep(goblinResult.goblinName);
+    const s = sec(goblinResult.goblinName);
     const bonus = goblinResult.totalHit - goblinResult.d20;
-    row(`d20  ${goblinResult.d20}  +${bonus}  → ${goblinResult.totalHit}`);
+    s.rows.push({ text: `d20  ${goblinResult.d20}  +${bonus}  → ${goblinResult.totalHit}` });
     const label = goblinResult.crit ? 'CRIT ✓' : goblinResult.fumble ? 'FUMBLE ✗' : goblinResult.hit ? 'HIT ✓' : 'MISS ✗';
-    row(`AC   ${goblinResult.pcAC}  ${label}`, goblinResult.hit && !goblinResult.fumble ? 'hit' : 'miss');
+    s.rows.push({ text: `AC   ${goblinResult.pcAC}  ${label}`, cls: goblinResult.hit && !goblinResult.fumble ? 'hit' : 'miss' });
     if (goblinResult.hit) {
-      row(`dmg  ${goblinResult.damage}`);
-      row(`you  ${goblinResult.pcPrevHp} → ${goblinResult.pcNewHp}${goblinResult.pcUnconscious ? '  (down)' : ''}`);
+      s.rows.push({ text: `dmg  ${goblinResult.damage}` });
+      s.rows.push({ text: `you  ${goblinResult.pcPrevHp} → ${goblinResult.pcNewHp}${goblinResult.pcUnconscious ? '  (down)' : ''}` });
     }
   }
 
-  el.innerHTML = rows.map(r =>
-    r.sep
-      ? `<div class="dbg-sep">${escHtml(r.text)}</div>`
-      : `<div class="dbg-row${r.cls ? ' ' + r.cls : ''}">${escHtml(r.text)}</div>`
-  ).join('');
+  el.innerHTML = sections.map(s => `<div class="dbg-section">
+    <div class="dbg-sep">${escHtml(s.label)}</div>
+    ${s.rows.map(r => `<div class="dbg-row${r.cls ? ' ' + r.cls : ''}">${escHtml(r.text)}</div>`).join('')}
+  </div>`).join('');
 }
 
 // ─── Action chips ─────────────────────────────────────────────────────────────
