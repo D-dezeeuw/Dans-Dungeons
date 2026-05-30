@@ -5,8 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Commands
 
 ```bash
-npm run serve   # serves from Projects/ (parent of 2024/ and 2026n/)
-                # open: http://localhost:8000/2026n/Dungeons-and-Dans/
+npm run serve   # serves the repo root; open: http://localhost:8000
 npm test        # node --test tests/ — zero-dep test runner (Node 20+)
 ```
 

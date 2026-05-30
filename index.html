@@ -6,21 +6,11 @@
   <title>Dan's Dungeons</title>
   <link rel="stylesheet" href="src/ui/style.css">
 
-  <!--
-    Dev import map.
-    Served via: npm run serve  →  python3 -m http.server 8000 --directory ../..
-    Navigate to: http://localhost:8000/2026n/Dungeons-and-Dans/
-
-    Spektrum  → local sibling at /2024/Spektrum/spektrum.js
-    bag-of-holding → local sibling at /2026n/bag-of-holding/index.js
-
-    On release both swap to pinned unpkg URLs with SRI hashes.
-  -->
   <script type="importmap">
   {
     "imports": {
-      "spektrum":       "/2024/Spektrum/spektrum.js",
-      "bag-of-holding": "/2026n/bag-of-holding/index.js"
+      "spektrum":       "./vendor/spektrum.js",
+      "bag-of-holding": "./vendor/bag-of-holding/index.js"
     }
   }
   </script>

@@ -3,9 +3,9 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "Text-based, AI-driven D&D type game. 100% client-side, DaN's Dungeons is hostable on GitHub Pages.",
+  "description": "Text-based, AI-driven D&D type game. 100% client-side, Dan's Dungeons is hostable on GitHub Pages.",
   "scripts": {
-    "serve": "python3 -m http.server 8000 --directory ../..",
+    "serve": "python3 -m http.server 8000",
     "test": "node --test tests/"
   },
   "dependencies": {},
