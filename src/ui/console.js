@@ -169,12 +169,15 @@ export function initCopyKeyButton(getKey) {
   const btn = document.getElementById('copy-key-btn');
   if (!btn) return;
   btn.addEventListener('click', async () => {
-    const key = getKey();
-    if (!key) { btn.textContent = '✗'; setTimeout(() => { btn.textContent = '🔑'; }, 1200); return; }
-    await navigator.clipboard.writeText(key);
+    await navigator.clipboard.writeText(getKey());
     btn.textContent = '✓';
     setTimeout(() => { btn.textContent = '🔑'; }, 1200);
   });
+}
+
+export function syncCopyKeyButton(hasKey) {
+  const btn = document.getElementById('copy-key-btn');
+  if (btn) btn.style.display = hasKey ? '' : 'none';
 }
 
 export function initCollapsibles() {

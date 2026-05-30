@@ -116,6 +116,7 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
 }
 
 #copy-key-btn {
+  display: none;
   background: transparent;
   border: none;
   color: var(--system);

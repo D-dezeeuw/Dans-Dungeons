@@ -290,10 +290,12 @@ async function boot() {
 
   if (save) {
     if (!appState.ai?.key) { await setupKey(); tick(); }
+    UI.syncCopyKeyButton(!!appState.ai?.key);
     if (appState.session?.phase === 'play') { await resumeGame(); return; }
   }
 
   if (!appState.ai?.key) { await setupKey(); tick(); }
+  UI.syncCopyKeyButton(!!appState.ai?.key);
 
   await startNewGame();
 }
