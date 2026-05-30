@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "bag-of-holding": {
+      "command": "node",
+      "args": ["/Users/ddezeeuw/Projects/2026n/bag-of-holding-mcp/bin/cli.js"]
+    }
+  }
+}

@@ -66,7 +66,7 @@ export function restoreState(snapshot) {
 
 // ─── Persistence ─────────────────────────────────────────────────────────────
 
-const SAVE_KEY = 'dnd-save';
+const SAVE_KEY = 'dans-dungeons';
 
 export function saveToStorage() {
   const snap = {

@@ -64,7 +64,7 @@ async function _call({ tier = 'medium', messages, schema }) {
       'Content-Type':  'application/json',
       'Authorization': `Bearer ${key}`,
       'HTTP-Referer':  location.origin,
-      'X-Title':       'Dungeons & Dans',
+      'X-Title':       "Dan's Dungeons",
     },
     body: JSON.stringify(body),
   });

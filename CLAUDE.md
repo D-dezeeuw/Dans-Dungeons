@@ -14,7 +14,7 @@ Run a single test file: `node --test tests/dnd/dice.test.js`
 
 ## Architecture
 
-**Dungeons and Dans** is a text-based, AI-driven D&D game that runs 100% in the browser — no backend, no build step, no installed npm dependencies.
+**Dan's Dungeons** is a text-based, AI-driven D&D game that runs 100% in the browser — no backend, no build step, no installed npm dependencies.
 
 ### Key constraints
 

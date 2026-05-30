@@ -1,4 +1,4 @@
-# DaN's Dungeons
+# Dan's Dungeons
 
 A text-based D&D type game in the spirit of Zork, pulled into the 21st century by
 putting an LLM in the Game Master's chair.
