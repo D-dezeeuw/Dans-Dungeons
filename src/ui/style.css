@@ -315,6 +315,15 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
 #cmd::placeholder { color: var(--system); }
 #cmd:disabled     { opacity: 0.4; }
 
+/* Blink the prompt indicator while the field is focused */
+#input-row.active #prompt-indicator {
+  animation: prompt-blink 1s step-end infinite;
+}
+@keyframes prompt-blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
 /* ─── Brand bar ──────────────────────────────────────────────── */
 #brand-bar {
   display: flex;

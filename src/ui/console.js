@@ -14,6 +14,8 @@ let _resolveInput = null;
 // ─── Input wiring ─────────────────────────────────────────────────────────────
 // ES modules are deferred — the DOM is ready by the time this runs.
 
+const inputRowEl = () => document.getElementById('input-row');
+
 cmdEl().addEventListener('keydown', (e) => {
   if (e.key !== 'Enter') return;
   const val = cmdEl().value.trim();
@@ -26,11 +28,20 @@ cmdEl().addEventListener('keydown', (e) => {
   }
 });
 
-function setInputEnabled(on) {
+// Toggle .active class on input-row to drive the blinking cursor CSS.
+cmdEl().addEventListener('focus', () => inputRowEl()?.classList.add('active'));
+cmdEl().addEventListener('blur',  () => inputRowEl()?.classList.remove('active'));
+
+// Clicking the transcript focuses the input so typing always lands there.
+transcriptEl().addEventListener('click', () => {
+  if (!cmdEl().disabled) cmdEl().focus();
+});
+
+function setInputEnabled(on, placeholder = 'What do you do?') {
   const el = cmdEl();
   el.disabled = !on;
   if (on) {
-    el.placeholder = 'What do you do?';
+    el.placeholder = placeholder;
     el.focus();
   } else {
     el.placeholder = '…';
@@ -67,7 +78,7 @@ export function setThinking(on) {
 
 export function prompt(message) {
   if (message) appendEntry('system', message);
-  setInputEnabled(true);
+  setInputEnabled(true, message || 'What do you do?');
   return new Promise((resolve) => { _resolveInput = resolve; });
 }
 
@@ -411,7 +422,6 @@ export function showActionChips(actions) {
         _resolveInput = null;
         setInputEnabled(false);
         cmdEl().value = '';
-        appendEntry('player', `> ${val}`);
         fn(val);
       } else {
         cmdEl().value = val;
