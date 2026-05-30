@@ -27,7 +27,11 @@ import * as UI from './ui/console.js';
 function syncSidebar() {
   const pc = appState.party?.pc;
   UI.updatePCStats(pc?.record, pc?.sheet, appState.party?.inventory ?? []);
-  UI.updateEnemyStats(appState.world?.npcs ?? {});
+  const currentRoom = appState.world?.currentRoom;
+  const roomNpcs = Object.fromEntries(
+    Object.entries(appState.world?.npcs ?? {}).filter(([, n]) => n.roomId === currentRoom)
+  );
+  UI.updateEnemyStats(roomNpcs);
   UI.updateCostMeter(
     appState.ai?.totalTokens ?? 0,
     appState.ai?.totalCostUsd ?? 0

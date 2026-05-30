@@ -146,7 +146,7 @@ Rules:
 - If intent is 'move': describe entering the new room (use newRoom.description); introduce any enemies using their intro text; mention visible items
 - If intent is 'take': describe picking up the item
 - If intent is 'unlock': describe unlocking the door with a satisfying click
-- If intent is 'impossible': the action fails; describe it briefly
+- CRITICAL — if intent is 'impossible': the action simply cannot happen. Do NOT describe it succeeding or partially succeeding. Describe only the failure and its reason. No enemy dies, no item is taken, nothing changes.
 
 Recent transcript (last 3 turns, for continuity):
 ${recentTranscript.slice(-3).map(e => `${e.role}: ${e.text}`).join('\n')}
