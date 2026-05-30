@@ -22,6 +22,7 @@
       <span id="title">⚔ Dan's Dungeons</span>
       <span id="turn-counter"></span>
       <span id="cost-meter" title="Estimated AI cost this session"></span>
+      <button id="sidebar-toggle" aria-label="Toggle sidebar">◀</button>
     </header>
 
     <main id="game">
@@ -37,6 +38,9 @@
     </main>
 
     <footer id="footer">
+      <div id="debug-bar" role="button" tabindex="0">
+        <span>Last turn</span><span class="toggle-chevron">▾</span>
+      </div>
       <div id="debug-panel"></div>
       <div id="input-row">
         <span id="prompt-indicator">&gt;</span>

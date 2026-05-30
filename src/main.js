@@ -270,6 +270,8 @@ async function resumeGame() {
 // ─── Boot ─────────────────────────────────────────────────────────────────────
 
 async function boot() {
+  UI.initCollapsibles();
+
   // Start Spektrum's rAF-driven tick loop (it only runs on rAF, never
   // automatically). We also call tick() explicitly wherever we need
   // appState to reflect a setValue before the next rAF fires.

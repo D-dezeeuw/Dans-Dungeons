@@ -138,6 +138,63 @@ export function updateTurnCounter(n) {
   turnCounterEl().textContent = n > 0 ? `Turn ${n}` : '';
 }
 
+// ─── Collapsibles (sidebar + debug panel) ────────────────────────────────────
+
+export function initCollapsibles() {
+  const MOBILE = 768;
+  const isMobile = () => window.innerWidth < MOBILE;
+
+  function storedOrDefault(key, desktopDefault) {
+    const v = localStorage.getItem(key);
+    return v !== null ? v === 'open' : (isMobile() ? false : desktopDefault);
+  }
+
+  // ── Sidebar ───────────────────────────────────────────────────────────────
+  const sidebar    = document.getElementById('sidebar');
+  const sidebarBtn = document.getElementById('sidebar-toggle');
+
+  function setSidebar(open) {
+    sidebar?.classList.toggle('collapsed', !open);
+    if (sidebarBtn) {
+      sidebarBtn.textContent      = open ? '◀' : '▶';
+      sidebarBtn.setAttribute('aria-expanded', String(open));
+    }
+    localStorage.setItem('dg-sidebar', open ? 'open' : 'closed');
+  }
+
+  setSidebar(storedOrDefault('dg-sidebar', true));
+  sidebarBtn?.addEventListener('click', () =>
+    setSidebar(sidebar.classList.contains('collapsed'))
+  );
+
+  // ── Debug panel ───────────────────────────────────────────────────────────
+  const debugPanel = document.getElementById('debug-panel');
+  const debugBar   = document.getElementById('debug-bar');
+
+  function setDebug(open) {
+    debugPanel?.classList.toggle('collapsed', !open);
+    if (debugBar) {
+      debugBar.setAttribute('aria-expanded', String(open));
+      const chevron = debugBar.querySelector('.toggle-chevron');
+      if (chevron) chevron.textContent = open ? '▴' : '▾';
+    }
+    localStorage.setItem('dg-debug', open ? 'open' : 'closed');
+  }
+
+  // Initial debug state applied once bar becomes visible (see updateDebugPanel)
+  window._debugOpen = storedOrDefault('dg-debug', true);
+
+  debugBar?.addEventListener('click', () =>
+    setDebug(debugPanel.classList.contains('collapsed'))
+  );
+  debugBar?.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); debugBar.click(); }
+  });
+
+  // expose setDebug so updateDebugPanel can use it
+  window._setDebug = setDebug;
+}
+
 // ─── Debug panel ─────────────────────────────────────────────────────────────
 
 function escHtml(str) {
@@ -145,9 +202,18 @@ function escHtml(str) {
 }
 
 export function updateDebugPanel(debug) {
-  const el = document.getElementById('debug-panel');
+  const el  = document.getElementById('debug-panel');
+  const bar = document.getElementById('debug-bar');
   if (!el) return;
   if (!debug) { el.innerHTML = ''; return; }
+
+  // Reveal the debug bar on first real data and apply stored preference.
+  if (bar && !bar.classList.contains('visible')) {
+    bar.classList.add('visible');
+    if (typeof window._setDebug === 'function') {
+      window._setDebug(window._debugOpen ?? true);
+    }
+  }
 
   const { classified, resolved, goblinResult } = debug;
 
