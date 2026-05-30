@@ -163,6 +163,20 @@ let _setDebug = null;
 let _debugBar = null;
 let _debugPanel = null;
 
+// Wires the 🔑 copy-key button in the chrome bar.
+// Reads the key from localStorage directly so it works even before Spektrum ticks.
+export function initCopyKeyButton(getKey) {
+  const btn = document.getElementById('copy-key-btn');
+  if (!btn) return;
+  btn.addEventListener('click', async () => {
+    const key = getKey();
+    if (!key) { btn.textContent = '✗'; setTimeout(() => { btn.textContent = '🔑'; }, 1200); return; }
+    await navigator.clipboard.writeText(key);
+    btn.textContent = '✓';
+    setTimeout(() => { btn.textContent = '🔑'; }, 1200);
+  });
+}
+
 export function initCollapsibles() {
   // ── Sidebar ───────────────────────────────────────────────────────────────
   const sidebar    = document.getElementById('sidebar');

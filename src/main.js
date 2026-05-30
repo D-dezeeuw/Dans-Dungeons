@@ -269,16 +269,24 @@ async function resumeGame() {
 
 async function boot() {
   UI.initCollapsibles();
+  UI.initCopyKeyButton(() => appState.ai?.key ?? '');
 
-  // Start Spektrum's rAF-driven tick loop (it only runs on rAF, never
-  // automatically). We also call tick() explicitly wherever we need
-  // appState to reflect a setValue before the next rAF fires.
   run();
 
   initState();
   const save = loadFromStorage();
   if (save) restoreState(save);
-  tick(); // Flush initState + optional restore → appState before any reads.
+
+  // ?key= URL param seeds the key for the session without touching the save.
+  // Useful after a hard browser reset — share the URL with your key pre-filled.
+  const urlKey = new URLSearchParams(location.search).get('key');
+  if (urlKey) {
+    setValue('ai.key', urlKey.trim());
+    // Strip the key from the address bar so it isn't leaked in browser history.
+    history.replaceState(null, '', location.pathname);
+  }
+
+  tick();
 
   if (save) {
     if (!appState.ai?.key) { await setupKey(); tick(); }
