@@ -115,7 +115,7 @@ export function updatePCStats(record, sheet, inventory = []) {
 }
 
 export function updateEnemyStats(npcs) {
-  const alive = Object.values(npcs ?? {}).filter(n => n.alive);
+  const alive = (Array.isArray(npcs) ? npcs : Object.values(npcs ?? {})).filter(n => n.alive);
   if (!alive.length) {
     enemyStatsEl().innerHTML = '<div class="muted">No enemies</div>';
     return;
@@ -140,59 +140,64 @@ export function updateTurnCounter(n) {
 
 // ─── Collapsibles (sidebar + debug panel) ────────────────────────────────────
 
-export function initCollapsibles() {
-  const MOBILE = 768;
-  const isMobile = () => window.innerWidth < MOBILE;
+const MOBILE_BREAKPOINT = 768;
 
-  function storedOrDefault(key, desktopDefault) {
-    const v = localStorage.getItem(key);
-    return v !== null ? v === 'open' : (isMobile() ? false : desktopDefault);
+// Shared toggle factory — handles collapse class, aria-expanded, localStorage.
+// extraUpdate is called with the open state for element-specific side effects.
+function makePanel(panel, storageKey, extraUpdate) {
+  function set(open) {
+    panel.classList.toggle('collapsed', !open);
+    panel.setAttribute('aria-expanded', String(open));
+    localStorage.setItem(storageKey, open ? 'open' : 'closed');
+    extraUpdate?.(open);
   }
+  function storedOrDefault() {
+    const v = localStorage.getItem(storageKey);
+    return v !== null ? v === 'open' : window.innerWidth >= MOBILE_BREAKPOINT;
+  }
+  return { set, storedOrDefault };
+}
 
+// Module-level reference so updateDebugPanel can call setDebug without window.*.
+let _setDebug = null;
+let _debugBar = null;
+let _debugPanel = null;
+
+export function initCollapsibles() {
   // ── Sidebar ───────────────────────────────────────────────────────────────
   const sidebar    = document.getElementById('sidebar');
   const sidebarBtn = document.getElementById('sidebar-toggle');
 
-  function setSidebar(open) {
-    sidebar?.classList.toggle('collapsed', !open);
-    if (sidebarBtn) {
-      sidebarBtn.textContent      = open ? '◀' : '▶';
-      sidebarBtn.setAttribute('aria-expanded', String(open));
-    }
-    localStorage.setItem('dg-sidebar', open ? 'open' : 'closed');
+  if (sidebar && sidebarBtn) {
+    const { set, storedOrDefault } = makePanel(sidebar, 'dg-sidebar', (open) => {
+      sidebarBtn.textContent = open ? '◀' : '▶';
+    });
+    set(storedOrDefault());
+    sidebarBtn.addEventListener('click', () => set(sidebar.classList.contains('collapsed')));
   }
-
-  setSidebar(storedOrDefault('dg-sidebar', true));
-  sidebarBtn?.addEventListener('click', () =>
-    setSidebar(sidebar.classList.contains('collapsed'))
-  );
 
   // ── Debug panel ───────────────────────────────────────────────────────────
-  const debugPanel = document.getElementById('debug-panel');
-  const debugBar   = document.getElementById('debug-bar');
+  _debugPanel = document.getElementById('debug-panel');
+  _debugBar   = document.getElementById('debug-bar');
+  const chevron = _debugBar?.querySelector('.toggle-chevron');
 
-  function setDebug(open) {
-    debugPanel?.classList.toggle('collapsed', !open);
-    if (debugBar) {
-      debugBar.setAttribute('aria-expanded', String(open));
-      const chevron = debugBar.querySelector('.toggle-chevron');
+  if (_debugPanel && _debugBar) {
+    const { set, storedOrDefault } = makePanel(_debugBar, 'dg-debug', (open) => {
+      _debugPanel.classList.toggle('collapsed', !open);
       if (chevron) chevron.textContent = open ? '▴' : '▾';
-    }
-    localStorage.setItem('dg-debug', open ? 'open' : 'closed');
+    });
+    // setDebug drives both the bar's aria state and the panel visibility.
+    _setDebug = set;
+    // Applied on first real data — store initial preference now.
+    _setDebug._initial = storedOrDefault();
+
+    _debugBar.addEventListener('click', () =>
+      _setDebug(_debugPanel.classList.contains('collapsed'))
+    );
+    _debugBar.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); _debugBar.click(); }
+    });
   }
-
-  // Initial debug state applied once bar becomes visible (see updateDebugPanel)
-  window._debugOpen = storedOrDefault('dg-debug', true);
-
-  debugBar?.addEventListener('click', () =>
-    setDebug(debugPanel.classList.contains('collapsed'))
-  );
-  debugBar?.addEventListener('keydown', e => {
-    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); debugBar.click(); }
-  });
-
-  // expose setDebug so updateDebugPanel can use it
-  window._setDebug = setDebug;
 }
 
 // ─── Debug panel ─────────────────────────────────────────────────────────────
@@ -202,17 +207,14 @@ function escHtml(str) {
 }
 
 export function updateDebugPanel(debug) {
-  const el  = document.getElementById('debug-panel');
-  const bar = document.getElementById('debug-bar');
+  const el = _debugPanel;
   if (!el) return;
   if (!debug) { el.innerHTML = ''; return; }
 
   // Reveal the debug bar on first real data and apply stored preference.
-  if (bar && !bar.classList.contains('visible')) {
-    bar.classList.add('visible');
-    if (typeof window._setDebug === 'function') {
-      window._setDebug(window._debugOpen ?? true);
-    }
+  if (_debugBar && !_debugBar.classList.contains('visible')) {
+    _debugBar.classList.add('visible');
+    _setDebug?.(_setDebug._initial ?? true);
   }
 
   const { classified, resolved, goblinResult } = debug;
