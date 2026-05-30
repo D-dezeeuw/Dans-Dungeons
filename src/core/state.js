@@ -14,9 +14,10 @@ import {
   computed,
   run,
   tick,
+  bindDOM,
 } from 'spektrum';
 
-export { appState, setValue, addValue, watch, addSystem, serialize, computed, run, tick };
+export { appState, setValue, addValue, watch, addSystem, serialize, computed, run, tick, bindDOM };
 
 // ─── Default shape ───────────────────────────────────────────────────────────
 

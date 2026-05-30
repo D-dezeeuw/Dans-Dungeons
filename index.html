@@ -20,8 +20,8 @@
 
     <header id="chrome">
       <span id="title">⚔ Dan's Dungeons</span>
-      <span id="turn-counter"></span>
-      <span id="cost-meter" title="Estimated AI cost this session"></span>
+      <span id="turn-counter" data-if="session.turnCount">Turn {{session.turnCount}}</span>
+      <span id="cost-meter" title="Estimated AI cost this session" data-if="ui.costDisplay">{{ui.costDisplay}}</span>
       <button id="sidebar-toggle" aria-label="Toggle sidebar">◀</button>
     </header>
 
@@ -30,7 +30,7 @@
 
       <aside id="sidebar">
         <div id="sidebar-header">
-          <button id="copy-key-btn" aria-label="Copy API key" title="Copy API key to clipboard">🔑</button>
+          <button id="copy-key-btn" data-if="ai.key" aria-label="Copy API key" title="Copy API key to clipboard">🔑</button>
         </div>
         <div id="pc-stats"></div>
         <div id="enemy-stats"></div>
@@ -57,6 +57,15 @@
         >
       </div>
     </footer>
+
+    <div id="brand-bar">
+      <span class="brand-social">
+        <a href="https://github.com/D-dezeeuw" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://www.npmjs.com/~ddezeeuw" target="_blank" rel="noopener">npm</a>
+      </span>
+      <a class="brand-company" href="https://www.linkedin.com/in/ddezeeuw/" target="_blank" rel="noopener">Neko Media</a>
+      <span class="brand-powered">Powered by <a href="https://www.npmjs.com/package/spektrum" target="_blank" rel="noopener"><em>SPEKTRUM</em></a></span>
+    </div>
 
   </div>
   <script type="module" src="src/main.js"></script>

@@ -7,8 +7,6 @@ const transcriptEl  = () => document.getElementById('transcript');
 const pcStatsEl     = () => document.getElementById('pc-stats');
 const enemyStatsEl  = () => document.getElementById('enemy-stats');
 const actionChipsEl = () => document.getElementById('action-chips');
-const costMeterEl   = () => document.getElementById('cost-meter');
-const turnCounterEl = () => document.getElementById('turn-counter');
 const cmdEl         = () => document.getElementById('cmd');
 
 let _resolveInput = null;
@@ -129,15 +127,6 @@ export function updateEnemyStats(npcs) {
   }).join('');
 }
 
-export function updateCostMeter(tokens, costUsd) {
-  costMeterEl().textContent =
-    tokens > 0 ? `$${costUsd.toFixed(4)} · ${tokens.toLocaleString()} tok` : '';
-}
-
-export function updateTurnCounter(n) {
-  turnCounterEl().textContent = n > 0 ? `Turn ${n}` : '';
-}
-
 // ─── Collapsibles (sidebar + debug panel) ────────────────────────────────────
 
 const MOBILE_BREAKPOINT = 768;
@@ -173,11 +162,6 @@ export function initCopyKeyButton(getKey) {
     btn.textContent = '✓';
     setTimeout(() => { btn.textContent = '🔑'; }, 1200);
   });
-}
-
-export function syncCopyKeyButton(hasKey) {
-  const btn = document.getElementById('copy-key-btn');
-  if (btn) btn.style.display = hasKey ? '' : 'none';
 }
 
 export function initCollapsibles() {

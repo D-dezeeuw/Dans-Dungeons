@@ -8,6 +8,9 @@ import {
   setValue,
   addValue,
   watch,
+  addSystem,
+  computed,
+  bindDOM,
   initState,
   restoreState,
   loadFromStorage,
@@ -24,17 +27,21 @@ import * as UI from './ui/console.js';
 
 // ─── Reactive sidebar (subscribes to appState) ────────────────────────────────
 
-function syncSidebar() {
-  const pc = appState.party?.pc;
-  UI.updatePCStats(pc?.record, pc?.sheet, appState.party?.inventory ?? []);
-  const currentRoom = appState.world?.currentRoom;
-  const roomNpcs = Object.values(appState.world?.npcs ?? {}).filter(n => n.roomId === currentRoom);
-  UI.updateEnemyStats(roomNpcs);
-  UI.updateCostMeter(
-    appState.ai?.totalTokens ?? 0,
-    appState.ai?.totalCostUsd ?? 0
-  );
-  UI.updateTurnCounter(appState.session?.turnCount ?? 0);
+// Registered in boot() before the first tick so the initial state fires them.
+function registerReactiveSidebar() {
+  computed('ui.costDisplay', ['ai.totalTokens', 'ai.totalCostUsd'], (s) => {
+    const tokens = s.ai?.totalTokens ?? 0;
+    const cost   = s.ai?.totalCostUsd ?? 0;
+    return tokens > 0 ? '$' + cost.toFixed(4) + ' · ' + tokens.toLocaleString() + ' tok' : '';
+  });
+
+  addSystem(['party.pc', 'party.inventory', 'world.currentRoom', 'world.npcs'], () => {
+    const pc = appState.party?.pc;
+    UI.updatePCStats(pc?.record, pc?.sheet, appState.party?.inventory ?? []);
+    const currentRoom = appState.world?.currentRoom;
+    const roomNpcs = Object.values(appState.world?.npcs ?? {}).filter(n => n.roomId === currentRoom);
+    UI.updateEnemyStats(roomNpcs);
+  });
 }
 
 // ─── Key / settings setup ────────────────────────────────────────────────────
@@ -107,7 +114,6 @@ async function beginAdventure() {
   );
   UI.appendEntry('system', '');
 
-  syncSidebar();
   await playLoop();
 }
 
@@ -123,7 +129,6 @@ async function playLoop() {
     const pcHp = appState.party?.pc?.record?.hpCurrent ?? 1;
     if (pcHp <= 0) { await doDefeat(); break; }
 
-    syncSidebar();
     const room = appState.world?.rooms?.[appState.world?.currentRoom];
     UI.showRoomChips(room?.exits ?? [], room?.loot ?? []);
     UI.showCharacterChips(appState.party?.pc?.record, appState.party?.pc?.sheet);
@@ -159,7 +164,6 @@ async function playLoop() {
     if (result?.narration) UI.appendEntry('gm', result.narration);
     UI.appendEntry('system', '');
 
-    syncSidebar();
     UI.updateDebugPanel(result?._debug);
   }
 }
@@ -261,7 +265,6 @@ async function resumeGame() {
   );
   UI.appendEntry('system', '');
 
-  syncSidebar();
   await playLoop();
 }
 
@@ -272,6 +275,9 @@ async function boot() {
   UI.initCopyKeyButton(() => appState.ai?.key ?? '');
 
   run();
+
+  // Register reactive subscriptions before first tick so they fire with initial state.
+  registerReactiveSidebar();
 
   initState();
   const save = loadFromStorage();
@@ -288,14 +294,16 @@ async function boot() {
 
   tick();
 
+  // Bind declarative {{expr}} / data-if to live appState after first tick.
+  bindDOM(document.getElementById('chrome'));
+  bindDOM(document.getElementById('sidebar-header'));
+
   if (save) {
     if (!appState.ai?.key) { await setupKey(); tick(); }
-    UI.syncCopyKeyButton(!!appState.ai?.key);
     if (appState.session?.phase === 'play') { await resumeGame(); return; }
   }
 
   if (!appState.ai?.key) { await setupKey(); tick(); }
-  UI.syncCopyKeyButton(!!appState.ai?.key);
 
   await startNewGame();
 }
