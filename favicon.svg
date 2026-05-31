@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Dark background -->
+  <rect width="32" height="32" rx="4" fill="#1a1a1a"/>
+  <!-- Sword blade -->
+  <line x1="16" y1="4" x2="16" y2="22" stroke="#d4b896" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Crossguard -->
+  <line x1="10" y1="16" x2="22" y2="16" stroke="#d4b896" stroke-width="2" stroke-linecap="round"/>
+  <!-- Grip -->
+  <line x1="16" y1="22" x2="16" y2="28" stroke="#8a7060" stroke-width="2" stroke-linecap="round"/>
+  <!-- Pommel -->
+  <circle cx="16" cy="28" r="2" fill="#d4b896"/>
+  <!-- Sword tip highlight -->
+  <polygon points="16,4 14.5,9 17.5,9" fill="#d4b896" opacity="0.6"/>
+</svg>

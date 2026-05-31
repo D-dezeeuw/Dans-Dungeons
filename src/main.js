@@ -649,9 +649,9 @@ async function boot() {
   bindDOM(document.getElementById('chrome'));
   bindDOM(document.getElementById('sidebar-header'));
 
-  // Sync toggle button and sketch controls to restored setting.
+  // Sync sketch controls to restored setting.
   const sketchOn = appState.settings?.sceneImage ?? false;
-  sceneToggle?.setAttribute('aria-pressed', String(sketchOn));
+  const sketchControls = document.getElementById('sketch-controls');
   if (sketchControls) sketchControls.style.display = sketchOn ? '' : 'none';
 
   // Sync action bar toggle to restored setting.
