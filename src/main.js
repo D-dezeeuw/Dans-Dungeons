@@ -629,7 +629,7 @@ async function boot() {
   // Action bar toggle.
   const actionBarToggle = document.getElementById('action-bar-toggle');
   actionBarToggle?.addEventListener('click', () => {
-    const next = !(appState.settings?.actionBar ?? false);
+    const next = !(appState.settings?.actionBar ?? true);
     setValue('settings.actionBar', next);
     actionBarToggle.setAttribute('aria-pressed', String(next));
     actionBarToggle.textContent = next ? 'ON' : 'OFF';
@@ -674,7 +674,7 @@ async function boot() {
   if (sketchControls) sketchControls.style.display = sketchOn ? '' : 'none';
 
   // Sync action bar toggle to restored setting.
-  const abOn = appState.settings?.actionBar ?? false;
+  const abOn = appState.settings?.actionBar ?? true;
   if (actionBarToggle) {
     actionBarToggle.setAttribute('aria-pressed', String(abOn));
     actionBarToggle.textContent = abOn ? 'ON' : 'OFF';

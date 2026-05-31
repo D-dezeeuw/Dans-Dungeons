@@ -502,8 +502,8 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
 /* ─── Ability & skill tiles ──────────────────────────────────── */
 #ab-abilities-list,
 #ab-skills-list {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, 62px);
   gap: 3px;
   align-content: flex-start;
 }
@@ -514,16 +514,18 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
   color: var(--text);
   font-family: var(--font);
   font-size: 10px;
-  padding: 0.15rem 0.4rem;
+  padding: 0.15rem 0.3rem;
   border-radius: 2px;
   cursor: pointer;
   text-align: left;
-  white-space: nowrap;
-  line-height: 1.25;
+  width: 62px;
+  height: 34px;
+  overflow: hidden;
+  line-height: 1.2;
   transition: background 0.1s, border-color 0.1s;
 }
 .ab-tile:hover { background: var(--chip-hover); border-color: var(--system); }
-.ab-tile .ab-sub { display: block; font-size: 8px; color: var(--system); opacity: 0.85; }
+.ab-tile .ab-sub { display: block; font-size: 8px; color: var(--system); opacity: 0.85; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ab-tile.ab-cooldown { opacity: 0.25; cursor: not-allowed; }
 
 /* ─── Export zone ────────────────────────────────────────────── */
