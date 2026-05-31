@@ -91,6 +91,20 @@ async function setupKey() {
   saveToStorage();
 }
 
+// ─── Mid-game re-authentication (401 recovery) ───────────────────────────────
+
+async function reAuthKey() {
+  UI.appendEntry('system', '');
+  UI.appendEntry('error', 'API key rejected — Missing Authentication header (401).');
+  const key = await UI.prompt('Paste a valid OpenRouter API key to continue:');
+  if (key.trim()) {
+    setValue('ai.key', key.trim());
+    tick(); // flush immediately so the next processTurn call sees the new key
+    saveToStorage();
+    UI.appendEntry('system', 'Key updated — retrying…');
+  }
+}
+
 // ─── Start a new adventure ────────────────────────────────────────────────────
 
 async function startNewGame() {
@@ -206,8 +220,10 @@ async function playLoop() {
     }
 
     // Attempt the turn up to 4 times (initial + 3 retries) on 4XX errors.
-    let result = null;
+    // 401 is handled separately: re-auth once, then retry immediately (no delay).
+    let result    = null;
     let caughtErr = null;
+    let reauthed  = false;
 
     for (let attempt = 0; attempt <= RETRY_DELAYS.length; attempt++) {
       if (attempt > 0) {
@@ -219,11 +235,25 @@ async function playLoop() {
         UI.setThinking(true);
       }
       try {
-        result   = await processTurn(raw, onChunk);
+        result    = await processTurn(raw, onChunk);
         caughtErr = null;
         break;
       } catch (e) {
         caughtErr = e;
+
+        // 401: bad/missing key — prompt once, then retry immediately without delay.
+        if (/^AI 401:/.test(e.message) && !reauthed) {
+          reauthed = true;
+          streamEl?.remove();
+          streamEl = null;
+          UI.setThinking(false);
+          await reAuthKey();
+          UI.setThinking(true);
+          attempt--;   // don't consume a delay-retry slot
+          caughtErr = null;
+          continue;
+        }
+
         if (!/^AI 4\d\d:/.test(e.message) || attempt === RETRY_DELAYS.length) break;
       }
     }
@@ -232,8 +262,11 @@ async function playLoop() {
       UI.setThinking(false);
       streamEl?.remove();
       streamEl = null;
-      if (/^AI 4\d\d:/.test(caughtErr.message)) {
-        UI.appendEntry('system', '');
+      UI.appendEntry('system', '');
+      if (/^AI 401:/.test(caughtErr.message)) {
+        // Re-auth was attempted but still failing — tell them to check settings.
+        UI.appendEntry('error', 'Still failing after re-authentication. Use /settings to update your API key.');
+      } else if (/^AI 4\d\d:/.test(caughtErr.message)) {
         UI.appendEntry('gm', 'The Game Master was not available. Try again when you are ready.');
         pendingRetry = raw;
       } else {
