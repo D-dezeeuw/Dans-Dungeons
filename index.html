@@ -6,15 +6,6 @@
   <title>Dan's Dungeons</title>
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <link rel="stylesheet" href="src/ui/style.css">
-
-  <script type="importmap">
-  {
-    "imports": {
-      "spektrum":       "./vendor/spektrum.js",
-      "bag-of-holding": "./vendor/bag-of-holding/index.js"
-    }
-  }
-  </script>
 </head>
 <body>
   <div id="app">
@@ -114,6 +105,11 @@
     </div>
 
   </div>
-  <script type="module" src="src/main.js"></script>
+  <script src="vendor/app.bundle.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/Dans-Dungeons/sw.js');
+    }
+  </script>
 </body>
 </html>
