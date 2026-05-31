@@ -130,6 +130,8 @@ html, body {
       </div>
     </header>
 
+    <div id="sidebar-backdrop" aria-hidden="true"></div>
+
     <main id="game">
       <div id="transcript" role="log" aria-live="polite" aria-atomic="false">
         <div id="transcript-bg" aria-hidden="true"></div>
@@ -139,6 +141,7 @@ html, body {
       <aside id="sidebar">
         <div id="sidebar-header">
           <button id="copy-key-btn" data-if="ai.key" style="display:none" aria-label="Copy API key" title="Copy API key to clipboard">🔑</button>
+          <button id="sidebar-close" aria-label="Close sidebar">✕</button>
         </div>
         <div id="sketch-controls" style="display:none">
           <span id="sketch-controls-label">Sketch</span>

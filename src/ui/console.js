@@ -277,13 +277,33 @@ export function initCollapsibles() {
   // ── Sidebar ───────────────────────────────────────────────────────────────
   const sidebar    = document.getElementById('sidebar');
   const sidebarBtn = document.getElementById('sidebar-toggle');
+  const closeBtn   = document.getElementById('sidebar-close');
+  const backdrop   = document.getElementById('sidebar-backdrop');
 
   if (sidebar && sidebarBtn) {
     const { set, storedOrDefault } = makePanel(sidebar, 'dg-sidebar', (open) => {
       sidebarBtn.textContent = open ? '◀' : '▶';
+      // Backdrop: only active on mobile (CSS hides it on desktop)
+      if (backdrop) backdrop.classList.toggle('active', open);
     });
     set(storedOrDefault());
+    const closeSidebar = () => set(false);
     sidebarBtn.addEventListener('click', () => set(sidebar.classList.contains('collapsed')));
+    closeBtn?.addEventListener('click', closeSidebar);
+    backdrop?.addEventListener('click', closeSidebar);
+  }
+
+  // ── Footer height — keep transcript above fixed footer on mobile ──────────
+  const footer  = document.getElementById('footer');
+  const game    = document.getElementById('game');
+  if (footer && game && window.ResizeObserver) {
+    new ResizeObserver(() => {
+      if (getComputedStyle(footer).position === 'fixed') {
+        game.style.paddingBottom = footer.offsetHeight + 'px';
+      } else {
+        game.style.paddingBottom = '';
+      }
+    }).observe(footer);
   }
 
   // ── Debug panel ───────────────────────────────────────────────────────────
