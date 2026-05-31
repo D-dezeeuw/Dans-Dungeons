@@ -2,14 +2,14 @@
 // Cache key is the git short hash baked in by build.js.
 // To bust the cache: run `npm run build` and commit/push.
 
-const VERSION  = 'app-c46b9d0';
+const VERSION  = 'app-cdf2c06';
 const BASE     = '/Dans-Dungeons';
 const PRECACHE = [
   `${BASE}/`,
   `${BASE}/index.html`,
   `${BASE}/favicon.svg`,
-  `${BASE}/src/ui/style.css`,
   `${BASE}/vendor/app.bundle.js`,
+  // CSS is inlined into index.html — no separate request needed
 ];
 
 self.addEventListener('install', (e) => {

@@ -597,6 +597,9 @@ async function ensureKey() {
 // ─── Boot ─────────────────────────────────────────────────────────────────────
 
 async function boot() {
+  // Remove the static skeleton now that JS is running
+  document.getElementById('skeleton-loading')?.remove();
+
   UI.initCollapsibles();
   UI.initCopyKeyButton(() => appState.ai?.key ?? '');
 

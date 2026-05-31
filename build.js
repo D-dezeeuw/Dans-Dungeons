@@ -36,6 +36,16 @@ const sw = fs.readFileSync(swPath, 'utf8');
 const updated = sw.replace(/const VERSION\s*=\s*'app-[^']+';/, `const VERSION  = 'app-${version}';`);
 fs.writeFileSync(swPath, updated);
 
+// Inline style.css into index.html between the <!-- BUILD:CSS --> markers
+const css     = fs.readFileSync('src/ui/style.css', 'utf8');
+const html    = fs.readFileSync('index.html', 'utf8');
+const inlined = html.replace(
+  /<!-- BUILD:CSS -->[\s\S]*?<!-- \/BUILD:CSS -->/,
+  `<!-- BUILD:CSS --><style>${css}</style><!-- /BUILD:CSS -->`
+);
+fs.writeFileSync('index.html', inlined);
+
 console.log(`\nBuilt ${outfile}  [${version}]`);
-console.log(`Size: ${(fs.statSync(outfile).size / 1024).toFixed(1)} KB`);
+console.log(`Bundle: ${(fs.statSync(outfile).size / 1024).toFixed(1)} KB`);
+console.log(`CSS inlined: ${(Buffer.byteLength(css) / 1024).toFixed(1)} KB`);
 console.log(`SW cache key: app-${version}`);
