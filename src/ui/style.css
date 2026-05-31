@@ -347,6 +347,41 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
   background: rgba(212, 184, 150, 0.08);
 }
 
+/* ─── Sketch size controls (sidebar) ────────────────────────── */
+#sketch-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.3rem 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+#sketch-controls-label {
+  flex: 1;
+  font-family: var(--font);
+  font-size: 10px;
+  color: var(--system);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+#sketch-controls button {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--system);
+  font-family: var(--font);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 0 0.3rem;
+  border-radius: 2px;
+  line-height: 1.3;
+  transition: color 0.15s, border-color 0.15s;
+}
+#sketch-controls button:hover { color: var(--text); border-color: var(--border); }
+#sketch-controls button[aria-pressed="true"] {
+  color: var(--gm);
+  border-color: var(--gm);
+  background: rgba(212, 184, 150, 0.08);
+}
+
 /* ─── Scene image panel ──────────────────────────────────────── */
 #scene-image-panel {
   position: absolute;
@@ -361,6 +396,8 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
   overflow: hidden;
   opacity: 0.93;
 }
+
+#scene-image-panel.sketch-max { width: 320px; }
 
 #scene-image-panel img {
   display: block;

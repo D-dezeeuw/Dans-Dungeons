@@ -26,6 +26,23 @@ import { processTurn }        from './game/loop.js';
 import { generateSceneImage, checkKey } from './ai/openrouter.js';
 import * as UI from './ui/console.js';
 
+// ─── Sketch view state ────────────────────────────────────────────────────────
+// 'minimized' | 'windowed' | 'maximized'  — local UI preference, not persisted.
+
+let sketchView = 'windowed';
+
+function applySketchView(view) {
+  sketchView = view;
+  const panel = document.getElementById('scene-image-panel');
+  panel?.classList.toggle('sketch-max', view === 'maximized');
+  if (view === 'minimized') UI.hideSceneImage();
+  ['min', 'win', 'max'].forEach(id => {
+    const map = { min: 'minimized', win: 'windowed', max: 'maximized' };
+    document.getElementById(`sketch-btn-${id}`)
+      ?.setAttribute('aria-pressed', String(map[id] === view));
+  });
+}
+
 // ─── Reactive sidebar (subscribes to appState) ────────────────────────────────
 
 // Registered in boot() before the first tick so the initial state fires them.
@@ -60,6 +77,7 @@ function buildImagePrompt(narration) {
 
 // Fire-and-forget: generates a scene image and updates the panel when ready.
 function requestSceneImage(narration) {
+  if (sketchView === 'minimized') return;
   UI.showSceneImageLoading();
   generateSceneImage(buildImagePrompt(narration))
     .then(src => {
@@ -429,14 +447,22 @@ async function boot() {
   UI.initCopyKeyButton(() => appState.ai?.key ?? '');
 
   // Scene-image toggle — reads/writes settings.sceneImage in Spektrum.
-  const sceneToggle = document.getElementById('scene-image-toggle');
+  const sceneToggle    = document.getElementById('scene-image-toggle');
+  const sketchControls = document.getElementById('sketch-controls');
   sceneToggle?.addEventListener('click', () => {
     const next = !(appState.settings?.sceneImage ?? false);
     setValue('settings.sceneImage', next);
     sceneToggle.setAttribute('aria-pressed', String(next));
+    sketchControls.style.display = next ? '' : 'none';
     if (!next) UI.hideSceneImage();
+    else applySketchView('windowed'); // reset to windowed when re-enabling
     saveToStorage();
   });
+
+  // Sketch size buttons.
+  document.getElementById('sketch-btn-min')?.addEventListener('click', () => applySketchView('minimized'));
+  document.getElementById('sketch-btn-win')?.addEventListener('click', () => applySketchView('windowed'));
+  document.getElementById('sketch-btn-max')?.addEventListener('click', () => applySketchView('maximized'));
 
   run();
 
@@ -462,8 +488,10 @@ async function boot() {
   bindDOM(document.getElementById('chrome'));
   bindDOM(document.getElementById('sidebar-header'));
 
-  // Sync toggle button to restored setting.
-  sceneToggle?.setAttribute('aria-pressed', String(appState.settings?.sceneImage ?? false));
+  // Sync toggle button and sketch controls to restored setting.
+  const sketchOn = appState.settings?.sceneImage ?? false;
+  sceneToggle?.setAttribute('aria-pressed', String(sketchOn));
+  if (sketchControls) sketchControls.style.display = sketchOn ? '' : 'none';
 
   await ensureKey();
 
