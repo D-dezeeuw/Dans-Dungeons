@@ -231,6 +231,7 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
 }
 .chip:hover { background: var(--chip-hover); border-color: var(--system); }
 .chip:active { background: var(--border); }
+.chip-retry  { color: var(--gm); border-color: var(--gm); }
 
 /* ─── Debug bar ──────────────────────────────────────────── */
 #debug-bar {

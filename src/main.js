@@ -156,7 +156,11 @@ async function beginAdventure() {
 
 // ─── Main play loop ───────────────────────────────────────────────────────────
 
+const RETRY_DELAYS = [1000, 2000, 4000]; // ms between attempts 1→2, 2→3, 3→4
+
 async function playLoop() {
+  let pendingRetry = null; // raw input to surface as a Retry chip after exhausted retries
+
   while (true) {
     if (appState.session.phase !== 'play') break;
 
@@ -170,6 +174,12 @@ async function playLoop() {
     UI.showRoomChips(room?.exits ?? [], room?.loot ?? []);
     UI.showCharacterChips(appState.party?.pc?.record, appState.party?.pc?.sheet);
     UI.showSkillChips(appState.session?.skillCooldowns ?? {});
+
+    // Surface a Retry chip if the previous turn failed after all retries.
+    if (pendingRetry) {
+      UI.insertActionChip('↺ Retry', pendingRetry);
+      pendingRetry = null;
+    }
 
     // Wait for player input (chips or typed)
     const raw = await UI.prompt('');
@@ -185,6 +195,7 @@ async function playLoop() {
 
     // Set up streaming: first chunk hides the "thinking" indicator and creates
     // the GM entry that subsequent chunks append into.
+    // streamEl is reset to null before each retry so a fresh entry is created.
     let streamEl = null;
     function onChunk(text) {
       if (!streamEl) {
@@ -194,13 +205,41 @@ async function playLoop() {
       UI.appendStreamChunk(streamEl, text);
     }
 
-    let result;
-    try {
-      result = await processTurn(raw, onChunk);
-    } catch (e) {
+    // Attempt the turn up to 4 times (initial + 3 retries) on 4XX errors.
+    let result = null;
+    let caughtErr = null;
+
+    for (let attempt = 0; attempt <= RETRY_DELAYS.length; attempt++) {
+      if (attempt > 0) {
+        streamEl?.remove();  // discard any partial stream from the failed attempt
+        streamEl = null;
+        UI.setThinking(false);
+        UI.appendEntry('system', `⏳ Retrying… (${attempt}/${RETRY_DELAYS.length})`);
+        await new Promise(r => setTimeout(r, RETRY_DELAYS[attempt - 1]));
+        UI.setThinking(true);
+      }
+      try {
+        result   = await processTurn(raw, onChunk);
+        caughtErr = null;
+        break;
+      } catch (e) {
+        caughtErr = e;
+        if (!/^AI 4\d\d:/.test(e.message) || attempt === RETRY_DELAYS.length) break;
+      }
+    }
+
+    if (caughtErr) {
       UI.setThinking(false);
-      UI.appendEntry('error', `Error: ${e.message}`);
-      UI.appendEntry('system', 'The turn was not resolved. Try again or type /restart.');
+      streamEl?.remove();
+      streamEl = null;
+      if (/^AI 4\d\d:/.test(caughtErr.message)) {
+        UI.appendEntry('system', '');
+        UI.appendEntry('gm', 'The Game Master was not available. Try again when you are ready.');
+        pendingRetry = raw;
+      } else {
+        UI.appendEntry('error', `Error: ${caughtErr.message}`);
+        UI.appendEntry('system', 'The turn was not resolved. Try again or type /restart.');
+      }
       continue;
     }
 

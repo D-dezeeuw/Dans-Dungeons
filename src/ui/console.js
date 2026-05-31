@@ -425,6 +425,29 @@ export function showSkillChips(cooldowns = {}) {
   }
 }
 
+// Prepends a single chip to the top of #action-chips without clearing others.
+// Used for the Retry chip after exhausted turn retries.
+export function insertActionChip(label, value) {
+  const el = actionChipsEl();
+  if (!el) return;
+  const btn = document.createElement('button');
+  btn.className = 'chip chip-retry';
+  btn.textContent = label;
+  btn.addEventListener('click', () => {
+    if (_resolveInput) {
+      const fn = _resolveInput;
+      _resolveInput = null;
+      setInputEnabled(false);
+      cmdEl().value = '';
+      fn(value);
+    } else {
+      cmdEl().value = value;
+      cmdEl().focus();
+    }
+  });
+  el.insertBefore(btn, el.firstChild);
+}
+
 export function showActionChips(actions) {
   const el = actionChipsEl();
   el.innerHTML = '';
