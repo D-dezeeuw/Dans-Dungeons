@@ -19,12 +19,15 @@
   <div id="app">
 
     <header id="chrome">
-      <span id="title">⚔ Dan's Dungeons</span>
-      <span id="pc-header-stats"></span>
-      <span id="turn-counter" data-if="session.turnCount">Turn {{session.turnCount}}</span>
-      <span id="cost-meter" title="Estimated AI cost this session" data-if="ui.costDisplay">{{ui.costDisplay}}</span>
-      <button id="scene-image-toggle" title="Generate a journal-sketch of the scene after each turn" aria-label="Toggle scene sketch" aria-pressed="false">🖼 Sketch</button>
-      <button id="sidebar-toggle" aria-label="Toggle sidebar">◀</button>
+      <div id="chrome-row1">
+        <span id="title">⚔ Dan's Dungeons</span>
+        <span id="turn-counter" data-if="session.turnCount">Turn {{session.turnCount}}</span>
+        <span id="cost-meter" title="Estimated AI cost this session" data-if="ui.costDisplay">{{ui.costDisplay}}</span>
+        <button id="sidebar-toggle" aria-label="Toggle sidebar">◀</button>
+      </div>
+      <div id="chrome-row2">
+        <span id="pc-header-stats"></span>
+      </div>
     </header>
 
     <main id="game">

@@ -33,13 +33,25 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
 
 #chrome {
   display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 0.4rem 1rem;
+  flex-direction: column;
+  padding: 0.3rem 1rem;
   background: var(--bg-edge);
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
 }
+
+#chrome-row1 {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+#chrome-row2 {
+  display: flex;
+  align-items: center;
+  min-height: 0;
+}
+#chrome-row2:empty { display: none; }
 
 #title { font-weight: bold; color: var(--gm); letter-spacing: 0.05em; }
 #pc-header-stats {
@@ -49,7 +61,6 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 260px;
 }
 #pc-header-stats .hs-name  { color: var(--gm); font-weight: bold; }
 #pc-header-stats .hs-sep   { color: var(--border); margin: 0 0.3rem; }
@@ -360,26 +371,6 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
   50%       { opacity: 0; }
 }
 
-/* ─── Scene image toggle (chrome) ───────────────────────────── */
-#scene-image-toggle {
-  background: transparent;
-  border: 1px solid var(--border);
-  color: var(--system);
-  font-family: var(--font);
-  font-size: 12px;
-  cursor: pointer;
-  padding: 0.15rem 0.5rem;
-  border-radius: 2px;
-  flex-shrink: 0;
-  line-height: 1;
-  transition: color 0.15s, border-color 0.15s, background 0.15s;
-}
-#scene-image-toggle:hover { color: var(--text); border-color: var(--system); }
-#scene-image-toggle[aria-pressed="true"] {
-  color: var(--gm);
-  border-color: var(--gm);
-  background: rgba(212, 184, 150, 0.08);
-}
 
 /* ─── Sketch size controls (sidebar) ────────────────────────── */
 #sketch-controls {
@@ -498,6 +489,38 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
   gap: 1px;
 }
 
+/* ─── Action bar tooltips ────────────────────────────────────── */
+[data-tip] {
+  position: relative;
+}
+[data-tip]::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: pre-line;
+  background: #1a1a1a;
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 10px;
+  font-weight: normal;
+  line-height: 1.5;
+  padding: 4px 8px;
+  border-radius: 3px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+  z-index: 100;
+  min-width: 120px;
+  max-width: 220px;
+  text-align: left;
+}
+[data-tip]:hover::after {
+  opacity: 1;
+}
+
 /* ─── Compass direction letters ──────────────────────────────── */
 .ab-dir-btn {
   background: none;
@@ -524,23 +547,19 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
   flex-wrap: wrap;
   gap: 0.15rem 0.5rem;
   align-content: flex-start;
+  max-width: 400px;
 }
 
 .ab-word {
-  background: none;
-  border: none;
   font-family: var(--font);
   font-size: 10px;
   font-weight: bold;
   line-height: 1.5;
-  padding: 0;
-  cursor: pointer;
-  transition: color 0.1s, opacity 0.1s;
+  cursor: default;
 }
-.ab-word.ab-available  { color: var(--text); }
-.ab-word.ab-available:hover { color: var(--gm); }
-.ab-word.ab-active     { color: var(--gm); }
-.ab-word.ab-unavailable{ color: var(--system); opacity: 0.4; cursor: default; }
+.ab-word.ab-available   { color: var(--text); }
+.ab-word.ab-active      { color: var(--gm); }
+.ab-word.ab-unavailable { color: var(--system); opacity: 0.4; }
 
 /* ─── Export zone ────────────────────────────────────────────── */
 #export-zone {

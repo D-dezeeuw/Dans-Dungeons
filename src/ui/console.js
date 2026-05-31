@@ -382,20 +382,20 @@ function classAbilities(record, sheet) {
 
   return {
     fighter: [
-      { label: 'Second Wind',  note: `1d10+${lvl} HP`,  text: 'I use Second Wind to heal myself' },
-      { label: 'Action Surge', note: 'extra action',     text: 'I use Action Surge for an extra action' },
+      { label: 'Second Wind',  note: `Bonus action: regain 1d10+${lvl} HP.\nOnce per short rest.`,                         text: 'I use Second Wind to heal myself' },
+      { label: 'Action Surge', note: 'Take one additional action this turn.\nOnce per short rest.',                         text: 'I use Action Surge for an extra action' },
     ],
     rogue: [
-      { label: 'Sneak Attack',   note: `${sneakDice}d6 extra`, text: 'I make a Sneak Attack' },
-      { label: 'Cunning Action', note: 'bonus action',          text: 'I use Cunning Action to ' },
+      { label: 'Sneak Attack',   note: `Deal ${sneakDice}d6 extra damage when you have advantage\nor an ally flanks your target.`, text: 'I make a Sneak Attack' },
+      { label: 'Cunning Action', note: 'Bonus action: Dash, Disengage, or Hide.\nKeeps you mobile without spending your main action.', text: 'I use Cunning Action to ' },
     ],
     cleric: [
-      { label: 'Turn Undead', note: 'channel divinity', text: 'I use Channel Divinity: Turn Undead' },
-      { label: 'Cast Spell',  note: `DC ${dc}`,         text: 'I cast a spell at ' },
+      { label: 'Turn Undead', note: `Channel Divinity: undead within 30 ft must flee.\nWIS save DC ${dc} or be turned for 1 minute.`, text: 'I use Channel Divinity: Turn Undead' },
+      { label: 'Cast Spell',  note: `Cast a prepared spell. Targets resist with DC ${dc}.\nConcentration spells last until broken or you cast another.`, text: 'I cast a spell at ' },
     ],
     wizard: [
-      { label: 'Arcane Recovery', note: 'short rest',     text: 'I use Arcane Recovery' },
-      { label: 'Cast Spell',      note: `+${spAtk} atk`, text: 'I cast a spell at ' },
+      { label: 'Arcane Recovery', note: `Short rest: regain spell slots up to level ${Math.ceil(lvl / 2)}.\nOnce per long rest.`, text: 'I use Arcane Recovery' },
+      { label: 'Cast Spell',      note: `Cast a prepared spell. +${spAtk} to spell attack rolls.\nHigher spell slots deal more damage or last longer.`, text: 'I cast a spell at ' },
     ],
   }[record.classId] ?? [];
 }
@@ -458,24 +458,24 @@ export function showCharacterChips(record, sheet) {
 }
 
 const SKILLS = [
-  { id: 'athletics',       label: 'Athletics',        ab: 'STR' },
-  { id: 'acrobatics',      label: 'Acrobatics',       ab: 'DEX' },
-  { id: 'sleight-of-hand', label: 'Sleight of Hand',  ab: 'DEX' },
-  { id: 'stealth',         label: 'Stealth',          ab: 'DEX' },
-  { id: 'arcana',          label: 'Arcana',           ab: 'INT' },
-  { id: 'history',         label: 'History',          ab: 'INT' },
-  { id: 'investigation',   label: 'Investigation',    ab: 'INT' },
-  { id: 'nature',          label: 'Nature',           ab: 'INT' },
-  { id: 'religion',        label: 'Religion',         ab: 'INT' },
-  { id: 'animal-handling', label: 'Animal Handling',  ab: 'WIS' },
-  { id: 'insight',         label: 'Insight',          ab: 'WIS' },
-  { id: 'medicine',        label: 'Medicine',         ab: 'WIS' },
-  { id: 'perception',      label: 'Perception',       ab: 'WIS' },
-  { id: 'survival',        label: 'Survival',         ab: 'WIS' },
-  { id: 'deception',       label: 'Deception',        ab: 'CHA' },
-  { id: 'intimidation',    label: 'Intimidation',     ab: 'CHA' },
-  { id: 'performance',     label: 'Performance',      ab: 'CHA' },
-  { id: 'persuasion',      label: 'Persuasion',       ab: 'CHA' },
+  { id: 'athletics',       label: 'Athletics',       ab: 'STR', desc: 'Climb, jump, swim, or grapple. Raw physical effort against resistance.' },
+  { id: 'acrobatics',      label: 'Acrobatics',      ab: 'DEX', desc: 'Balance, tumble, or escape a grapple. Finesse and body control.' },
+  { id: 'sleight-of-hand', label: 'Sleight of Hand', ab: 'DEX', desc: 'Pick pockets, plant objects, or perform manual trickery unseen.' },
+  { id: 'stealth',         label: 'Stealth',         ab: 'DEX', desc: 'Move silently and stay hidden. Opposed by passive Perception.' },
+  { id: 'arcana',          label: 'Arcana',          ab: 'INT', desc: 'Recall lore about spells, magic items, and the planes.' },
+  { id: 'history',         label: 'History',         ab: 'INT', desc: 'Recall past events, legendary figures, and ancient civilisations.' },
+  { id: 'investigation',   label: 'Investigation',   ab: 'INT', desc: 'Search for clues, find hidden doors, or deduce what happened.' },
+  { id: 'nature',          label: 'Nature',          ab: 'INT', desc: 'Identify plants, animals, weather patterns, and natural hazards.' },
+  { id: 'religion',        label: 'Religion',        ab: 'INT', desc: 'Recall lore about deities, rites, cults, and holy symbols.' },
+  { id: 'animal-handling', label: 'Animal Handling', ab: 'WIS', desc: 'Calm, guide, or read the intent of beasts and mounts.' },
+  { id: 'insight',         label: 'Insight',         ab: 'WIS', desc: "Read someone's true feelings or detect when they're lying." },
+  { id: 'medicine',        label: 'Medicine',        ab: 'WIS', desc: 'Stabilise a dying creature, diagnose ailments, or tend wounds.' },
+  { id: 'perception',      label: 'Perception',      ab: 'WIS', desc: 'Notice threats, spot hidden creatures, or hear distant sounds.' },
+  { id: 'survival',        label: 'Survival',        ab: 'WIS', desc: 'Track prey, forage food, navigate terrain, or endure the wild.' },
+  { id: 'deception',       label: 'Deception',       ab: 'CHA', desc: 'Lie convincingly, disguise your intent, or create a false impression.' },
+  { id: 'intimidation',    label: 'Intimidation',    ab: 'CHA', desc: 'Coerce through threats, menace, or sheer force of presence.' },
+  { id: 'performance',     label: 'Performance',     ab: 'CHA', desc: 'Entertain, impersonate, or captivate an audience.' },
+  { id: 'persuasion',      label: 'Persuasion',      ab: 'CHA', desc: 'Win someone over through charm, reasoned argument, or diplomacy.' },
 ];
 
 // Clicking a skill chip always prefills the input — the player edits and submits.
@@ -621,6 +621,13 @@ export function updateActionBar(exits, record, sheet, cooldowns) {
     btn.onclick = exit
       ? () => fireChip(exit.locked ? `I try to unlock the door to the ${dir}` : `I go ${dir}`)
       : null;
+    if (exit?.locked) {
+      btn.dataset.tip = `${dir.charAt(0).toUpperCase() + dir.slice(1)} — locked\nTry to force or unlock the door.`;
+    } else if (exit) {
+      btn.dataset.tip = `${dir.charAt(0).toUpperCase() + dir.slice(1)} — passage open\n${exit.description ?? 'Move in this direction.'}`;
+    } else {
+      btn.dataset.tip = `${dir.charAt(0).toUpperCase() + dir.slice(1)} — no exit`;
+    }
   }
 
   // ── Class abilities word cloud ─────────────────────────────────────────────
@@ -629,19 +636,17 @@ export function updateActionBar(exits, record, sheet, cooldowns) {
     abEl.innerHTML = '';
     if (record && sheet) {
       for (const atk of (sheet.attacks ?? [])) {
-        const btn = document.createElement('button');
+        const btn = document.createElement('span');
         btn.className = 'ab-word ab-available';
-        btn.title = `+${atk.attackBonus} ${atk.damageDice}`;
+        btn.dataset.tip = `Attack\n+${atk.attackBonus} to hit · ${atk.damageDice} damage`;
         btn.textContent = atk.name;
-        btn.addEventListener('click', () => fireChip(`I attack with my ${atk.name}`));
         abEl.appendChild(btn);
       }
       for (const ability of classAbilities(record, sheet)) {
-        const btn = document.createElement('button');
+        const btn = document.createElement('span');
         btn.className = 'ab-word ab-available';
-        btn.title = ability.note;
+        btn.dataset.tip = ability.note;
         btn.textContent = ability.label;
-        btn.addEventListener('click', () => fireChip(ability.text));
         abEl.appendChild(btn);
       }
     }
@@ -654,12 +659,12 @@ export function updateActionBar(exits, record, sheet, cooldowns) {
     for (const skill of SKILLS) {
       const remaining = cooldowns[skill.id] ?? 0;
       const onCd = remaining > 0;
-      const btn = document.createElement('button');
+      const btn = document.createElement('span');
       btn.className = 'ab-word ' + (onCd ? 'ab-unavailable' : 'ab-available');
-      btn.disabled  = onCd;
-      btn.title     = onCd ? `${skill.ab} — ${remaining} turn${remaining > 1 ? 's' : ''} cooldown` : skill.ab;
+      btn.dataset.tip = onCd
+        ? `${skill.label} · ${skill.ab}\n${skill.desc}\n\nCooldown: ${remaining} turn${remaining > 1 ? 's' : ''} remaining`
+        : `${skill.label} · ${skill.ab}\n${skill.desc}`;
       btn.textContent = skill.label + (onCd ? ` (${remaining})` : '');
-      if (!onCd) btn.addEventListener('click', () => fireChip(`I use ${skill.label}`));
       skEl.appendChild(btn);
     }
   }

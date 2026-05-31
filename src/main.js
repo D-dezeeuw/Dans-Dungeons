@@ -169,7 +169,6 @@ async function startNewGame() {
   const wantsSketch = sketchChoice === 'yes';
   setValue('settings.sceneImage', wantsSketch);
   const sketchControls = document.getElementById('sketch-controls');
-  document.getElementById('scene-image-toggle')?.setAttribute('aria-pressed', String(wantsSketch));
   if (sketchControls) sketchControls.style.display = wantsSketch ? '' : 'none';
 
   setValue('session.phase', 'play');
@@ -601,18 +600,7 @@ async function boot() {
   UI.initCollapsibles();
   UI.initCopyKeyButton(() => appState.ai?.key ?? '');
 
-  // Scene-image toggle — reads/writes settings.sceneImage in Spektrum.
-  const sceneToggle    = document.getElementById('scene-image-toggle');
-  const sketchControls = document.getElementById('sketch-controls');
-  sceneToggle?.addEventListener('click', () => {
-    const next = !(appState.settings?.sceneImage ?? false);
-    setValue('settings.sceneImage', next);
-    sceneToggle.setAttribute('aria-pressed', String(next));
-    sketchControls.style.display = next ? '' : 'none';
-    if (!next) UI.hideSceneImage();
-    else applySketchView('windowed'); // reset to windowed when re-enabling
-    saveToStorage();
-  });
+  // Sketch opacity controls are shown reactively via sketch-controls visibility.
 
   // Sketch size buttons.
   document.getElementById('sketch-btn-min')?.addEventListener('click', () => applySketchView('minimized'));
