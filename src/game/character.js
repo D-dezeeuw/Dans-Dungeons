@@ -30,25 +30,25 @@ export async function createCharacter(ui) {
   ui.appendEntry('system', '═══════════════════════════');
   ui.appendEntry('system', '');
 
-  // Name
-  const name = await ui.prompt('What is your adventurer\'s name?');
-  if (!name.trim()) return null;
+  // Name — default: Dan
+  const nameRaw = await ui.prompt('What is your adventurer\'s name? [Dan]:');
+  const name    = nameRaw.trim() || 'Dan';
 
-  // Class
+  // Class — default: fighter (index 0)
   const classId = await ui.pickFrom('Choose your class:', STARTER_CLASSES, (c) =>
-    c.charAt(0).toUpperCase() + c.slice(1)
+    c.charAt(0).toUpperCase() + c.slice(1), 0
   );
 
-  // Species (all SRD species)
+  // Species — default: human (index 0)
   const speciesIds = Object.keys(SRD.species);
-  const speciesId = await ui.pickFrom('Choose your species:', speciesIds, (s) =>
-    SRD.species[s]?.name ?? (s.charAt(0).toUpperCase() + s.slice(1))
+  const speciesId  = await ui.pickFrom('Choose your species:', speciesIds, (s) =>
+    SRD.species[s]?.name ?? (s.charAt(0).toUpperCase() + s.slice(1)), 0
   );
 
-  // Background (all SRD backgrounds — only 4 in this version)
+  // Background — default: soldier (index 3)
   const bgIds = Object.keys(SRD.backgrounds);
-  const bgId = await ui.pickFrom('Choose your background:', bgIds, (b) =>
-    SRD.backgrounds[b]?.name ?? (b.charAt(0).toUpperCase() + b.slice(1))
+  const bgId  = await ui.pickFrom('Choose your background:', bgIds, (b) =>
+    SRD.backgrounds[b]?.name ?? (b.charAt(0).toUpperCase() + b.slice(1)), 3
   );
 
   ui.appendEntry('system', '');

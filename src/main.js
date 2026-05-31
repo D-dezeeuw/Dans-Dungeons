@@ -162,19 +162,20 @@ async function startNewGame() {
 
   setValue('party.pc', result);
 
-  // Ask about scene sketches before starting.
+  // Ask about scene sketches inside the transcript, no sidebar chips.
   UI.appendEntry('system', '');
-  UI.appendEntry('system', 'Generate an AI journal-sketch of each scene after your turn?');
   UI.appendEntry('system', '(black ink on sepia parchment — costs a few extra credits per turn)');
-  UI.showActionChips([
-    { label: '🖼 Yes, sketch each scene', value: 'yes' },
-    { label: '✗ No thanks',              value: 'no'  },
-  ]);
-  const sketchChoice = await UI.prompt('');
-  const wantsSketch  = sketchChoice.toLowerCase().startsWith('y');
+  const sketchChoice = await UI.pickFrom(
+    'Generate an AI scene sketch after each turn?',
+    ['yes', 'no'],
+    x => x === 'yes' ? '🖼 Yes, sketch each scene' : '✗ No thanks',
+    1,  // default: no
+  );
+  const wantsSketch = sketchChoice === 'yes';
   setValue('settings.sceneImage', wantsSketch);
+  const sketchControls = document.getElementById('sketch-controls');
   document.getElementById('scene-image-toggle')?.setAttribute('aria-pressed', String(wantsSketch));
-  UI.clearChips();
+  if (sketchControls) sketchControls.style.display = wantsSketch ? '' : 'none';
 
   setValue('session.phase', 'play');
   tick(); // Flush delta → appState before beginAdventure reads it (rAF hasn't fired yet)

@@ -137,16 +137,21 @@ export function prompt(message) {
   return new Promise((resolve) => { _resolveInput = resolve; });
 }
 
-export async function pickFrom(message, options, labelFn = (x) => x) {
+export async function pickFrom(message, options, labelFn = (x) => x, defaultIdx = -1) {
   appendEntry('system', message);
   options.forEach((opt, i) => {
-    appendEntry('option', `  ${i + 1}. ${labelFn(opt)}`);
+    const isDefault = i === defaultIdx;
+    appendEntry(
+      isDefault ? 'option-default' : 'option',
+      `  ${i + 1}. ${labelFn(opt)}${isDefault ? '  ← default' : ''}`
+    );
   });
   appendEntry('system', '');
 
   while (true) {
-    const input = await prompt('Enter a number or name:');
-    const num   = parseInt(input, 10);
+    const input = await prompt(defaultIdx >= 0 ? 'Enter a number, name, or press Enter for default:' : 'Enter a number or name:');
+    if (input.trim() === '' && defaultIdx >= 0) return options[defaultIdx];
+    const num = parseInt(input, 10);
     if (!isNaN(num) && num >= 1 && num <= options.length) return options[num - 1];
     const match = options.find(
       (o) => o.toLowerCase() === input.toLowerCase() ||

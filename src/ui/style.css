@@ -73,7 +73,8 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
 .entry-gm      { color: var(--gm); }
 .entry-player  { color: var(--player); }
 .entry-system  { color: var(--system); }
-.entry-option  { color: var(--option); }
+.entry-option         { color: var(--option); }
+.entry-option-default { color: var(--gm); }
 .entry-error   { color: var(--error); }
 .entry-thinking { color: var(--system); font-style: italic; }
 
