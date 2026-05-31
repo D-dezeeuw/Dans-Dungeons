@@ -51,7 +51,7 @@ const DEFAULTS = {
   transcript: [],
   settings: {
     sceneImage: false,  // generate a journal-sketch scene image after each turn
-    actionBar:  false,  // show the action bar above the debug bar
+    actionBar:  true,   // show the action bar above the debug bar
   },
 };
 

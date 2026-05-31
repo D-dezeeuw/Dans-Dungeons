@@ -528,7 +528,7 @@ export function insertActionChip(label, value) {
 
 export function showActionChips(actions) {
   const el = actionChipsEl();
-  el.innerHTML = '';
+  if (!el) return;
   for (const action of actions) {
     const btn = document.createElement('button');
     btn.className   = 'chip';
@@ -539,9 +539,10 @@ export function showActionChips(actions) {
 }
 
 export function clearChips() {
-  actionChipsEl().innerHTML = '';
-  characterChipsEl().innerHTML = '';
-  skillChipsEl().innerHTML = '';
+  const a = actionChipsEl(), c = characterChipsEl(), s = skillChipsEl();
+  if (a) a.innerHTML = '';
+  if (c) c.innerHTML = '';
+  if (s) s.innerHTML = '';
 }
 
 // Dynamic room chips — exits, loot, and standard actions.

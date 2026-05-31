@@ -10,14 +10,14 @@
   --text:     #c8c0a8;    /* parchment */
   --gm:       #d4b896;    /* narrator */
   --player:   #7ec8e3;    /* player */
-  --system:   #5a5a5a;    /* system / meta */
+  --system:   #787060;    /* system / meta — lifted for readability */
   --option:   #8ab08a;    /* menu options */
   --error:    #e05050;
   --hp-ok:    #4ade80;
   --hp-low:   #f87171;
-  --chip-bg:  #1e1e1e;
-  --chip-border: #3a3a3a;
-  --chip-hover:  #2a2a2a;
+  --chip-bg:  #242424;
+  --chip-border: #4a4a4a;
+  --chip-hover:  #303030;
   --font:     'Courier New', Courier, 'Lucida Console', monospace;
   --sidebar-w: 220px;
 }
@@ -523,7 +523,7 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
   transition: background 0.1s, border-color 0.1s;
 }
 .ab-tile:hover { background: var(--chip-hover); border-color: var(--system); }
-.ab-tile .ab-sub { display: block; font-size: 8px; color: var(--system); }
+.ab-tile .ab-sub { display: block; font-size: 8px; color: var(--system); opacity: 0.85; }
 .ab-tile.ab-cooldown { opacity: 0.25; cursor: not-allowed; }
 
 /* ─── Export zone ────────────────────────────────────────────── */
@@ -547,7 +547,7 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
 .export-tile {
   background: var(--chip-bg);
   border: 1px solid var(--chip-border);
-  color: var(--system);
+  color: var(--text);
   font-family: var(--font);
   font-size: 10px;
   padding: 0.25rem 0.4rem;
