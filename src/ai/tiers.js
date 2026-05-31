@@ -4,7 +4,7 @@
 // Defaults are sensible OpenRouter models; the player can override in the UI.
 
 export const DEFAULT_MODELS = {
-  tiny:   'google/gemini-3.1-flash-lite',  // classifier — runs every turn (cheap, fast)
+  tiny:   'google/gemini-2.5-flash-lite',   // classifier — runs every turn (cheap, fast)
   medium: 'deepseek/deepseek-v4-pro',      // narrator — quality matters
   large:  'deepseek/deepseek-v4-pro',      // world gen — not used in Phase 3
   image:  'google/gemini-2.5-flash-image', // scene sketch — optional, fires after each turn
