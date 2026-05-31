@@ -32,16 +32,27 @@ import * as UI from './ui/console.js';
 let sketchView = 'windowed';
 
 function applySketchView(view) {
+  const prev = sketchView;
   sketchView = view;
   const panel = document.getElementById('scene-image-panel');
   panel?.classList.toggle('sketch-max', view === 'maximized');
-  if (view === 'minimized') UI.hideSceneImage();
+  if (view === 'minimized') {
+    UI.hideSceneImage();
+  } else if (prev === 'minimized') {
+    // Restore last image from DOM or localStorage when un-minimizing.
+    UI.restoreSceneImage();
+  }
   ['min', 'win', 'max'].forEach(id => {
     const map = { min: 'minimized', win: 'windowed', max: 'maximized' };
     document.getElementById(`sketch-btn-${id}`)
       ?.setAttribute('aria-pressed', String(map[id] === view));
   });
 }
+
+// ─── Journal log ──────────────────────────────────────────────────────────────
+// Accumulates {turn, narration, imageSrc} entries for the current session.
+
+const journalLog = [];
 
 // ─── Reactive sidebar (subscribes to appState) ────────────────────────────────
 
@@ -75,16 +86,19 @@ function buildImagePrompt(narration) {
   return npcs.length ? `${base} ${npcs.join(', ')} present.` : base;
 }
 
-// Fire-and-forget: generates a scene image and updates the panel when ready.
-function requestSceneImage(narration) {
-  if (sketchView === 'minimized') return;
+// Generates a scene image, updates the panel, and returns a Promise<string|null>.
+// Pass a journalEntry object to backfill imageSrc when the image resolves.
+function requestSceneImage(narration, journalEntry = null) {
+  if (sketchView === 'minimized') return Promise.resolve(null);
   UI.showSceneImageLoading();
-  generateSceneImage(buildImagePrompt(narration))
+  return generateSceneImage(buildImagePrompt(narration))
     .then(src => {
       console.log('[scene-image] generateSceneImage resolved:', src ? `data URI ${src.length} chars` : 'null');
       src ? UI.setSceneImage(src) : UI.hideSceneImage();
+      if (src && journalEntry) journalEntry.imageSrc = src;
+      return src;
     })
-    .catch(e => { console.warn('[scene-image] uncaught error', e); UI.hideSceneImage(); });
+    .catch(e => { console.warn('[scene-image] uncaught error', e); UI.hideSceneImage(); return null; });
 }
 
 // ─── Key / settings setup ────────────────────────────────────────────────────
@@ -189,7 +203,12 @@ async function beginAdventure() {
   );
   UI.appendEntry('system', '');
 
-  if (appState.settings?.sceneImage) requestSceneImage(room.description);
+  // Opening journal entry — the scene description is the first narration.
+  const openingEntry = { turn: 0, narration: room.description, imageSrc: null };
+  journalLog.push(openingEntry);
+  document.getElementById('journal-btn').style.display = '';
+
+  if (appState.settings?.sceneImage) requestSceneImage(room.description, openingEntry);
 
   await playLoop();
 }
@@ -311,8 +330,12 @@ async function playLoop() {
     if (!streamEl && result?.narration) UI.appendEntry('gm', result.narration);
     UI.appendEntry('system', '');
 
+    // Journal entry — accumulate narration now; image backfilled when it resolves.
+    const journalEntry = { turn: appState.session?.turnCount ?? 0, narration: result?.narration ?? '', imageSrc: null };
+    journalLog.push(journalEntry);
+
     // Scene sketch — non-blocking; fires after narration is visible.
-    if (appState.settings?.sceneImage) requestSceneImage(result?.narration);
+    if (appState.settings?.sceneImage) requestSceneImage(result?.narration, journalEntry);
 
     UI.updateDebugPanel(result?._debug);
   }
@@ -418,6 +441,62 @@ async function resumeGame() {
   await playLoop();
 }
 
+// ─── Journal generator ────────────────────────────────────────────────────────
+// Builds a standalone HTML file from journalLog and triggers a download.
+// No dependencies — everything is inline: CSS, base64 images, text.
+
+function createJournal() {
+  if (!journalLog.length) return;
+  const pcName  = appState.party?.pc?.record?.name ?? 'Adventurer';
+  const pcClass = appState.party?.pc?.record?.classId ?? '';
+
+  const entriesHtml = journalLog.map((entry, i) => {
+    const heading = i === 0 ? 'The Adventure Begins' : `Turn ${entry.turn}`;
+    const img = entry.imageSrc
+      ? `<img src="${entry.imageSrc}" alt="Scene sketch" style="width:100%;display:block;margin-bottom:1.2rem;border-radius:2px;">`
+      : '';
+    const text = entry.narration
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/\n/g, '<br>');
+    return `<div class="entry">
+  <div class="turn-label">${heading}</div>
+  ${img}
+  <p>${text}</p>
+</div>`;
+  }).join('\n');
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Journal of ${pcName.replace(/</g, '&lt;')}</title>
+<style>
+  body { background:#f5e6c8; color:#3a2a1a; font-family:Georgia,'Times New Roman',serif; max-width:700px; margin:0 auto; padding:2rem 1.5rem; line-height:1.8; }
+  h1 { text-align:center; font-size:2rem; margin-bottom:0.3rem; color:#5c3d1a; letter-spacing:0.04em; }
+  .subtitle { text-align:center; color:#8c6a3a; font-style:italic; margin-bottom:2.5rem; font-size:1rem; }
+  .entry { border-top:1px solid #c8a878; padding-top:1.5rem; margin-top:1.5rem; }
+  .entry:first-child { border-top:none; margin-top:0; }
+  .turn-label { font-size:0.75rem; text-transform:uppercase; letter-spacing:0.1em; color:#8c6a3a; margin-bottom:0.8rem; }
+  p { margin:0; }
+  img { border:1px solid #c8a878; }
+</style>
+</head>
+<body>
+<h1>Journal of ${pcName.replace(/</g, '&lt;')}</h1>
+<div class="subtitle">A ${pcClass} — Dan's Dungeons</div>
+${entriesHtml}
+</body>
+</html>`;
+
+  const blob = new Blob([html], { type: 'text/html' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `dans-dungeons-journal-${pcName.toLowerCase().replace(/\s+/g, '-')}.html`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 // ─── Key guard ────────────────────────────────────────────────────────────────
 // Called once in boot after state is restored. Ensures a working key exists
 // before any gameplay begins. If the stored key is present but invalid (401)
@@ -463,6 +542,9 @@ async function boot() {
   document.getElementById('sketch-btn-min')?.addEventListener('click', () => applySketchView('minimized'));
   document.getElementById('sketch-btn-win')?.addEventListener('click', () => applySketchView('windowed'));
   document.getElementById('sketch-btn-max')?.addEventListener('click', () => applySketchView('maximized'));
+
+  // Journal download.
+  document.getElementById('journal-btn')?.addEventListener('click', createJournal);
 
   run();
 

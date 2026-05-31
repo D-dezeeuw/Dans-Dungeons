@@ -267,6 +267,7 @@ export async function generateSceneImage(sceneDescription) {
     'Old hand-drawn journal sketch of a medieval fantasy scene. ' +
     'Black ink lines on sepia parchment paper. Rough, scratchy linework. ' +
     'No colour — only shades of sepia and black ink. Like an adventurer\'s field journal. ' +
+    'No text, no labels, no writing of any kind. No borders, no frames, no decorative edges. ' +
     'Scene: ' + sceneDescription;
 
   let res;

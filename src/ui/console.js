@@ -260,12 +260,19 @@ export function updateDebugPanel(debug) {
   if (classified.dc != null) cs.rows.push({ text: `dc: ${classified.dc}` });
   if (classified.reason)    cs.rows.push({ text: classified.reason, cls: 'dim' });
 
+  // Renders a d20 value with nat-1/nat-20 highlight if applicable.
+  function d20Html(val) {
+    if (val === 1)  return `d20  <strong class="nat-1">${val}</strong>`;
+    if (val === 20) return `d20  <strong class="nat-20">${val}</strong>`;
+    return escHtml(`d20  ${val}`);
+  }
+
   // ── PC action ─────────────────────────────────────────────────────────────
   if (resolved.intent === 'attack') {
     const s = sec('pc attack');
     s.rows.push({ text: resolved.weaponName });
     const bonus = resolved.totalHit - resolved.d20;
-    s.rows.push({ text: `d20  ${resolved.d20}  +${bonus}  → ${resolved.totalHit}` });
+    s.rows.push({ html: `${d20Html(resolved.d20)}  +${escHtml(String(bonus))}  → ${escHtml(String(resolved.totalHit))}` });
     const label = resolved.crit ? 'CRIT ✓' : resolved.fumble ? 'FUMBLE ✗' : resolved.hit ? 'HIT ✓' : 'MISS ✗';
     s.rows.push({ text: `AC   ${resolved.targetAC}  ${label}`, cls: resolved.hit && !resolved.fumble ? 'hit' : 'miss' });
     if (resolved.hit) {
@@ -275,7 +282,7 @@ export function updateDebugPanel(debug) {
   } else if (resolved.intent === 'skill') {
     const s = sec(`skill: ${resolved.skill} (${resolved.ability})`);
     const bonus = resolved.abilMod + resolved.profBonus;
-    s.rows.push({ text: `d20  ${resolved.d20}  +${bonus}  → ${resolved.total}` });
+    s.rows.push({ html: `${d20Html(resolved.d20)}  +${escHtml(String(bonus))}  → ${escHtml(String(resolved.total))}` });
     s.rows.push({ text: `DC   ${resolved.dc}  ${resolved.success ? 'PASS ✓' : 'FAIL ✗'}`, cls: resolved.success ? 'hit' : 'miss' });
   } else {
     const s = sec('pc action');
@@ -287,7 +294,7 @@ export function updateDebugPanel(debug) {
   if (goblinResult) {
     const s = sec(goblinResult.goblinName);
     const bonus = goblinResult.totalHit - goblinResult.d20;
-    s.rows.push({ text: `d20  ${goblinResult.d20}  +${bonus}  → ${goblinResult.totalHit}` });
+    s.rows.push({ html: `${d20Html(goblinResult.d20)}  +${escHtml(String(bonus))}  → ${escHtml(String(goblinResult.totalHit))}` });
     const label = goblinResult.crit ? 'CRIT ✓' : goblinResult.fumble ? 'FUMBLE ✗' : goblinResult.hit ? 'HIT ✓' : 'MISS ✗';
     s.rows.push({ text: `AC   ${goblinResult.pcAC}  ${label}`, cls: goblinResult.hit && !goblinResult.fumble ? 'hit' : 'miss' });
     if (goblinResult.hit) {
@@ -298,7 +305,7 @@ export function updateDebugPanel(debug) {
 
   el.innerHTML = sections.map(s => `<div class="dbg-section">
     <div class="dbg-sep">${escHtml(s.label)}</div>
-    ${s.rows.map(r => `<div class="dbg-row${r.cls ? ' ' + r.cls : ''}">${escHtml(r.text)}</div>`).join('')}
+    ${s.rows.map(r => `<div class="dbg-row${r.cls ? ' ' + r.cls : ''}">${r.html ?? escHtml(r.text)}</div>`).join('')}
   </div>`).join('');
 }
 
@@ -501,6 +508,22 @@ export function setSceneImage(src) {
   img.style.display = '';
   sceneLoadEl().style.display = 'none';
   panel.style.display = '';
+  try { localStorage.setItem('sketch-last-image', src); } catch { /* quota — skip */ }
+}
+
+// Show the panel using whatever src is already in the img (or fall back to localStorage).
+// Used when un-minimizing without a fresh image.
+export function restoreSceneImage() {
+  const panel = scenePanelEl();
+  const img   = sceneImgEl();
+  if (!panel || !img) return false;
+  const src = img.src || localStorage.getItem('sketch-last-image');
+  if (!src) return false;
+  if (!img.src) img.src = src;
+  img.style.display = '';
+  sceneLoadEl().style.display = 'none';
+  panel.style.display = '';
+  return true;
 }
 
 export function hideSceneImage() {

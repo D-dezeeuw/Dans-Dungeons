@@ -292,6 +292,8 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
 .dbg-row.hit  { color: var(--hp-ok); }
 .dbg-row.miss { color: var(--hp-low); }
 .dbg-row.dim  { color: #383838; font-style: italic; white-space: normal; max-width: 180px; }
+.nat-1  { font-weight: bold; color: #b44fdb; }
+.nat-20 { font-weight: bold; color: #ffaa00; }
 
 /* ─── Input row ──────────────────────────────────────────── */
 #input-row {
@@ -381,6 +383,25 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
   border-color: var(--gm);
   background: rgba(212, 184, 150, 0.08);
 }
+
+/* ─── Journal button ─────────────────────────────────────────── */
+#journal-btn {
+  display: none;
+  width: 100%;
+  margin-top: 0.4rem;
+  padding: 0.3rem 0.6rem;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--system);
+  font-family: var(--font);
+  font-size: 11px;
+  cursor: pointer;
+  border-radius: 2px;
+  text-align: left;
+  letter-spacing: 0.04em;
+  transition: color 0.15s, border-color 0.15s;
+}
+#journal-btn:hover { color: var(--gm); border-color: var(--gm); }
 
 /* ─── Scene image panel ──────────────────────────────────────── */
 #scene-image-panel {
