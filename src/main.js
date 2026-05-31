@@ -62,8 +62,11 @@ function buildImagePrompt() {
 function requestSceneImage() {
   UI.showSceneImageLoading();
   generateSceneImage(buildImagePrompt())
-    .then(src => { src ? UI.setSceneImage(src) : UI.hideSceneImage(); })
-    .catch(() => UI.hideSceneImage());
+    .then(src => {
+      console.log('[scene-image] generateSceneImage resolved:', src ? `data URI ${src.length} chars` : 'null');
+      src ? UI.setSceneImage(src) : UI.hideSceneImage();
+    })
+    .catch(e => { console.warn('[scene-image] uncaught error', e); UI.hideSceneImage(); });
 }
 
 // ─── Key / settings setup ────────────────────────────────────────────────────

@@ -291,13 +291,29 @@ export async function generateSceneImage(sceneDescription) {
   }
 
   let data;
-  try { data = await res.json(); } catch { return null; }
+  try { data = await res.json(); } catch (e) {
+    console.warn('[scene-image] res.json() failed', e);
+    return null;
+  }
 
   // Usage tracking (image tokens are counted alongside text tokens).
   if (data.usage?.total_tokens) addValue('ai.totalTokens', data.usage.total_tokens);
 
   // Extract image data URI from various possible response shapes.
-  const content = data.choices?.[0]?.message?.content;
+  const msg     = data.choices?.[0]?.message ?? {};
+  const content = msg.content;
+
+  console.log('[scene-image] msg keys:', Object.keys(msg), '| content type:', typeof content, '| images array:', Array.isArray(msg.images));
+
+  // Gemini via OpenRouter: image lands in message.images[], not message.content
+  if (Array.isArray(msg.images)) {
+    for (const part of msg.images) {
+      if (part.type === 'image_url' && part.image_url?.url) {
+        console.log('[scene-image] extracted from msg.images, length:', part.image_url.url.length);
+        return part.image_url.url;
+      }
+    }
+  }
 
   if (Array.isArray(content)) {
     for (const part of content) {
