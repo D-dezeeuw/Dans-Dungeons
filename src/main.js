@@ -171,6 +171,8 @@ async function beginAdventure() {
   );
   UI.appendEntry('system', '');
 
+  if (appState.settings?.sceneImage) requestSceneImage(room.description);
+
   await playLoop();
 }
 
