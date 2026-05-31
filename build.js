@@ -36,16 +36,24 @@ const sw = fs.readFileSync(swPath, 'utf8');
 const updated = sw.replace(/const VERSION\s*=\s*'app-[^']+';/, `const VERSION  = 'app-${version}';`);
 fs.writeFileSync(swPath, updated);
 
-// Inline style.css into index.html between the <!-- BUILD:CSS --> markers
-const css     = fs.readFileSync('src/ui/style.css', 'utf8');
-const html    = fs.readFileSync('index.html', 'utf8');
-const inlined = html.replace(
-  /<!-- BUILD:CSS -->[\s\S]*?<!-- \/BUILD:CSS -->/,
-  `<!-- BUILD:CSS --><style>${css}</style><!-- /BUILD:CSS -->`
+// Inline critical.css and load style.css non-blocking
+const critical = fs.readFileSync('src/ui/critical.css', 'utf8');
+const deferred = `<link rel="stylesheet" href="src/ui/style.css" media="print" onload="this.media='all'">` +
+                 `<noscript><link rel="stylesheet" href="src/ui/style.css"></noscript>`;
+
+let html = fs.readFileSync('index.html', 'utf8');
+html = html.replace(
+  /<!-- BUILD:CSS-CRITICAL -->[\s\S]*?<!-- \/BUILD:CSS-CRITICAL -->/,
+  `<!-- BUILD:CSS-CRITICAL --><style>${critical}</style><!-- /BUILD:CSS-CRITICAL -->`
 );
-fs.writeFileSync('index.html', inlined);
+html = html.replace(
+  /<!-- BUILD:CSS-DEFERRED -->[\s\S]*?<!-- \/BUILD:CSS-DEFERRED -->/,
+  `<!-- BUILD:CSS-DEFERRED -->${deferred}<!-- /BUILD:CSS-DEFERRED -->`
+);
+fs.writeFileSync('index.html', html);
 
 console.log(`\nBuilt ${outfile}  [${version}]`);
-console.log(`Bundle: ${(fs.statSync(outfile).size / 1024).toFixed(1)} KB`);
-console.log(`CSS inlined: ${(Buffer.byteLength(css) / 1024).toFixed(1)} KB`);
+console.log(`Bundle:   ${(fs.statSync(outfile).size / 1024).toFixed(1)} KB`);
+console.log(`Critical: ${(Buffer.byteLength(critical) / 1024).toFixed(1)} KB inlined`);
+console.log(`Full CSS: loaded non-blocking after first paint`);
 console.log(`SW cache key: app-${version}`);
