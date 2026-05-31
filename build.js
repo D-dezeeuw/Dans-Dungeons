@@ -12,6 +12,7 @@ const outfile = 'vendor/app.bundle.js';
 await esbuild.build({
   entryPoints: ['src/main.js'],
   bundle:      true,
+  minify:      true,
   format:      'iife',
   outfile,
   // Map bare specifiers to local vendor files
