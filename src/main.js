@@ -48,20 +48,20 @@ function registerReactiveSidebar() {
 // ─── Scene image helpers ──────────────────────────────────────────────────────
 
 // Builds a concise scene description for the image generation prompt.
-function buildImagePrompt() {
+function buildImagePrompt(narration) {
   const roomId = appState.world?.currentRoom;
   const room   = appState.world?.rooms?.[roomId];
   const npcs   = Object.values(appState.world?.npcs ?? {})
     .filter(n => n.roomId === roomId && n.alive)
     .map(n => n.name);
-  const desc = room?.description ?? 'A dark dungeon corridor';
-  return npcs.length ? `${desc} ${npcs.join(', ')} present.` : desc;
+  const base = narration || room?.description || 'A dark dungeon corridor';
+  return npcs.length ? `${base} ${npcs.join(', ')} present.` : base;
 }
 
 // Fire-and-forget: generates a scene image and updates the panel when ready.
-function requestSceneImage() {
+function requestSceneImage(narration) {
   UI.showSceneImageLoading();
-  generateSceneImage(buildImagePrompt())
+  generateSceneImage(buildImagePrompt(narration))
     .then(src => {
       console.log('[scene-image] generateSceneImage resolved:', src ? `data URI ${src.length} chars` : 'null');
       src ? UI.setSceneImage(src) : UI.hideSceneImage();
@@ -292,7 +292,7 @@ async function playLoop() {
     UI.appendEntry('system', '');
 
     // Scene sketch — non-blocking; fires after narration is visible.
-    if (appState.settings?.sceneImage) requestSceneImage();
+    if (appState.settings?.sceneImage) requestSceneImage(result?.narration);
 
     UI.updateDebugPanel(result?._debug);
   }
