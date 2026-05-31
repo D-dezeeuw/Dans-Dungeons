@@ -3,6 +3,29 @@
 // All DOM reads and writes live here. The loop calls these functions;
 // this module never touches the AI or Spektrum directly.
 
+// ─── Floating tooltip ─────────────────────────────────────────────────────────
+// Single shared div appended to <body> so it's never clipped by overflow.
+const _tip = document.createElement('div');
+_tip.id = 'ab-tooltip';
+document.body.appendChild(_tip);
+
+document.addEventListener('mouseover', (e) => {
+  const el = e.target.closest('[data-tip]');
+  if (!el) return;
+  _tip.textContent = el.dataset.tip;
+  const r = el.getBoundingClientRect();
+  // Position above the element, centred horizontally
+  _tip.style.left = `${r.left + r.width / 2}px`;
+  _tip.style.top  = `${r.top - 8}px`;
+  _tip.style.transform = 'translate(-50%, -100%)';
+  _tip.classList.add('visible');
+});
+
+document.addEventListener('mouseout', (e) => {
+  if (!e.target.closest('[data-tip]')) return;
+  _tip.classList.remove('visible');
+});
+
 // ─── Input history ────────────────────────────────────────────────────────────
 // Stores player-submitted strings for UP/DOWN recall. Newest at the end.
 // _historyCursor = -1 means "not browsing"; goes from len-1 (newest) down to 0.

@@ -490,16 +490,8 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
 }
 
 /* ─── Action bar tooltips ────────────────────────────────────── */
-[data-tip] {
-  position: relative;
-}
-[data-tip]::after {
-  content: attr(data-tip);
-  position: absolute;
-  bottom: calc(100% + 6px);
-  left: 50%;
-  transform: translateX(-50%);
-  white-space: pre-line;
+#ab-tooltip {
+  position: fixed;
   background: #1a1a1a;
   border: 1px solid var(--border);
   color: var(--text);
@@ -507,19 +499,18 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
   font-size: 10px;
   font-weight: normal;
   line-height: 1.5;
+  white-space: pre-line;
   padding: 4px 8px;
   border-radius: 3px;
   pointer-events: none;
   opacity: 0;
   transition: opacity 0.15s;
-  z-index: 100;
+  z-index: 9999;
   min-width: 120px;
   max-width: 220px;
   text-align: left;
 }
-[data-tip]:hover::after {
-  opacity: 1;
-}
+#ab-tooltip.visible { opacity: 1; }
 
 /* ─── Compass direction letters ──────────────────────────────── */
 .ab-dir-btn {
