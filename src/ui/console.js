@@ -51,7 +51,8 @@ function setInputEnabled(on, placeholder = 'What do you do?') {
 // ─── Transcript helpers ───────────────────────────────────────────────────────
 
 export function clear() {
-  transcriptEl().innerHTML = '';
+  // Preserve non-entry children (e.g. #scene-image-panel) — only remove entries.
+  transcriptEl().querySelectorAll('.entry').forEach(e => e.remove());
 }
 
 export function appendEntry(role, text) {
@@ -455,6 +456,35 @@ export function clearChips() {
 }
 
 // Dynamic room chips — exits, loot, and standard actions.
+// ─── Scene image panel ────────────────────────────────────────────────────────
+
+const scenePanelEl  = () => document.getElementById('scene-image-panel');
+const sceneImgEl    = () => document.getElementById('scene-image');
+const sceneLoadEl   = () => document.getElementById('scene-image-loading');
+
+export function showSceneImageLoading() {
+  const panel = scenePanelEl();
+  if (!panel) return;
+  panel.style.display = '';
+  sceneImgEl().style.display = 'none';
+  sceneLoadEl().style.display = '';
+}
+
+export function setSceneImage(src) {
+  const panel = scenePanelEl();
+  if (!panel) return;
+  const img = sceneImgEl();
+  img.src = src;
+  img.style.display = '';
+  sceneLoadEl().style.display = 'none';
+  panel.style.display = '';
+}
+
+export function hideSceneImage() {
+  const panel = scenePanelEl();
+  if (panel) panel.style.display = 'none';
+}
+
 export function showRoomChips(exits, loot) {
   const ICON = { north: '↑', south: '↓', east: '→', west: '←' };
   const cap  = s => s.charAt(0).toUpperCase() + s.slice(1);

@@ -49,6 +49,9 @@ const DEFAULTS = {
   },
   flags: {},
   transcript: [],
+  settings: {
+    sceneImage: false,  // generate a journal-sketch scene image after each turn
+  },
 };
 
 export function initState() {
@@ -76,6 +79,7 @@ export function saveToStorage() {
     world:      appState.world,
     flags:      appState.flags,
     transcript: appState.transcript,
+    settings:   appState.settings,
   };
   try {
     localStorage.setItem(SAVE_KEY, JSON.stringify(snap));

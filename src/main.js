@@ -20,9 +20,10 @@ import {
   tick,
 } from './core/state.js';
 
-import { generateWorld }   from './game/world.js';
-import { createCharacter } from './game/character.js';
-import { processTurn }     from './game/loop.js';
+import { generateWorld }      from './game/world.js';
+import { createCharacter }    from './game/character.js';
+import { processTurn }        from './game/loop.js';
+import { generateSceneImage } from './ai/openrouter.js';
 import * as UI from './ui/console.js';
 
 // ─── Reactive sidebar (subscribes to appState) ────────────────────────────────
@@ -42,6 +43,27 @@ function registerReactiveSidebar() {
     const roomNpcs = Object.values(appState.world?.npcs ?? {}).filter(n => n.roomId === currentRoom);
     UI.updateEnemyStats(roomNpcs);
   });
+}
+
+// ─── Scene image helpers ──────────────────────────────────────────────────────
+
+// Builds a concise scene description for the image generation prompt.
+function buildImagePrompt() {
+  const roomId = appState.world?.currentRoom;
+  const room   = appState.world?.rooms?.[roomId];
+  const npcs   = Object.values(appState.world?.npcs ?? {})
+    .filter(n => n.roomId === roomId && n.alive)
+    .map(n => n.name);
+  const desc = room?.description ?? 'A dark dungeon corridor';
+  return npcs.length ? `${desc} ${npcs.join(', ')} present.` : desc;
+}
+
+// Fire-and-forget: generates a scene image and updates the panel when ready.
+function requestSceneImage() {
+  UI.showSceneImageLoading();
+  generateSceneImage(buildImagePrompt())
+    .then(src => { src ? UI.setSceneImage(src) : UI.hideSceneImage(); })
+    .catch(() => UI.hideSceneImage());
 }
 
 // ─── Key / settings setup ────────────────────────────────────────────────────
@@ -176,6 +198,9 @@ async function playLoop() {
     if (!streamEl && result?.narration) UI.appendEntry('gm', result.narration);
     UI.appendEntry('system', '');
 
+    // Scene sketch — non-blocking; fires after narration is visible.
+    if (appState.settings?.sceneImage) requestSceneImage();
+
     UI.updateDebugPanel(result?._debug);
   }
 }
@@ -286,6 +311,16 @@ async function boot() {
   UI.initCollapsibles();
   UI.initCopyKeyButton(() => appState.ai?.key ?? '');
 
+  // Scene-image toggle — reads/writes settings.sceneImage in Spektrum.
+  const sceneToggle = document.getElementById('scene-image-toggle');
+  sceneToggle?.addEventListener('click', () => {
+    const next = !(appState.settings?.sceneImage ?? false);
+    setValue('settings.sceneImage', next);
+    sceneToggle.setAttribute('aria-pressed', String(next));
+    if (!next) UI.hideSceneImage();
+    saveToStorage();
+  });
+
   run();
 
   // Register reactive subscriptions before first tick so they fire with initial state.
@@ -309,6 +344,9 @@ async function boot() {
   // Bind declarative {{expr}} / data-if to live appState after first tick.
   bindDOM(document.getElementById('chrome'));
   bindDOM(document.getElementById('sidebar-header'));
+
+  // Sync toggle button to restored setting.
+  sceneToggle?.setAttribute('aria-pressed', String(appState.settings?.sceneImage ?? false));
 
   if (save) {
     if (!appState.ai?.key) { await setupKey(); tick(); }

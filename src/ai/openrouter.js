@@ -232,6 +232,76 @@ async function _callStream(opts, onChunk) {
   }
 }
 
+// ─── Scene image generation ───────────────────────────────────────────────────
+//
+// Calls the Gemini image model with a journal-sketch style prompt.
+// Returns a data-URI string (ready for <img src>), or null on failure.
+// Never throws — image generation is decorative; errors are silent.
+
+export async function generateSceneImage(sceneDescription) {
+  const ai   = appState.ai || {};
+  const base = (ai.baseUrl || 'https://openrouter.ai/api/v1').replace(/\/$/, '');
+  const model = modelFor('image', ai);
+
+  const prompt =
+    'Old hand-drawn journal sketch of a medieval fantasy scene. ' +
+    'Black ink lines on sepia parchment paper. Rough, scratchy linework. ' +
+    'No colour — only shades of sepia and black ink. Like an adventurer\'s field journal. ' +
+    'Scene: ' + sceneDescription;
+
+  let res;
+  try {
+    res = await fetch(`${base}/chat/completions`, {
+      method: 'POST',
+      headers: headers(ai.key || '', location.origin),
+      body: JSON.stringify({
+        model,
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 2048,
+      }),
+    });
+  } catch (e) {
+    console.warn('[scene-image] fetch failed', e);
+    return null;
+  }
+
+  if (!res.ok) {
+    console.warn('[scene-image] API error', res.status);
+    return null;
+  }
+
+  let data;
+  try { data = await res.json(); } catch { return null; }
+
+  // Usage tracking (image tokens are counted alongside text tokens).
+  if (data.usage?.total_tokens) addValue('ai.totalTokens', data.usage.total_tokens);
+
+  // Extract image data URI from various possible response shapes.
+  const content = data.choices?.[0]?.message?.content;
+
+  if (Array.isArray(content)) {
+    for (const part of content) {
+      // OpenAI-compatible image_url part
+      if (part.type === 'image_url' && part.image_url?.url) return part.image_url.url;
+      // Gemini inline_data part (via OpenRouter shim)
+      if (part.type === 'image' && part.data) return `data:image/png;base64,${part.data}`;
+      if (part.inline_data?.data) {
+        const mime = part.inline_data.mime_type || 'image/png';
+        return `data:${mime};base64,${part.inline_data.data}`;
+      }
+    }
+  }
+
+  // Fallback: scan a string response for an embedded data URI.
+  if (typeof content === 'string') {
+    const m = content.match(/data:image\/[^;]+;base64,[A-Za-z0-9+/]+=*/);
+    if (m) return m[0];
+  }
+
+  console.warn('[scene-image] no image data found in response', data);
+  return null;
+}
+
 // ─── Public helpers ───────────────────────────────────────────────────────────
 
 export async function chatCompletion(opts) {
