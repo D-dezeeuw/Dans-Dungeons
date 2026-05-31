@@ -209,6 +209,7 @@ async function beginAdventure() {
   document.getElementById('journal-btn').style.display = '';
 
   if (appState.settings?.sceneImage) requestSceneImage(room.description, openingEntry);
+  if (appState.settings?.actionBar)  UI.updateActionBar(room.exits ?? [], appState.party?.pc?.record, appState.party?.pc?.sheet, {});
 
   await playLoop();
 }
@@ -233,6 +234,9 @@ async function playLoop() {
     UI.showRoomChips(room?.exits ?? [], room?.loot ?? []);
     UI.showCharacterChips(appState.party?.pc?.record, appState.party?.pc?.sheet);
     UI.showSkillChips(appState.session?.skillCooldowns ?? {});
+    if (appState.settings?.actionBar) {
+      UI.updateActionBar(room?.exits ?? [], appState.party?.pc?.record, appState.party?.pc?.sheet, appState.session?.skillCooldowns ?? {});
+    }
 
     // Surface a Retry chip if the previous turn failed after all retries.
     if (pendingRetry) {
@@ -441,6 +445,12 @@ async function resumeGame() {
   await playLoop();
 }
 
+// ─── Action bar ───────────────────────────────────────────────────────────────
+
+function applyActionBarState(on) {
+  document.getElementById('action-bar').style.display = on ? '' : 'none';
+}
+
 // ─── Journal generator ────────────────────────────────────────────────────────
 // Builds a standalone HTML file from journalLog and triggers a download.
 // No dependencies — everything is inline: CSS, base64 images, text.
@@ -543,6 +553,17 @@ async function boot() {
   document.getElementById('sketch-btn-win')?.addEventListener('click', () => applySketchView('windowed'));
   document.getElementById('sketch-btn-max')?.addEventListener('click', () => applySketchView('maximized'));
 
+  // Action bar toggle.
+  const actionBarToggle = document.getElementById('action-bar-toggle');
+  actionBarToggle?.addEventListener('click', () => {
+    const next = !(appState.settings?.actionBar ?? false);
+    setValue('settings.actionBar', next);
+    actionBarToggle.setAttribute('aria-pressed', String(next));
+    actionBarToggle.textContent = next ? 'ON' : 'OFF';
+    applyActionBarState(next);
+    saveToStorage();
+  });
+
   // Journal download.
   document.getElementById('journal-btn')?.addEventListener('click', createJournal);
 
@@ -574,6 +595,14 @@ async function boot() {
   const sketchOn = appState.settings?.sceneImage ?? false;
   sceneToggle?.setAttribute('aria-pressed', String(sketchOn));
   if (sketchControls) sketchControls.style.display = sketchOn ? '' : 'none';
+
+  // Sync action bar toggle to restored setting.
+  const abOn = appState.settings?.actionBar ?? false;
+  if (actionBarToggle) {
+    actionBarToggle.setAttribute('aria-pressed', String(abOn));
+    actionBarToggle.textContent = abOn ? 'ON' : 'OFF';
+  }
+  applyActionBarState(abOn);
 
   await ensureKey();
 

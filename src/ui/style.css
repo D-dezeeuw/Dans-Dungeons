@@ -384,6 +384,134 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
   background: rgba(212, 184, 150, 0.08);
 }
 
+/* ─── Action bar toggle (sidebar) ───────────────────────────── */
+#ab-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.3rem 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+.ab-toggle-label {
+  flex: 1;
+  font-family: var(--font);
+  font-size: 10px;
+  color: var(--system);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+#action-bar-toggle {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--system);
+  font-family: var(--font);
+  font-size: 10px;
+  cursor: pointer;
+  padding: 0.1rem 0.4rem;
+  border-radius: 2px;
+  line-height: 1.4;
+  transition: color 0.15s, border-color 0.15s;
+}
+#action-bar-toggle:hover { color: var(--text); border-color: var(--system); }
+#action-bar-toggle[aria-pressed="true"] {
+  color: var(--gm);
+  border-color: var(--gm);
+  background: rgba(212, 184, 150, 0.08);
+}
+
+/* ─── Action bar ─────────────────────────────────────────────── */
+#action-bar {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 0;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-mid);
+  padding: 0.4rem 0.75rem;
+  overflow-x: auto;
+}
+#action-bar::-webkit-scrollbar { height: 3px; }
+#action-bar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+.ab-zone {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+.ab-abilities-zone,
+.ab-skills-zone { flex-shrink: 1; min-width: 0; }
+
+.ab-zone-label {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--system);
+  margin-bottom: 0.3rem;
+  white-space: nowrap;
+}
+
+.ab-divider {
+  width: 1px;
+  background: var(--border);
+  margin: 0 0.6rem;
+  align-self: stretch;
+  flex-shrink: 0;
+}
+
+/* ─── Compass ────────────────────────────────────────────────── */
+#ab-compass {
+  display: grid;
+  grid-template-columns: repeat(3, 22px);
+  grid-template-rows: repeat(3, 22px);
+  gap: 2px;
+}
+
+.ab-dir-btn {
+  background: var(--chip-bg);
+  border: 1px solid var(--chip-border);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 10px;
+  font-weight: bold;
+  cursor: pointer;
+  border-radius: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: background 0.1s, border-color 0.1s;
+}
+.ab-dir-btn:hover:not(:disabled) { background: var(--chip-hover); border-color: var(--system); }
+.ab-dir-btn:disabled:not(.ab-locked) { opacity: 0.15; cursor: default; }
+.ab-dir-btn.ab-locked { color: var(--system); border-color: var(--border); cursor: default; }
+
+/* ─── Ability & skill tiles ──────────────────────────────────── */
+#ab-abilities-list,
+#ab-skills-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  align-content: flex-start;
+}
+
+.ab-tile {
+  background: var(--chip-bg);
+  border: 1px solid var(--chip-border);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 10px;
+  padding: 0.15rem 0.4rem;
+  border-radius: 2px;
+  cursor: pointer;
+  text-align: left;
+  white-space: nowrap;
+  line-height: 1.25;
+  transition: background 0.1s, border-color 0.1s;
+}
+.ab-tile:hover { background: var(--chip-hover); border-color: var(--system); }
+.ab-tile .ab-sub { display: block; font-size: 8px; color: var(--system); }
+.ab-tile.ab-cooldown { opacity: 0.25; cursor: not-allowed; }
+
 /* ─── Journal button ─────────────────────────────────────────── */
 #journal-btn {
   display: none;

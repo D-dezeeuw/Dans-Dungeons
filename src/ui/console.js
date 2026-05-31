@@ -386,6 +386,19 @@ function prefillChip(text) {
   cmdEl().setSelectionRange(text.length, text.length);
 }
 
+// Submit immediately if input is awaiting a response; otherwise prefill the field.
+function fireChip(val) {
+  if (_resolveInput) {
+    const fn  = _resolveInput;
+    _resolveInput = null;
+    setInputEnabled(false);
+    cmdEl().value = '';
+    fn(val);
+  } else {
+    prefillChip(val);
+  }
+}
+
 export function showCharacterChips(record, sheet) {
   const el = characterChipsEl();
   if (!el) return;
@@ -500,19 +513,7 @@ export function showActionChips(actions) {
     const btn = document.createElement('button');
     btn.className   = 'chip';
     btn.textContent = action.label;
-    btn.addEventListener('click', () => {
-      const val = action.value ?? action.label;
-      if (_resolveInput) {
-        const fn  = _resolveInput;
-        _resolveInput = null;
-        setInputEnabled(false);
-        cmdEl().value = '';
-        fn(val);
-      } else {
-        cmdEl().value = val;
-        cmdEl().focus();
-      }
-    });
+    btn.addEventListener('click', () => fireChip(action.value ?? action.label));
     el.appendChild(btn);
   }
 }
@@ -588,4 +589,62 @@ export function showRoomChips(exits, loot) {
     { label: '⏳ Wait',        value: 'I wait and watch' },
   ];
   showActionChips(actions);
+}
+
+// ─── Action bar ───────────────────────────────────────────────────────────────
+//
+// Three-zone bar rendered in the footer: compass (movement), class abilities,
+// skills. Updated each turn when the action bar is enabled.
+
+export function updateActionBar(exits, record, sheet, cooldowns) {
+  // ── Compass ────────────────────────────────────────────────────────────────
+  const DIRS = ['north', 'east', 'south', 'west'];
+  for (const dir of DIRS) {
+    const btn  = document.getElementById(`ab-${dir}`);
+    if (!btn) continue;
+    const exit = exits.find(e => e.dir === dir);
+    btn.disabled = !exit;
+    btn.classList.toggle('ab-locked', !!(exit?.locked));
+    btn.onclick = exit
+      ? () => fireChip(exit.locked ? `I try to unlock the door to the ${dir}` : `I go ${dir}`)
+      : null;
+  }
+
+  // ── Class abilities ────────────────────────────────────────────────────────
+  const abEl = document.getElementById('ab-abilities-list');
+  if (abEl) {
+    abEl.innerHTML = '';
+    if (record && sheet) {
+      for (const atk of (sheet.attacks ?? [])) {
+        const btn = document.createElement('button');
+        btn.className = 'ab-tile';
+        btn.innerHTML = `${escHtml(atk.name)}<span class="ab-sub">+${atk.attackBonus} ${escHtml(atk.damageDice)}</span>`;
+        btn.addEventListener('click', () => fireChip(`I attack with my ${atk.name}`));
+        abEl.appendChild(btn);
+      }
+      for (const ability of classAbilities(record, sheet)) {
+        const btn = document.createElement('button');
+        btn.className = 'ab-tile';
+        btn.innerHTML = `${escHtml(ability.label)}<span class="ab-sub">${escHtml(ability.note)}</span>`;
+        btn.addEventListener('click', () => fireChip(ability.text));
+        abEl.appendChild(btn);
+      }
+    }
+  }
+
+  // ── Skills ─────────────────────────────────────────────────────────────────
+  const skEl = document.getElementById('ab-skills-list');
+  if (skEl) {
+    skEl.innerHTML = '';
+    for (const skill of SKILLS) {
+      const remaining = cooldowns[skill.id] ?? 0;
+      const onCd = remaining > 0;
+      const btn = document.createElement('button');
+      btn.className = 'ab-tile' + (onCd ? ' ab-cooldown' : '');
+      btn.disabled = onCd;
+      btn.innerHTML = `${escHtml(skill.label)}<span class="ab-sub">${escHtml(skill.ab)}${onCd ? ` (${remaining})` : ''}</span>`;
+      if (!onCd) btn.addEventListener('click', () => fireChip(`I use ${skill.label}`));
+      skEl.appendChild(btn);
+    }
+  }
 }

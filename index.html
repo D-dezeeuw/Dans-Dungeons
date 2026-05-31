@@ -44,6 +44,10 @@
           <button id="sketch-btn-win" aria-pressed="true"  title="Windowed sketch" aria-label="Windowed sketch">⊡</button>
           <button id="sketch-btn-max" aria-pressed="false" title="Maximize sketch" aria-label="Maximize sketch">⊞</button>
         </div>
+        <div id="ab-toggle-row">
+          <span class="ab-toggle-label">Action bar</span>
+          <button id="action-bar-toggle" aria-pressed="false" title="Show the action bar above the input">OFF</button>
+        </div>
         <button id="journal-btn" title="Download your adventure as a journal">📖 Create Journal</button>
         <div id="pc-stats"></div>
         <div id="enemy-stats"></div>
@@ -54,6 +58,27 @@
     </main>
 
     <footer id="footer">
+      <div id="action-bar" style="display:none" aria-label="Action bar">
+        <div class="ab-zone ab-move-zone">
+          <div class="ab-zone-label">Move</div>
+          <div id="ab-compass">
+            <button id="ab-north" class="ab-dir-btn" style="grid-column:2;grid-row:1" disabled aria-label="Go north">N</button>
+            <button id="ab-west"  class="ab-dir-btn" style="grid-column:1;grid-row:2" disabled aria-label="Go west">W</button>
+            <button id="ab-east"  class="ab-dir-btn" style="grid-column:3;grid-row:2" disabled aria-label="Go east">E</button>
+            <button id="ab-south" class="ab-dir-btn" style="grid-column:2;grid-row:3" disabled aria-label="Go south">S</button>
+          </div>
+        </div>
+        <div class="ab-divider"></div>
+        <div class="ab-zone ab-abilities-zone">
+          <div class="ab-zone-label">Class</div>
+          <div id="ab-abilities-list"></div>
+        </div>
+        <div class="ab-divider"></div>
+        <div class="ab-zone ab-skills-zone">
+          <div class="ab-zone-label">Skills</div>
+          <div id="ab-skills-list"></div>
+        </div>
+      </div>
       <div id="debug-bar" role="button" tabindex="0">
         <span>Last turn</span><span class="toggle-chevron">▾</span>
       </div>
