@@ -20,6 +20,7 @@
 
     <header id="chrome">
       <span id="title">⚔ Dan's Dungeons</span>
+      <span id="pc-header-stats"></span>
       <span id="turn-counter" data-if="session.turnCount">Turn {{session.turnCount}}</span>
       <span id="cost-meter" title="Estimated AI cost this session" data-if="ui.costDisplay">{{ui.costDisplay}}</span>
       <button id="scene-image-toggle" title="Generate a journal-sketch of the scene after each turn" aria-label="Toggle scene sketch" aria-pressed="false">🖼 Sketch</button>
@@ -48,7 +49,16 @@
           <span class="ab-toggle-label">Action bar</span>
           <button id="action-bar-toggle" aria-pressed="false" title="Show the action bar above the input">OFF</button>
         </div>
-        <button id="journal-btn" title="Download your adventure as a journal">📖 Create Journal</button>
+        <div id="export-zone">
+          <div class="export-zone-label">Export / Import</div>
+          <div id="export-tiles">
+            <button class="export-tile" id="export-journal"    title="Download adventure as a styled HTML journal">Journal</button>
+            <button class="export-tile" id="export-screenshot" title="Save current scene sketch as PNG">Screenshot</button>
+            <button class="export-tile" id="export-sketches"   title="Download all session sketches as HTML">All Sketches</button>
+            <button class="export-tile" id="export-import"     title="Import a saved game file">Import</button>
+          </div>
+          <input type="file" id="import-file-input" accept=".dnd.json,.json" style="display:none" aria-hidden="true">
+        </div>
         <div id="pc-stats"></div>
         <div id="enemy-stats"></div>
         <div id="action-chips"></div>

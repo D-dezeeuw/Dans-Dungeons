@@ -164,6 +164,21 @@ export async function pickFrom(message, options, labelFn = (x) => x, defaultIdx 
 
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
 
+export function updatePCHeaderStats(record, sheet) {
+  const el = document.getElementById('pc-header-stats');
+  if (!el) return;
+  if (!record || !sheet) { el.innerHTML = ''; return; }
+  const hp    = record.hpCurrent ?? sheet.hp.max;
+  const maxHp = sheet.hp.max;
+  const low   = hp <= Math.floor(maxHp / 4);
+  const cap   = s => s.charAt(0).toUpperCase() + s.slice(1);
+  el.innerHTML =
+    `<span class="hs-name">${escHtml(record.name)}</span>` +
+    `<span class="hs-sep">·</span>${escHtml(cap(record.classId))}` +
+    `<span class="hs-sep">·</span>HP <span class="${low ? 'hs-hp-low' : 'hs-hp-ok'}">${hp}/${maxHp}</span>` +
+    `<span class="hs-sep">·</span>AC ${sheet.ac.value}`;
+}
+
 export function updatePCStats(record, sheet, inventory = []) {
   if (!record || !sheet) { pcStatsEl().innerHTML = ''; return; }
   const hp    = record.hpCurrent ?? sheet.hp.max;

@@ -67,6 +67,7 @@ function registerReactiveSidebar() {
   addSystem(['party.pc', 'party.inventory', 'world.currentRoom', 'world.npcs'], () => {
     const pc = appState.party?.pc;
     UI.updatePCStats(pc?.record, pc?.sheet, appState.party?.inventory ?? []);
+    UI.updatePCHeaderStats(pc?.record, pc?.sheet);
     const currentRoom = appState.world?.currentRoom;
     const roomNpcs = Object.values(appState.world?.npcs ?? {}).filter(n => n.roomId === currentRoom);
     UI.updateEnemyStats(roomNpcs);
@@ -207,8 +208,6 @@ async function beginAdventure() {
   // Opening journal entry — the scene description is the first narration.
   const openingEntry = { turn: 0, narration: room.description, imageSrc: null };
   journalLog.push(openingEntry);
-  document.getElementById('journal-btn').style.display = '';
-
   if (appState.settings?.sceneImage) requestSceneImage(room.description, openingEntry);
   if (appState.settings?.actionBar)  UI.updateActionBar(room.exits ?? [], appState.party?.pc?.record, appState.party?.pc?.sheet, {});
 
@@ -452,6 +451,84 @@ function applyActionBarState(on) {
   document.getElementById('action-bar').style.display = on ? '' : 'none';
 }
 
+// ─── Export helpers ───────────────────────────────────────────────────────────
+
+function triggerDownload(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a   = Object.assign(document.createElement('a'), { href: url, download: filename });
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// Export the current scene sketch as a PNG.
+function exportScreenshot() {
+  const img = document.getElementById('scene-image');
+  if (!img?.src?.startsWith('data:image')) {
+    UI.appendEntry('system', 'No scene sketch to export yet.');
+    return;
+  }
+  // Convert data URI to blob.
+  const [header, b64] = img.src.split(',');
+  const mime = header.match(/:(.*?);/)[1];
+  const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+  const blob  = new Blob([bytes], { type: mime });
+  const name  = appState.party?.pc?.record?.name ?? 'adventurer';
+  triggerDownload(blob, `dans-dungeons-sketch-${name.toLowerCase().replace(/\s+/g, '-')}.png`);
+}
+
+// Export all session sketches as a self-contained HTML page.
+function exportAllSketches() {
+  const sketches = journalLog.filter(e => e.imageSrc);
+  if (!sketches.length) {
+    UI.appendEntry('system', 'No sketches generated this session yet.');
+    return;
+  }
+  const pcName = appState.party?.pc?.record?.name ?? 'Adventurer';
+  const rows   = sketches.map((e, i) =>
+    `<figure>
+  <figcaption>${i === 0 ? 'Opening scene' : 'Turn ' + e.turn}</figcaption>
+  <img src="${e.imageSrc}" alt="Scene sketch turn ${e.turn}">
+</figure>`
+  ).join('\n');
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><title>Sketches — ${pcName}</title>
+<style>
+  body{background:#f5e6c8;color:#3a2a1a;font-family:Georgia,serif;max-width:800px;margin:0 auto;padding:2rem}
+  h1{text-align:center;color:#5c3d1a;margin-bottom:2rem}
+  figure{margin:0 0 2rem;border-top:1px solid #c8a878;padding-top:1.5rem}
+  figcaption{font-size:.75rem;text-transform:uppercase;letter-spacing:.1em;color:#8c6a3a;margin-bottom:.6rem}
+  img{width:100%;border:1px solid #c8a878;border-radius:2px}
+</style></head>
+<body><h1>Sketches of ${pcName}</h1>${rows}</body></html>`;
+  triggerDownload(new Blob([html], { type: 'text/html' }),
+    `dans-dungeons-sketches-${pcName.toLowerCase().replace(/\s+/g, '-')}.html`);
+}
+
+// Import a .dnd.json save file.
+function importSave() {
+  document.getElementById('import-file-input').click();
+}
+
+function handleImportFile(e) {
+  const file = e.target.files?.[0];
+  if (!file) return;
+  e.target.value = ''; // reset so same file can be picked again
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const snap = JSON.parse(ev.target.result);
+      restoreState(snap);
+      tick();
+      saveToStorage();
+      UI.appendEntry('system', `Imported save: ${file.name}`);
+    } catch {
+      UI.appendEntry('error', 'Failed to import — file is not a valid save.');
+    }
+  };
+  reader.readAsText(file);
+}
+
 // ─── Journal generator ────────────────────────────────────────────────────────
 // Builds a standalone HTML file from journalLog and triggers a download.
 // No dependencies — everything is inline: CSS, base64 images, text.
@@ -499,13 +576,8 @@ ${entriesHtml}
 </body>
 </html>`;
 
-  const blob = new Blob([html], { type: 'text/html' });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.href     = url;
-  a.download = `dans-dungeons-journal-${pcName.toLowerCase().replace(/\s+/g, '-')}.html`;
-  a.click();
-  URL.revokeObjectURL(url);
+  triggerDownload(new Blob([html], { type: 'text/html' }),
+    `dans-dungeons-journal-${pcName.toLowerCase().replace(/\s+/g, '-')}.html`);
 }
 
 // ─── Key guard ────────────────────────────────────────────────────────────────
@@ -565,8 +637,12 @@ async function boot() {
     saveToStorage();
   });
 
-  // Journal download.
-  document.getElementById('journal-btn')?.addEventListener('click', createJournal);
+  // Export / import tiles.
+  document.getElementById('export-journal')?.addEventListener('click', createJournal);
+  document.getElementById('export-screenshot')?.addEventListener('click', exportScreenshot);
+  document.getElementById('export-sketches')?.addEventListener('click', exportAllSketches);
+  document.getElementById('export-import')?.addEventListener('click', importSave);
+  document.getElementById('import-file-input')?.addEventListener('change', handleImportFile);
 
   run();
 
