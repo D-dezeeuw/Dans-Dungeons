@@ -545,50 +545,42 @@ export function clearChips() {
   if (s) s.innerHTML = '';
 }
 
-// Dynamic room chips — exits, loot, and standard actions.
-// ─── Scene image panel ────────────────────────────────────────────────────────
+// ─── Scene background image ───────────────────────────────────────────────────
+// The generated sketch is used as the transcript background at low opacity.
 
-const scenePanelEl  = () => document.getElementById('scene-image-panel');
-const sceneImgEl    = () => document.getElementById('scene-image');
-const sceneLoadEl   = () => document.getElementById('scene-image-loading');
+const transcriptBgEl = () => document.getElementById('transcript-bg');
 
 export function showSceneImageLoading() {
-  const panel = scenePanelEl();
-  if (!panel) return;
-  panel.style.display = '';
-  sceneImgEl().style.display = 'none';
-  sceneLoadEl().style.display = '';
+  // Nothing visible during load — the existing bg stays until the new one arrives.
 }
 
 export function setSceneImage(src) {
-  const panel = scenePanelEl();
-  if (!panel) return;
-  const img = sceneImgEl();
-  img.src = src;
-  img.style.display = '';
-  sceneLoadEl().style.display = 'none';
-  panel.style.display = '';
+  const el = transcriptBgEl();
+  if (el) el.style.backgroundImage = `url("${src}")`;
   try { localStorage.setItem('sketch-last-image', src); } catch { /* quota — skip */ }
 }
 
-// Show the panel using whatever src is already in the img (or fall back to localStorage).
-// Used when un-minimizing without a fresh image.
 export function restoreSceneImage() {
-  const panel = scenePanelEl();
-  const img   = sceneImgEl();
-  if (!panel || !img) return false;
-  const src = img.src || localStorage.getItem('sketch-last-image');
+  const src = localStorage.getItem('sketch-last-image');
   if (!src) return false;
-  if (!img.src) img.src = src;
-  img.style.display = '';
-  sceneLoadEl().style.display = 'none';
-  panel.style.display = '';
+  const el = transcriptBgEl();
+  if (el) el.style.backgroundImage = `url("${src}")`;
   return true;
 }
 
 export function hideSceneImage() {
-  const panel = scenePanelEl();
-  if (panel) panel.style.display = 'none';
+  const el = transcriptBgEl();
+  if (el) el.classList.add('sketch-off');
+}
+
+// Called by applySketchView to set the opacity tier.
+export function setSketchOpacity(tier) {
+  const el = transcriptBgEl();
+  if (!el) return;
+  el.classList.remove('sketch-off', 'sketch-hi');
+  if (tier === 'off') el.classList.add('sketch-off');
+  if (tier === 'hi')  el.classList.add('sketch-hi');
+  // 'normal' = no class = 0.2 default
 }
 
 export function showRoomChips(exits, loot) {
@@ -631,29 +623,31 @@ export function updateActionBar(exits, record, sheet, cooldowns) {
       : null;
   }
 
-  // ── Class abilities ────────────────────────────────────────────────────────
+  // ── Class abilities word cloud ─────────────────────────────────────────────
   const abEl = document.getElementById('ab-abilities-list');
   if (abEl) {
     abEl.innerHTML = '';
     if (record && sheet) {
       for (const atk of (sheet.attacks ?? [])) {
         const btn = document.createElement('button');
-        btn.className = 'ab-tile';
-        btn.innerHTML = `${escHtml(atk.name)}<span class="ab-sub">+${atk.attackBonus} ${escHtml(atk.damageDice)}</span>`;
+        btn.className = 'ab-word ab-available';
+        btn.title = `+${atk.attackBonus} ${atk.damageDice}`;
+        btn.textContent = atk.name;
         btn.addEventListener('click', () => fireChip(`I attack with my ${atk.name}`));
         abEl.appendChild(btn);
       }
       for (const ability of classAbilities(record, sheet)) {
         const btn = document.createElement('button');
-        btn.className = 'ab-tile';
-        btn.innerHTML = `${escHtml(ability.label)}<span class="ab-sub">${escHtml(ability.note)}</span>`;
+        btn.className = 'ab-word ab-available';
+        btn.title = ability.note;
+        btn.textContent = ability.label;
         btn.addEventListener('click', () => fireChip(ability.text));
         abEl.appendChild(btn);
       }
     }
   }
 
-  // ── Skills ─────────────────────────────────────────────────────────────────
+  // ── Skills word cloud ──────────────────────────────────────────────────────
   const skEl = document.getElementById('ab-skills-list');
   if (skEl) {
     skEl.innerHTML = '';
@@ -661,9 +655,10 @@ export function updateActionBar(exits, record, sheet, cooldowns) {
       const remaining = cooldowns[skill.id] ?? 0;
       const onCd = remaining > 0;
       const btn = document.createElement('button');
-      btn.className = 'ab-tile' + (onCd ? ' ab-cooldown' : '');
-      btn.disabled = onCd;
-      btn.innerHTML = `${escHtml(skill.label)}<span class="ab-sub">${escHtml(skill.ab)}${onCd ? ` (${remaining})` : ''}</span>`;
+      btn.className = 'ab-word ' + (onCd ? 'ab-unavailable' : 'ab-available');
+      btn.disabled  = onCd;
+      btn.title     = onCd ? `${skill.ab} — ${remaining} turn${remaining > 1 ? 's' : ''} cooldown` : skill.ab;
+      btn.textContent = skill.label + (onCd ? ` (${remaining})` : '');
       if (!onCd) btn.addEventListener('click', () => fireChip(`I use ${skill.label}`));
       skEl.appendChild(btn);
     }
