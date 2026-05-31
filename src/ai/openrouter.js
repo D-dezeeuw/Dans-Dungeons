@@ -53,6 +53,26 @@ function headers(key, origin) {
   };
 }
 
+// ─── Key validation ───────────────────────────────────────────────────────────
+//
+// Hits GET /auth/key (OpenRouter-specific endpoint).
+// Returns false ONLY on 401 — any other outcome (404, network error, custom
+// base URL) is treated as "assume valid" so non-OpenRouter setups aren't blocked.
+
+export async function checkKey() {
+  const ai   = appState.ai || {};
+  if (!ai.key) return false;
+  const base = (ai.baseUrl || 'https://openrouter.ai/api/v1').replace(/\/$/, '');
+  try {
+    const res = await fetch(`${base}/auth/key`, {
+      headers: { 'Authorization': `Bearer ${ai.key}` },
+    });
+    return res.status !== 401;
+  } catch {
+    return true; // network error or non-OpenRouter endpoint — don't block
+  }
+}
+
 // ─── Non-streaming fetch ──────────────────────────────────────────────────────
 
 async function _callOnce({ tier = 'medium', messages, schema }) {

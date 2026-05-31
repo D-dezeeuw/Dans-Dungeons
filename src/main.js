@@ -23,7 +23,7 @@ import {
 import { generateWorld }      from './game/world.js';
 import { createCharacter }    from './game/character.js';
 import { processTurn }        from './game/loop.js';
-import { generateSceneImage } from './ai/openrouter.js';
+import { generateSceneImage, checkKey } from './ai/openrouter.js';
 import * as UI from './ui/console.js';
 
 // ─── Reactive sidebar (subscribes to appState) ────────────────────────────────
@@ -94,12 +94,15 @@ async function setupKey() {
 // ─── Mid-game re-authentication (401 recovery) ───────────────────────────────
 
 async function reAuthKey() {
+  // Clear the invalid key immediately — hides the 🔑 icon via data-if.
+  setValue('ai.key', '');
+  tick();
   UI.appendEntry('system', '');
   UI.appendEntry('error', 'API key rejected — Missing Authentication header (401).');
   const key = await UI.prompt('Paste a valid OpenRouter API key to continue:');
   if (key.trim()) {
     setValue('ai.key', key.trim());
-    tick(); // flush immediately so the next processTurn call sees the new key
+    tick();
     saveToStorage();
     UI.appendEntry('system', 'Key updated — retrying…');
   }
@@ -392,6 +395,28 @@ async function resumeGame() {
   await playLoop();
 }
 
+// ─── Key guard ────────────────────────────────────────────────────────────────
+// Called once in boot after state is restored. Ensures a working key exists
+// before any gameplay begins. If the stored key is present but invalid (401)
+// it is cleared so the icon hides, then setupKey() runs.
+
+async function ensureKey() {
+  if (!appState.ai?.key) {
+    await setupKey();
+    tick();
+    return;
+  }
+  // Validate the stored key — only blocks on a definitive 401.
+  const valid = await checkKey();
+  if (!valid) {
+    setValue('ai.key', '');
+    tick();
+    saveToStorage();
+    await setupKey();
+    tick();
+  }
+}
+
 // ─── Boot ─────────────────────────────────────────────────────────────────────
 
 async function boot() {
@@ -435,12 +460,9 @@ async function boot() {
   // Sync toggle button to restored setting.
   sceneToggle?.setAttribute('aria-pressed', String(appState.settings?.sceneImage ?? false));
 
-  if (save) {
-    if (!appState.ai?.key) { await setupKey(); tick(); }
-    if (appState.session?.phase === 'play') { await resumeGame(); return; }
-  }
+  await ensureKey();
 
-  if (!appState.ai?.key) { await setupKey(); tick(); }
+  if (save && appState.session?.phase === 'play') { await resumeGame(); return; }
 
   await startNewGame();
 }
