@@ -3,6 +3,13 @@
 // All DOM reads and writes live here. The loop calls these functions;
 // this module never touches the AI or Spektrum directly.
 
+// ─── Input history ────────────────────────────────────────────────────────────
+// Stores player-submitted strings for UP/DOWN recall. Newest at the end.
+// _historyCursor = -1 means "not browsing"; goes from len-1 (newest) down to 0.
+const _history = [];
+let   _historyCursor = -1;
+let   _historyDraft  = ''; // preserves in-progress text when UP is first pressed
+
 const transcriptEl  = () => document.getElementById('transcript');
 const pcStatsEl     = () => document.getElementById('pc-stats');
 const enemyStatsEl  = () => document.getElementById('enemy-stats');
@@ -17,9 +24,40 @@ let _resolveInput = null;
 const inputRowEl = () => document.getElementById('input-row');
 
 cmdEl().addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowUp') {
+    if (!_history.length || cmdEl().disabled) return;
+    e.preventDefault();
+    if (_historyCursor === -1) {
+      _historyDraft  = cmdEl().value;   // save whatever is typed so far
+      _historyCursor = _history.length - 1;
+    } else if (_historyCursor > 0) {
+      _historyCursor--;
+    }
+    cmdEl().value = _history[_historyCursor];
+    cmdEl().setSelectionRange(cmdEl().value.length, cmdEl().value.length);
+    return;
+  }
+
+  if (e.key === 'ArrowDown') {
+    if (_historyCursor === -1 || cmdEl().disabled) return;
+    e.preventDefault();
+    if (_historyCursor < _history.length - 1) {
+      _historyCursor++;
+      cmdEl().value = _history[_historyCursor];
+    } else {
+      _historyCursor = -1;
+      cmdEl().value  = _historyDraft;
+    }
+    cmdEl().setSelectionRange(cmdEl().value.length, cmdEl().value.length);
+    return;
+  }
+
   if (e.key !== 'Enter') return;
   const val = cmdEl().value.trim();
   cmdEl().value = '';
+  _historyCursor = -1;
+  _historyDraft  = '';
+  if (val) _history.push(val);   // record non-empty submissions
   if (_resolveInput) {
     const fn  = _resolveInput;
     _resolveInput = null;
