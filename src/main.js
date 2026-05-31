@@ -32,16 +32,10 @@ import * as UI from './ui/console.js';
 let sketchView = 'windowed';
 
 function applySketchView(view) {
-  const prev = sketchView;
   sketchView = view;
-  const panel = document.getElementById('scene-image-panel');
-  panel?.classList.toggle('sketch-max', view === 'maximized');
-  if (view === 'minimized') {
-    UI.hideSceneImage();
-  } else if (prev === 'minimized') {
-    // Restore last image from DOM or localStorage when un-minimizing.
-    UI.restoreSceneImage();
-  }
+  // min = hidden (off), win = 20% opacity (normal), max = 45% opacity (hi)
+  UI.setSketchOpacity(view === 'minimized' ? 'off' : view === 'maximized' ? 'hi' : 'normal');
+  if (view !== 'minimized') UI.restoreSceneImage();
   ['min', 'win', 'max'].forEach(id => {
     const map = { min: 'minimized', win: 'windowed', max: 'maximized' };
     document.getElementById(`sketch-btn-${id}`)
@@ -462,14 +456,13 @@ function triggerDownload(blob, filename) {
 
 // Export the current scene sketch as a PNG.
 function exportScreenshot() {
-  const img = document.getElementById('scene-image');
-  if (!img?.src?.startsWith('data:image')) {
+  const src = localStorage.getItem('sketch-last-image');
+  if (!src?.startsWith('data:image')) {
     UI.appendEntry('system', 'No scene sketch to export yet.');
     return;
   }
-  // Convert data URI to blob.
-  const [header, b64] = img.src.split(',');
-  const mime = header.match(/:(.*?);/)[1];
+  const [header, b64] = src.split(',');
+  const mime  = header.match(/:(.*?);/)[1];
   const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
   const blob  = new Blob([bytes], { type: mime });
   const name  = appState.party?.pc?.record?.name ?? 'adventurer';
