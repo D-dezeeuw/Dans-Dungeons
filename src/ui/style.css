@@ -328,20 +328,23 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
 /* ─── Scene image toggle (chrome) ───────────────────────────── */
 #scene-image-toggle {
   background: transparent;
-  border: none;
+  border: 1px solid var(--border);
   color: var(--system);
   font-family: var(--font);
-  font-size: 13px;
+  font-size: 12px;
   cursor: pointer;
-  padding: 0.15rem 0.4rem;
+  padding: 0.15rem 0.5rem;
   border-radius: 2px;
   flex-shrink: 0;
   line-height: 1;
-  opacity: 0.5;
-  transition: opacity 0.15s, color 0.15s;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
 }
-#scene-image-toggle:hover { opacity: 1; color: var(--text); }
-#scene-image-toggle[aria-pressed="true"] { opacity: 1; color: var(--gm); }
+#scene-image-toggle:hover { color: var(--text); border-color: var(--system); }
+#scene-image-toggle[aria-pressed="true"] {
+  color: var(--gm);
+  border-color: var(--gm);
+  background: rgba(212, 184, 150, 0.08);
+}
 
 /* ─── Scene image panel ──────────────────────────────────────── */
 #scene-image-panel {
