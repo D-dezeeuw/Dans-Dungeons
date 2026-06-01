@@ -6,6 +6,16 @@
 import { appState, addValue } from '../core/state.js';
 import { modelFor, headers }  from './client.js';
 
+// ─── Fallback model chain ─────────────────────────────────────────────────────
+// Tried in order when the primary model returns 429 (capacity exceeded).
+// All share the same /audio/speech API shape.
+
+const TTS_FALLBACKS = [
+  'google/gemini-3.1-flash-tts-preview',
+  'x-ai/grok-voice-tts-1.0',
+  'mistralai/voxtral-mini-tts-2603',
+];
+
 // ─── Playback state ───────────────────────────────────────────────────────────
 
 let _currentAudio = null;
@@ -38,23 +48,18 @@ export async function speakText(text) {
 
   cancelSpeech(); // stop any ongoing audio before fetching new
 
-  const body = JSON.stringify({
-    model:           modelFor('tts', ai),
-    input:           text,
-    voice:           'alloy',
-    response_format: 'mp3',
-  });
+  const reqHeaders = headers(ai.key || '', location.origin);
 
-  // OpenRouter routes TTS to OpenAI which can 429 on capacity even for a first
-  // request. One retry after a short backoff is enough to clear transient spikes.
-  let res = await fetch(`${base}/audio/speech`, {
-    method: 'POST', headers: headers(ai.key || '', location.origin), body,
-  });
-  if (res.status === 429) {
-    await new Promise(r => setTimeout(r, 3000));
+  // Try the configured model first, then each fallback on 429 (capacity exceeded).
+  const models = [modelFor('tts', ai), ...TTS_FALLBACKS];
+  let res;
+  for (const model of models) {
     res = await fetch(`${base}/audio/speech`, {
-      method: 'POST', headers: headers(ai.key || '', location.origin), body,
+      method:  'POST',
+      headers: reqHeaders,
+      body:    JSON.stringify({ model, input: text, voice: 'alloy', response_format: 'mp3' }),
     });
+    if (res.status !== 429) break;
   }
 
   if (!res.ok) {
