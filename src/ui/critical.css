@@ -114,6 +114,27 @@ html, body {
   border-left-color: transparent !important;
 }
 
+/* ─── Skeleton — hide everything except title row until style.css loads ── */
+/* Keeps layout space (no CLS) but nothing is visible until styles-loaded  */
+#chrome-row2,
+#chrome-row3,
+#sidebar,
+#footer > *,
+#brand-bar {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+
+html.styles-loaded #chrome-row2,
+html.styles-loaded #chrome-row3,
+html.styles-loaded #sidebar,
+html.styles-loaded #footer > *,
+html.styles-loaded #brand-bar {
+  opacity: 1;
+  pointer-events: auto;
+}
+
 /* ─── Mobile layout — in critical CSS to prevent CLS ────── */
 /* These rules must apply before first paint; duplicated from style.css */
 @media (max-width: 767px) {

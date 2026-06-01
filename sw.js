@@ -2,7 +2,7 @@
 // Cache key is the git short hash baked in by build.js.
 // To bust the cache: run `npm run build` and commit/push.
 
-const VERSION  = 'app-30bbc41';
+const VERSION  = 'app-b84d7cb';
 const BASE     = '/Dans-Dungeons';
 const PRECACHE = [
   `${BASE}/`,

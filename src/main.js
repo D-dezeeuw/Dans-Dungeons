@@ -600,6 +600,10 @@ async function boot() {
   // Remove the static skeleton now that JS is running
   document.getElementById('skeleton-loading')?.remove();
 
+  // Reveal skeleton — styles-loaded is normally set by the deferred style.css
+  // onload event. This fallback covers dev mode where style.css is blocking.
+  document.documentElement.classList.add('styles-loaded');
+
   UI.initCollapsibles();
   UI.initCopyKeyButton(() => appState.ai?.key ?? '');
 

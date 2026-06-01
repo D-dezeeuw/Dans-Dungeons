@@ -38,7 +38,7 @@ fs.writeFileSync(swPath, updated);
 
 // Inline critical.css and load style.css non-blocking
 const critical = fs.readFileSync('src/ui/critical.css', 'utf8');
-const deferred = `<link rel="stylesheet" href="src/ui/style.css" media="print" onload="this.media='all'">` +
+const deferred = `<link rel="stylesheet" href="src/ui/style.css" media="print" onload="this.media='all';document.documentElement.classList.add('styles-loaded')">` +
                  `<noscript><link rel="stylesheet" href="src/ui/style.css"></noscript>`;
 
 let html = fs.readFileSync('index.html', 'utf8');
