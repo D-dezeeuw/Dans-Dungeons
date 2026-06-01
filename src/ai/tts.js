@@ -80,10 +80,9 @@ export async function speakText(text) {
   let res;
   let usedModel;
   for (const model of models) {
-    const fmt = PCM_MODELS.has(model) ? 'pcm' : 'mp3';
-    const body = PCM_MODELS.has(model)
-      ? JSON.stringify({ model: 'google/gemini-3.1-flash-tts-preview', input: 'Hello, where am I. What is happening?', voice: 'Umbriel', response_format: 'pcm' })
-      : JSON.stringify({ model, input: text, voice: 'alloy', response_format: fmt });
+    const fmt   = PCM_MODELS.has(model) ? 'pcm' : 'mp3';
+    const voice = PCM_MODELS.has(model) ? 'Umbriel' : 'alloy';
+    const body  = JSON.stringify({ model, input: text, voice, response_format: fmt });
     res = await fetch(`${base}/audio/speech`, {
       method:  'POST',
       headers: reqHeaders,

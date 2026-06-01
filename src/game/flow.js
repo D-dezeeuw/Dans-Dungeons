@@ -178,6 +178,14 @@ export async function startNewGame() {
   );
   setValue('settings.sceneImage', sketchChoice === 'yes');
 
+  const ttsChoice = await UI.pickFrom(
+    'Enable voice narration?',
+    ['yes', 'no'],
+    x => x === 'yes' ? '🔊 Yes, read the story aloud' : '🔇 No thanks',
+    1,
+  );
+  setValue('settings.tts', ttsChoice === 'yes');
+
   setValue('session.phase', 'play');
   tick();
   saveToStorage();
