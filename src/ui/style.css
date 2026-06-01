@@ -730,7 +730,8 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
 
 #brand-bar a:hover { color: var(--text); }
 
-.brand-social { display: flex; gap: 0.75rem; }
+.brand-social { display: flex; gap: 0.75rem; align-items: center; }
+.brand-icon { width: 16px; height: 16px; fill: currentColor; display: block; }
 .brand-company { color: var(--gm); font-weight: bold; letter-spacing: 0.03em; }
 .brand-company:hover { color: var(--text); }
 .brand-powered em { font-style: italic; letter-spacing: 0.05em; }
