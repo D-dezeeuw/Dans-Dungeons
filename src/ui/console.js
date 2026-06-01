@@ -258,13 +258,14 @@ export function initCollapsibles() {
 
   if (sidebar && sidebarBtn) {
     const { set, storedOrDefault } = makePanel(sidebar, 'dg-sidebar', (open) => {
-      sidebarBtn.textContent = open ? '◀' : '▶';
       // Backdrop: only active on mobile (CSS hides it on desktop)
       if (backdrop) backdrop.classList.toggle('active', open);
     });
     // Hand off from CSS pre-init (data attribute) to JS class-based control.
     document.documentElement.removeAttribute('data-sidebar-init');
-    set(storedOrDefault());
+    // Default closed — only restore open state if user has explicitly opened it before
+    const stored = localStorage.getItem('dg-sidebar');
+    set(stored === 'open');
     const closeSidebar = () => set(false);
     sidebarBtn.addEventListener('click', () => set(sidebar.classList.contains('collapsed')));
     closeBtn?.addEventListener('click', closeSidebar);

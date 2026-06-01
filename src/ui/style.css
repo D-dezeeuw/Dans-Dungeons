@@ -264,11 +264,21 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
   }
 }
 
-/* ─── Sidebar toggle button ──────────────────────────────── */
+/* ─── Sidebar header ─────────────────────────────────────── */
 #sidebar-header {
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
   flex-shrink: 0;
+  gap: 0.5rem;
+}
+#sidebar-title {
+  font-family: var(--font);
+  font-size: 11px;
+  font-weight: bold;
+  color: var(--gm);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  flex: 1;
 }
 
 #copy-key-btn {
@@ -290,7 +300,7 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
   border: none;
   color: var(--system);
   font-family: var(--font);
-  font-size: 13px;
+  font-size: 16px;
   cursor: pointer;
   padding: 0.15rem 0.4rem;
   border-radius: 2px;
