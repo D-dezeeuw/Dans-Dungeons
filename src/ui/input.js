@@ -2,7 +2,7 @@
 // prefillChip/fireChip for chip-to-input wiring, and mic-button STT wiring.
 
 import { appendEntry } from './transcript.js';
-import { setValue }    from '../core/state.js';
+import { appState, setValue } from '../core/state.js';
 
 // ─── Input history ────────────────────────────────────────────────────────────
 // Stores submitted strings for UP/DOWN recall. Newest at the end.
@@ -179,5 +179,14 @@ export function initMicButton() {
     } finally {
       setValue('ui.recording', false);
     }
+  });
+
+  // Spacebar toggles recording when not typing in the input field.
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== ' ') return;
+    if (document.activeElement === cmdEl()) return;
+    if (!appState.settings?.stt || !appState.ai?.key) return;
+    e.preventDefault();
+    btn.click();
   });
 }

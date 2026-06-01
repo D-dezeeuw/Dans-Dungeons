@@ -9,10 +9,14 @@ import { createCharacter } from './character.js';
 import { processTurn, checkApiKey, generateTurnImage } from './loop.js';
 import * as UI from '../ui/console.js';
 
-// TTS helper — imported lazily so the audio module is a no-op when TTS is off.
+// TTS helpers — imported lazily so the audio module is a no-op when TTS is off.
 function _speak(text) {
   if (!appState.settings?.tts || !appState.ai?.key || !text?.trim()) return;
   import('../ai/tts.js').then(({ speakText }) => speakText(text)).catch(() => {});
+}
+async function _speakAsync(text) {
+  if (!appState.settings?.tts || !appState.ai?.key || !text?.trim()) return;
+  try { const { speakText } = await import('../ai/tts.js'); await speakText(text); } catch {}
 }
 function _cancelSpeech() {
   import('../ai/tts.js').then(({ cancelSpeech }) => cancelSpeech()).catch(() => {});
@@ -261,6 +265,7 @@ export async function playLoop() {
     UI.appendEntry('player', `> ${raw}`);
     UI.clearChips();
     UI.setThinking(true);
+    if (appState.settings?.roleplayMode) UI.showRoleplayOverlay(true);
 
     let streamEl = null;
     function onChunk(text) {
@@ -295,8 +300,10 @@ export async function playLoop() {
           streamEl?.remove();
           streamEl = null;
           UI.setThinking(false);
+          if (appState.settings?.roleplayMode) UI.showRoleplayOverlay(false);
           await reAuthKey();
           UI.setThinking(true);
+          if (appState.settings?.roleplayMode) UI.showRoleplayOverlay(true);
           attempt--;
           caughtErr = null;
           continue;
@@ -307,6 +314,7 @@ export async function playLoop() {
 
     if (caughtErr) {
       UI.setThinking(false);
+      if (appState.settings?.roleplayMode) UI.showRoleplayOverlay(false);
       streamEl?.remove();
       streamEl = null;
       UI.appendEntry('system', '');
@@ -332,7 +340,14 @@ export async function playLoop() {
     journalLog.push(journalEntry);
 
     if (appState.settings?.sceneImage) requestSceneImage(result?.narration, journalEntry);
-    _speak(result?.narration);
+
+    if (appState.settings?.roleplayMode) {
+      await _speakAsync(result?.narration);
+      UI.showRoleplayOverlay(false);
+    } else {
+      _speak(result?.narration);
+    }
+
     UI.updateDebugPanel(result?._debug);
   }
 }

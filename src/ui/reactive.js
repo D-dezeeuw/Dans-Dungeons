@@ -64,6 +64,9 @@ export function registerReactiveSidebar() {
   computed('ui.sketchMaxPressed', ['settings.sketchView'], (s) => (s.settings?.sketchView ?? 'windowed') === 'maximized');
 
   // TTS state — drive icon on the toggle button.
-  computed('ui.ttsActive', ['settings.tts'], s => !!(s.settings?.tts));
-  computed('ui.ttsIcon',   ['settings.tts'], s => s.settings?.tts ? '🔊' : '🔇');
+  computed('ui.ttsActive',     ['settings.tts'],        s => !!(s.settings?.tts));
+  computed('ui.ttsIcon',       ['settings.tts'],        s => s.settings?.tts ? '🔊' : '🔇');
+
+  // Roleplay mode — drives aria-pressed on the roleplay button.
+  computed('ui.roleplayActive', ['settings.roleplayMode'], s => !!(s.settings?.roleplayMode));
 }

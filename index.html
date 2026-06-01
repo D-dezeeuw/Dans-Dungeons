@@ -194,6 +194,7 @@ html.styles-loaded #brand-bar {
         <span id="turn-counter" data-cloak data-if="session.turnCount">Turn {{session.turnCount}}</span>
         <span id="cost-meter" title="Estimated AI cost this session" data-cloak data-if="ui.costDisplay">{{ui.costDisplay}}</span>
         <button id="sidebar-toggle" aria-label="Toggle settings">⚙</button>
+        <button id="roleplay-btn" data-cloak data-if="ai.key" :ariaPressed="ui.roleplayActive" aria-pressed="false" aria-label="Roleplay mode" title="Roleplay mode">🎭</button>
       </div>
       <div id="chrome-row2" data-cloak data-if="ui.pcStatsVisible">
         <span id="pc-header-stats" :innerHTML="ui.pcStats"></span>
@@ -277,7 +278,7 @@ html.styles-loaded #brand-bar {
           placeholder="What do you do?"
           aria-label="Command input"
         >
-        <button id="mic-btn" class="input-icon-btn" data-cloak :ariaPressed="ui.recording" aria-pressed="false" aria-label="Record voice input" title="Speak your action" data-if="settings.stt">🎤</button>
+        <button id="mic-btn" class="input-icon-btn" data-cloak :ariaPressed="ui.recording" aria-pressed="false" aria-label="Record voice input" title="Speak your action (Spacebar)" data-if="settings.stt"><svg width="13" height="13" viewBox="0 0 13 13" fill="currentColor" aria-hidden="true" focusable="false"><circle cx="6.5" cy="6.5" r="4.5" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="6.5" cy="6.5" r="2.5"/></svg></button>
       </div>
     </footer>
 
@@ -292,6 +293,16 @@ html.styles-loaded #brand-bar {
       </span>
       <a class="brand-company" href="https://www.linkedin.com/in/ddezeeuw/" target="_blank" rel="noopener">Neko Media</a>
       <span class="brand-powered">Powered by <a href="https://www.npmjs.com/package/spektrum" target="_blank" rel="noopener"><em>SPEKTRUM</em></a></span>
+    </div>
+
+    <div id="roleplay-overlay" aria-hidden="true">
+      <div class="sand-fall">
+        <span class="sand-grain"></span>
+        <span class="sand-grain"></span>
+        <span class="sand-grain"></span>
+        <span class="sand-grain"></span>
+        <span class="sand-grain"></span>
+      </div>
     </div>
 
   </div>

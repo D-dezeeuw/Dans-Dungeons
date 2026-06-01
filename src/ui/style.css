@@ -551,16 +551,17 @@
 #mic-btn {
   background: none;
   border: none;
-  color: var(--system);
+  color: #9090a0;
   cursor: pointer;
   padding: 0 6px;
-  font-size: 16px;
   line-height: 1;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
   transition: color 0.15s;
 }
 #mic-btn[aria-pressed="true"] {
-  color: var(--error, #e07070);
+  color: #f97316;
   animation: mic-pulse 1s ease-in-out infinite;
 }
 @keyframes mic-pulse {
@@ -586,6 +587,73 @@
   margin-bottom: 0.4rem;
 }
 #tts-toggle[aria-pressed="true"] { color: var(--gm); border-color: var(--gm); }
+
+/* ─── Roleplay mode button ───────────────────────────────── */
+#roleplay-btn {
+  margin-left: 0.25rem;
+  background: transparent;
+  border: none;
+  color: var(--system);
+  font-family: var(--font);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 0.15rem 0.4rem;
+  border-radius: 2px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+#roleplay-btn:hover { color: var(--text); }
+#roleplay-btn[aria-pressed="true"] { color: var(--gm); }
+
+/* ─── Roleplay mode — immersive view ────────────────────── */
+/* Hide all transcript children except the background image */
+body.roleplay-mode #transcript > *:not(#transcript-bg) { display: none !important; }
+body.roleplay-mode #transcript-bg { opacity: 0.65 !important; }
+body.roleplay-mode #transcript:hover #transcript-bg { opacity: 0.75 !important; }
+body.roleplay-mode #action-bar  { display: none !important; }
+body.roleplay-mode #debug-bar   { display: none !important; }
+body.roleplay-mode #debug-panel { display: none !important; }
+body.roleplay-mode #brand-bar   { display: none !important; }
+
+/* ─── Roleplay overlay — shown while GM thinks / TTS plays ── */
+#roleplay-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  background: rgba(13, 13, 13, 0.55);
+}
+#roleplay-overlay.visible { display: flex; }
+
+.sand-fall {
+  position: relative;
+  width: 6px;
+  height: 64px;
+}
+.sand-grain {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--gm);
+  left: 0;
+  animation: grain-fall 1.5s ease-in infinite;
+}
+.sand-grain:nth-child(1) { animation-delay: 0.0s; }
+.sand-grain:nth-child(2) { animation-delay: 0.3s; }
+.sand-grain:nth-child(3) { animation-delay: 0.6s; }
+.sand-grain:nth-child(4) { animation-delay: 0.9s; }
+.sand-grain:nth-child(5) { animation-delay: 1.2s; }
+
+@keyframes grain-fall {
+  0%   { top: 0;    opacity: 0; }
+  8%   { opacity: 1; }
+  88%  { opacity: 0.8; }
+  100% { top: 60px; opacity: 0; }
+}
 
 /* ─── Action bar tooltips ────────────────────────────────── */
 #ab-tooltip {

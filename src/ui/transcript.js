@@ -52,6 +52,10 @@ export function setThinking(on) {
 // the mouse enters a .entry-gm element. Clicking it reads that entry aloud via TTS.
 // Mirrors the tooltip pattern in actionbar.js.
 
+export function showRoleplayOverlay(on) {
+  document.getElementById('roleplay-overlay')?.classList.toggle('visible', on);
+}
+
 export function initSpeakHover() {
   const btn = document.createElement('button');
   btn.id = 'speak-hover-btn';

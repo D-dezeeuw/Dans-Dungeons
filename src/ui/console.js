@@ -1,7 +1,7 @@
 // src/ui/console.js — re-export barrel.
 // Import from specific modules for new code.
 
-export { clear, appendEntry, beginStreamEntry, appendStreamChunk, setThinking } from './transcript.js';
+export { clear, appendEntry, beginStreamEntry, appendStreamChunk, setThinking, showRoleplayOverlay } from './transcript.js';
 export { setInputEnabled, prompt, pickFrom, prefillChip, fireChip }            from './input.js';
 export { showActionChips, showCharacterChips, showSkillChips,
          insertActionChip, clearChips, showRoomChips }                         from './chips.js';

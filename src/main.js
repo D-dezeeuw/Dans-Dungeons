@@ -33,6 +33,21 @@ async function boot() {
     saveToStorage();
   });
 
+  // Roleplay mode — immersive view with forced TTS; restores TTS state on exit.
+  const roleplayBtn = document.getElementById('roleplay-btn');
+  roleplayBtn?.addEventListener('click', () => {
+    const next = !(appState.settings?.roleplayMode ?? false);
+    if (next) {
+      setValue('settings._preTts', appState.settings?.tts ?? false);
+      setValue('settings.tts', true);
+    } else {
+      setValue('settings.tts', appState.settings?._preTts ?? false);
+    }
+    setValue('settings.roleplayMode', next);
+    document.body.classList.toggle('roleplay-mode', next);
+    saveToStorage();
+  });
+
   document.getElementById('export-journal')?.addEventListener('click', createJournal);
   document.getElementById('export-screenshot')?.addEventListener('click', exportScreenshot);
   document.getElementById('export-sketches')?.addEventListener('click', exportAllSketches);
@@ -45,6 +60,7 @@ async function boot() {
 
   const save = loadFromStorage();
   if (save) restoreState(save);
+  if (appState.settings?.roleplayMode) document.body.classList.add('roleplay-mode');
 
   const urlKey = new URLSearchParams(location.search).get('key');
   if (urlKey) {
