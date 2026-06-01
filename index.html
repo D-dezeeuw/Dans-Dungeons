@@ -189,10 +189,9 @@ html.styles-loaded #brand-bar {
         <span id="title"><img src="favicon.svg" alt="" aria-hidden="true" id="title-icon" style="width:18px;height:18px;display:inline-block;vertical-align:middle;"> DnD – Dan's Dungeons</span>
         <span id="turn-counter" data-if="session.turnCount">Turn {{session.turnCount}}</span>
         <span id="cost-meter" title="Estimated AI cost this session" data-if="ui.costDisplay">{{ui.costDisplay}}</span>
-        <button id="tts-toggle" class="chrome-icon-btn" aria-label="Toggle narration voice" aria-pressed="false" title="Toggle narration voice" data-if="ai.key">🔊</button>
         <button id="sidebar-toggle" aria-label="Toggle settings">⚙</button>
       </div>
-      <div id="chrome-row2" style="display:none" data-if="party.pc">
+      <div id="chrome-row2" style="display:none" data-if="ui.pcStats">
         <span id="pc-header-stats" :innerHTML="ui.pcStats"></span>
       </div>
       <div id="chrome-row3" style="display:none" data-if="ui.enemiesPresent">
@@ -205,6 +204,7 @@ html.styles-loaded #brand-bar {
     <main id="game">
       <div id="transcript" role="log" aria-live="polite" aria-atomic="false">
         <div id="transcript-bg" aria-hidden="true"></div>
+        <button id="tts-toggle" data-if="ai.key" style="display:none" aria-label="Toggle narration voice" aria-pressed="false" title="Toggle narration voice">{{ui.ttsIcon}}</button>
         <div id="skeleton-loading" class="entry entry-system" aria-hidden="true">⚔ Dan's Dungeons is loading…</div>
       </div>
 

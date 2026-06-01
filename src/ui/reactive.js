@@ -55,5 +55,6 @@ export function registerReactiveSidebar() {
 
   // TTS / STT state — drive aria-pressed on the chrome and input buttons.
   computed('ui.ttsActive', ['settings.tts'], s => !!(s.settings?.tts));
+  computed('ui.ttsIcon',   ['settings.tts'], s => s.settings?.tts ? '🔊' : '🔇');
   computed('ui.recording', ['ui.recording'],  s => !!(s.ui?.recording));
 }

@@ -568,18 +568,24 @@
   50%       { opacity: 0.35; }
 }
 
-/* ─── TTS toggle in chrome-row1 ──────────────────────────── */
-.chrome-icon-btn {
-  background: none;
-  border: none;
+/* ─── TTS toggle — sticky in top-right of transcript ────── */
+#tts-toggle {
+  position: sticky;
+  top: 0.5rem;
+  float: right;
+  z-index: 10;
+  background: var(--bg-mid);
+  border: 1px solid var(--border);
   color: var(--system);
   cursor: pointer;
-  font-size: 14px;
-  padding: 0 4px;
-  line-height: 1;
-  transition: color 0.15s;
+  font-size: 15px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  line-height: 1.8;
+  transition: color 0.15s, border-color 0.15s;
+  margin-bottom: 0.4rem;
 }
-.chrome-icon-btn[aria-pressed="true"] { color: var(--gm); }
+#tts-toggle[aria-pressed="true"] { color: var(--gm); border-color: var(--gm); }
 
 /* ─── Action bar tooltips ────────────────────────────────── */
 #ab-tooltip {
@@ -644,6 +650,13 @@
 .ab-word.ab-active      { color: var(--gm); }
 /* Fixed color instead of opacity so contrast checkers can reason about it */
 .ab-word.ab-unavailable { color: #4a4a4a; }
+
+/* Middle-dot separator between skill words so they're easy to tell apart */
+#ab-skills-list .ab-word + .ab-word::before {
+  content: ' · ';
+  color: var(--system);
+  font-weight: normal;
+}
 
 /* ─── Export zone ────────────────────────────────────────── */
 #export-zone {
