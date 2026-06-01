@@ -1,67 +1,7 @@
-/* ─── Reset ─────────────────────────────────────────────── */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+/* Tokens are defined in critical.css (inlined in <head>) — do not redeclare :root here.
+   This file is loaded non-blocking after first paint via the media="print" trick. */
 
-/* ─── Tokens ─────────────────────────────────────────────── */
-:root {
-  --bg:       #0d0d0d;
-  --bg-mid:   #141414;
-  --bg-edge:  #1c1c1c;
-  --border:   #2a2a2a;
-  --text:     #c8c0a8;    /* parchment */
-  --gm:       #d4b896;    /* narrator */
-  --player:   #7ec8e3;    /* player */
-  --system:   #9a9080;    /* system / meta — WCAG AA contrast on dark bg */
-  --option:   #8ab08a;    /* menu options */
-  --error:    #e05050;
-  --hp-ok:    #4ade80;
-  --hp-low:   #f87171;
-  --chip-bg:  #242424;
-  --chip-border: #4a4a4a;
-  --chip-hover:  #303030;
-  --font:     'Courier New', Courier, 'Lucida Console', monospace;
-  --sidebar-w: 220px;
-}
-
-/* ─── Layout ─────────────────────────────────────────────── */
-html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(--text); font-family: var(--font); font-size: 14px; line-height: 1.6; }
-
-#app {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-}
-
-#chrome {
-  display: flex;
-  flex-direction: column;
-  padding: 0.3rem 1rem;
-  background: var(--bg-edge);
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-}
-
-#chrome-row1 {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-#chrome-row2 {
-  display: flex;
-  align-items: center;
-  min-height: 0;
-}
-#chrome-row2 { display: flex; }
-#chrome-row2:empty { display: none; }
-
-#chrome-row3 {
-  display: flex;
-  align-items: center;
-  min-height: 0;
-}
-#chrome-row3 { display: flex; }
-#chrome-row3:empty { display: none; }
-
+/* ─── Chrome detail ──────────────────────────────────────── */
 #enemy-header-stats {
   font-size: 11px;
   color: var(--system);
@@ -76,7 +16,9 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
 #enemy-header-stats .hs-hp-low     { color: var(--hp-low); }
 #enemy-header-stats .hs-enemy-divider { color: var(--border); }
 
-#title { font-weight: bold; color: var(--gm); letter-spacing: 0.05em; display: flex; align-items: center; gap: 0.4rem; }
+/* critical.css sets font-weight/color/letter-spacing; add flex layout here */
+#title { display: flex; align-items: center; gap: 0.4rem; }
+
 #pc-header-stats {
   font-size: 11px;
   color: var(--system);
@@ -92,55 +34,19 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
 #turn-counter, #cost-meter { font-size: 12px; color: var(--system); margin-left: auto; }
 #cost-meter { margin-left: 0.5rem; }
 
-#game {
-  display: flex;
-  flex: 1;
-  overflow: hidden;
-}
-
-/* ─── Transcript ─────────────────────────────────────────── */
-#transcript {
-  flex: 1;
-  overflow-y: auto;
-  padding: 1rem 1.2rem;
-  scroll-behavior: smooth;
-  position: relative;
-}
-
+/* ─── Transcript scrollbar ───────────────────────────────── */
 #transcript::-webkit-scrollbar { width: 4px; }
 #transcript::-webkit-scrollbar-track { background: transparent; }
 #transcript::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 
-/* ─── Transcript background image ────────────────────────── */
-#transcript-bg {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  background-size: cover;
-  background-position: center;
-  opacity: 0.2;
-  transition: opacity 0.5s ease;
-  pointer-events: none;
-}
+/* ─── Sketch opacity variants ────────────────────────────── */
 #transcript-bg.sketch-off { opacity: 0 !important; }
 #transcript-bg.sketch-hi  { opacity: 0.45; }
 #transcript:hover #transcript-bg:not(.sketch-off) { opacity: 0.6; }
 #transcript:hover #transcript-bg.sketch-hi        { opacity: 0.8; }
 
-.entry {
-  position: relative;
-  z-index: 1;
-  margin-bottom: 0.4rem;
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-
-.entry-gm      { color: var(--gm); }
-.entry-player  { color: var(--player); }
-.entry-system  { color: var(--system); }
-.entry-option         { color: var(--option); }
+/* ─── Entry variants not in critical.css ────────────────── */
 .entry-option-default { color: var(--gm); }
-.entry-error   { color: var(--error); }
 .entry-thinking { color: var(--system); font-style: italic; }
 
 /* ─── Sidebar ────────────────────────────────────────────── */
@@ -163,7 +69,7 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
   border-left-color: transparent;
 }
 
-/* ─── Sidebar backdrop (mobile only) ────────────────────────── */
+/* ─── Sidebar backdrop (mobile only) ────────────────────── */
 #sidebar-backdrop {
   display: none;
 }
@@ -442,7 +348,8 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
 .dbg-section  { flex-shrink: 0; }
 
 .dbg-sep {
-  color: var(--border);
+  --debug-sep: #4d4d4d;
+  color: var(--debug-sep);
   font-size: 10px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -452,7 +359,7 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
 .dbg-row      { color: var(--system); line-height: 1.45; white-space: pre; }
 .dbg-row.hit  { color: var(--hp-ok); }
 .dbg-row.miss { color: var(--hp-low); }
-.dbg-row.dim  { color: #383838; font-style: italic; white-space: normal; max-width: 180px; }
+.dbg-row.dim  { color: #5a5a5a; font-style: italic; white-space: normal; max-width: 180px; }
 .nat-1  { font-weight: bold; color: #b44fdb; }
 .nat-20 { font-weight: bold; color: #ffaa00; }
 
@@ -490,7 +397,7 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
 }
 
 
-/* ─── Sketch size controls (sidebar) ────────────────────────── */
+/* ─── Sketch size controls (sidebar) ────────────────────── */
 #sketch-controls {
   display: flex;
   align-items: center;
@@ -525,7 +432,7 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
   background: rgba(212, 184, 150, 0.08);
 }
 
-/* ─── Action bar toggle (sidebar) ───────────────────────────── */
+/* ─── Action bar toggle (sidebar) ───────────────────────── */
 #ab-toggle-row {
   display: flex;
   align-items: center;
@@ -560,7 +467,7 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
   background: rgba(212, 184, 150, 0.08);
 }
 
-/* ─── Action bar ─────────────────────────────────────────────── */
+/* ─── Action bar ─────────────────────────────────────────── */
 #action-bar {
   display: flex;
   flex-direction: row;
@@ -600,7 +507,7 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
   flex-shrink: 0;
 }
 
-/* ─── Compass ────────────────────────────────────────────────── */
+/* ─── Compass ────────────────────────────────────────────── */
 #ab-compass {
   display: grid;
   grid-template-columns: repeat(3, 24px);
@@ -608,7 +515,7 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
   gap: 1px;
 }
 
-/* ─── Action bar tooltips ────────────────────────────────────── */
+/* ─── Action bar tooltips ────────────────────────────────── */
 #ab-tooltip {
   position: fixed;
   background: #1a1a1a;
@@ -631,7 +538,7 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
 }
 #ab-tooltip.visible { opacity: 1; }
 
-/* ─── Compass direction letters ──────────────────────────────── */
+/* ─── Compass direction letters ──────────────────────────── */
 .ab-dir-btn {
   background: none;
   border: none;
@@ -650,7 +557,7 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
 .ab-dir-btn:disabled:not(.ab-locked) { opacity: 0.12; cursor: default; }
 .ab-dir-btn.ab-locked { color: var(--system); cursor: default; }
 
-/* ─── Ability & skill word clouds ────────────────────────────── */
+/* ─── Ability & skill word clouds ────────────────────────── */
 #ab-abilities-list,
 #ab-skills-list {
   display: flex;
@@ -669,9 +576,10 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
 }
 .ab-word.ab-available   { color: var(--text); }
 .ab-word.ab-active      { color: var(--gm); }
-.ab-word.ab-unavailable { color: var(--system); opacity: 0.4; }
+/* Fixed color instead of opacity so contrast checkers can reason about it */
+.ab-word.ab-unavailable { color: #4a4a4a; }
 
-/* ─── Export zone ────────────────────────────────────────────── */
+/* ─── Export zone ────────────────────────────────────────── */
 #export-zone {
   padding: 0.3rem 0.5rem 0.4rem;
   border-bottom: 1px solid var(--border);
@@ -711,7 +619,7 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
 
 /* (scene-image-panel removed — image is now the transcript background) */
 
-/* ─── Brand bar ──────────────────────────────────────────────── */
+/* ─── Brand bar ──────────────────────────────────────────── */
 #brand-bar {
   display: flex;
   align-items: center;

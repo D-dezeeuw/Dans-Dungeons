@@ -4,6 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="A browser-based AI dungeon master. Bring your own OpenRouter key and adventure through a procedurally generated world — no install, no backend.">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-tAUjT3wKLNTnmsNWU+RI09/9OXYPvgyVs4hlkuw4C0I='; style-src 'self' 'unsafe-inline'; connect-src https:; img-src 'self' data: blob:; font-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none';">
+  <meta property="og:title" content="Dan's Dungeons">
+  <meta property="og:description" content="A browser-based AI dungeon master. Bring your own OpenRouter key and adventure through a procedurally generated world.">
+  <meta property="og:type" content="website">
   <title>Dan's Dungeons</title>
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <!-- BUILD:CSS-CRITICAL --><style>/* critical.css — inlined by build.js into <head>
@@ -203,13 +207,13 @@ html.styles-loaded #brand-bar {
         <div id="skeleton-loading" class="entry entry-system" aria-hidden="true">⚔ Dan's Dungeons is loading…</div>
       </div>
 
-      <aside id="sidebar">
+      <aside id="sidebar" aria-label="Settings">
         <div id="sidebar-header">
           <span id="sidebar-title">Settings</span>
           <button id="copy-key-btn" data-if="ai.key" style="display:none" aria-label="Copy API key" title="Copy API key to clipboard">🔑</button>
           <button id="sidebar-close" aria-label="Close settings">✕</button>
         </div>
-        <div id="sketch-controls" style="display:none" data-if="settings.sceneImage">
+        <div id="sketch-controls" style="display:none" data-if="settings.sceneImage" role="group" aria-labelledby="sketch-controls-label">
           <span id="sketch-controls-label">Sketch</span>
           <button id="sketch-btn-min" aria-pressed="false" title="Minimize sketch" aria-label="Minimize sketch">⊟</button>
           <button id="sketch-btn-win" aria-pressed="true"  title="Windowed sketch" aria-label="Windowed sketch">⊡</button>
@@ -234,8 +238,8 @@ html.styles-loaded #brand-bar {
 
     <footer id="footer">
       <div id="action-bar" style="display:none" data-if="ui.actionBarVisible" aria-label="Action bar">
-        <div class="ab-zone ab-move-zone">
-          <div class="ab-zone-label">Move</div>
+        <div class="ab-zone ab-move-zone" role="group" aria-labelledby="ab-label-move">
+          <div class="ab-zone-label" id="ab-label-move">Move</div>
           <div id="ab-compass">
             <button id="ab-north" class="ab-dir-btn" style="grid-column:2;grid-row:1" disabled aria-label="Go north">N</button>
             <button id="ab-west"  class="ab-dir-btn" style="grid-column:1;grid-row:2" disabled aria-label="Go west">W</button>
@@ -244,17 +248,17 @@ html.styles-loaded #brand-bar {
           </div>
         </div>
         <div class="ab-divider"></div>
-        <div class="ab-zone ab-abilities-zone">
-          <div class="ab-zone-label">Class</div>
+        <div class="ab-zone ab-abilities-zone" role="group" aria-labelledby="ab-label-class">
+          <div class="ab-zone-label" id="ab-label-class">Class</div>
           <div id="ab-abilities-list"></div>
         </div>
         <div class="ab-divider"></div>
-        <div class="ab-zone ab-skills-zone">
-          <div class="ab-zone-label">Skills</div>
+        <div class="ab-zone ab-skills-zone" role="group" aria-labelledby="ab-label-skills">
+          <div class="ab-zone-label" id="ab-label-skills">Skills</div>
           <div id="ab-skills-list"></div>
         </div>
       </div>
-      <div id="debug-bar" role="button" tabindex="0">
+      <div id="debug-bar" role="button" tabindex="0" aria-label="Toggle last turn debug info" aria-expanded="false" aria-controls="debug-panel">
         <span>Last turn</span><span class="toggle-chevron">▾</span>
       </div>
       <div id="debug-panel"></div>

@@ -1,0 +1,126 @@
+// src/ai/narrate.js — narrator and scene-image AI calls.
+//
+// narrate() streams the GM narration for a resolved turn.
+// generateSceneImage() produces a journal-sketch data URI (decorative, silent on failure).
+
+import { appState, addValue } from '../core/state.js';
+import { _call, _callStream, repairJson, modelFor, headers } from './client.js';
+import { NARRATOR_SCHEMA } from './schemas.js';
+
+// ─── Narrator ────────────────────────────────────────────────────────────────
+//
+// Streams the response. onChunk(text) receives each narration token as it
+// arrives so the UI can display it progressively. Returns the full parsed
+// JSON object once the stream is complete.
+
+export async function narrate(resolvedFacts, sceneContext, recentTranscript, onChunk) {
+  const system = `You are the Game Master narrating a D&D 5e dungeon encounter.
+
+Setting: gritty low fantasy, second person ("you strike", "you dodge").
+
+Rules:
+- Do NOT invent dice results — use only the resolved facts in the data
+- 2–4 sentences; vivid but concise
+- If a hit: describe the impact and the enemy's reaction
+- If a miss: describe the near-miss
+- If the enemy retaliated: weave it into the same narration
+- End on tension or consequence
+- If intent is 'move': describe entering the new room (use newRoom.description); introduce any enemies using their intro text; mention visible items
+- If intent is 'take': describe picking up the item
+- If intent is 'unlock': describe unlocking the door with a satisfying click
+- CRITICAL — if intent is 'impossible': the action simply cannot happen. Do NOT describe it succeeding or partially succeeding. Describe only the failure and its reason. No enemy dies, no item is taken, nothing changes.
+
+Recent transcript (last 3 turns, for continuity):
+${recentTranscript.slice(-3).map(e => `${e.role}: ${e.text}`).join('\n')}
+
+Current scene:
+${JSON.stringify(sceneContext, null, 2)}
+
+Resolved mechanics:
+${JSON.stringify(resolvedFacts, null, 2)}
+
+Output ONLY a JSON object — no markdown, no extra text:
+{"narration":"...","combat_ended":true/false,"outcome":"continue"|"victory"|"defeat"|"flee"}`;
+
+  const messages = [
+    { role: 'system', content: system },
+    { role: 'user',   content: 'Narrate the outcome of this turn.' },
+  ];
+
+  const raw = await _callStream({ tier: 'medium', messages }, onChunk);
+
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return repairJson(raw, { tier: 'medium', schema: NARRATOR_SCHEMA }, messages);
+  }
+}
+
+// ─── Scene image generation ───────────────────────────────────────────────────
+//
+// Calls the image model with a journal-sketch style prompt.
+// Returns a data-URI string (ready for background-image), or null on failure.
+// Never throws — image generation is decorative; errors are silent.
+
+export async function generateSceneImage(sceneDescription) {
+  const ai   = appState.ai || {};
+  const base = (ai.baseUrl || 'https://openrouter.ai/api/v1').replace(/\/$/, '');
+  const model = modelFor('image', ai);
+
+  const prompt =
+    'Old hand-drawn journal sketch of a medieval fantasy scene. ' +
+    'Black ink lines on sepia parchment paper. Rough, scratchy linework. ' +
+    'No colour — only shades of sepia and black ink. Like an adventurer\'s field journal. ' +
+    'No text, no labels, no writing of any kind. No borders, no frames, no decorative edges. ' +
+    'Scene: ' + sceneDescription;
+
+  let res;
+  try {
+    res = await fetch(`${base}/chat/completions`, {
+      method: 'POST',
+      headers: headers(ai.key || '', location.origin),
+      body: JSON.stringify({
+        model,
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 2048,
+      }),
+    });
+  } catch {
+    return null;
+  }
+
+  if (!res.ok) return null;
+
+  let data;
+  try { data = await res.json(); } catch { return null; }
+
+  if (data.usage?.total_tokens) addValue('ai.totalTokens', data.usage.total_tokens);
+
+  const msg     = data.choices?.[0]?.message ?? {};
+  const content = msg.content;
+
+  // Gemini via OpenRouter: image lands in message.images[], not message.content
+  if (Array.isArray(msg.images)) {
+    for (const part of msg.images) {
+      if (part.type === 'image_url' && part.image_url?.url) return part.image_url.url;
+    }
+  }
+
+  if (Array.isArray(content)) {
+    for (const part of content) {
+      if (part.type === 'image_url' && part.image_url?.url) return part.image_url.url;
+      if (part.type === 'image' && part.data) return `data:image/png;base64,${part.data}`;
+      if (part.inline_data?.data) {
+        const mime = part.inline_data.mime_type || 'image/png';
+        return `data:${mime};base64,${part.inline_data.data}`;
+      }
+    }
+  }
+
+  if (typeof content === 'string') {
+    const m = content.match(/data:image\/[^;]+;base64,[A-Za-z0-9+/]+=*/);
+    if (m) return m[0];
+  }
+
+  return null;
+}
