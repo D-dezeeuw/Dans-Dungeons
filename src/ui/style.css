@@ -75,7 +75,6 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
 #enemy-header-stats .hs-enemy-divider { color: var(--border); }
 
 #title { font-weight: bold; color: var(--gm); letter-spacing: 0.05em; display: flex; align-items: center; gap: 0.4rem; }
-#title-icon { width: 18px; height: 18px; display: inline-block; vertical-align: middle; }
 #pc-header-stats {
   font-size: 11px;
   color: var(--system);
