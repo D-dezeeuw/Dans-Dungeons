@@ -127,10 +127,9 @@ body.spektrum-ready { opacity: 1; transition: opacity 0.1s ease; }
   border-left-color: transparent !important;
 }
 
-/* ─── Skeleton — hide everything except title row until style.css loads ── */
-/* Keeps layout space (no CLS) but nothing is visible until styles-loaded  */
-#chrome-row2,
-#chrome-row3,
+/* ─── Skeleton — hide chrome extras + sidebar until style.css loads ────── */
+/* #chrome-row2/#chrome-row3 are excluded: they are data-cloak + data-if   */
+/* controlled by Spektrum and must NOT also be opacity-gated.               */
 #sidebar,
 #footer > *,
 #brand-bar {
@@ -139,8 +138,6 @@ body.spektrum-ready { opacity: 1; transition: opacity 0.1s ease; }
   transition: opacity 0.25s ease;
 }
 
-html.styles-loaded #chrome-row2,
-html.styles-loaded #chrome-row3,
 html.styles-loaded #sidebar,
 html.styles-loaded #footer > *,
 html.styles-loaded #brand-bar {

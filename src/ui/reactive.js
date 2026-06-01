@@ -13,6 +13,13 @@ export function registerReactiveSidebar() {
     return tokens > 0 ? '$' + cost.toFixed(4) + ' · ' + tokens.toLocaleString() + ' tok' : '';
   });
 
+  // Boolean flags that drive data-if visibility on the two chrome stat rows.
+  computed('ui.pcStatsVisible',   ['party.pc'], (s) => !!(s.party?.pc?.record && s.party?.pc?.sheet));
+  computed('ui.enemyStatsVisible', ['world.npcs', 'world.currentRoom'], (s) => {
+    const room = s.world?.currentRoom;
+    return Object.values(s.world?.npcs ?? {}).some(n => n.roomId === room && n.alive);
+  });
+
   // PC header stats — rendered as HTML so HP colour classes work.
   computed('ui.pcStats', ['party.pc'], (s) => {
     const pc = s.party?.pc;
@@ -28,11 +35,6 @@ export function registerReactiveSidebar() {
   });
 
   // Enemy header stats — alive enemies in current room.
-  computed('ui.enemiesPresent', ['world.npcs', 'world.currentRoom'], (s) => {
-    const room = s.world?.currentRoom;
-    return Object.values(s.world?.npcs ?? {}).some(n => n.roomId === room && n.alive);
-  });
-
   computed('ui.enemyStats', ['world.npcs', 'world.currentRoom'], (s) => {
     const room  = s.world?.currentRoom;
     const alive = Object.values(s.world?.npcs ?? {}).filter(n => n.roomId === room && n.alive);
