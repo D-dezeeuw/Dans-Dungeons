@@ -17,6 +17,9 @@
 /* ─── Reset ─────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+/* ─── Cloak — hides data-if elements until Spektrum binds ── */
+[data-cloak] { display: none !important; }
+
 /* ─── Tokens ─────────────────────────────────────────────── */
 :root {
   --bg:          #0d0d0d;
@@ -191,14 +194,14 @@ html.styles-loaded #brand-bar {
     <header id="chrome">
       <div id="chrome-row1">
         <span id="title"><img src="favicon.svg" alt="" aria-hidden="true" id="title-icon" style="width:18px;height:18px;display:inline-block;vertical-align:middle;"> DnD – Dan's Dungeons</span>
-        <span id="turn-counter" data-if="session.turnCount">Turn {{session.turnCount}}</span>
-        <span id="cost-meter" title="Estimated AI cost this session" data-if="ui.costDisplay">{{ui.costDisplay}}</span>
+        <span id="turn-counter" data-cloak data-if="session.turnCount">Turn {{session.turnCount}}</span>
+        <span id="cost-meter" title="Estimated AI cost this session" data-cloak data-if="ui.costDisplay">{{ui.costDisplay}}</span>
         <button id="sidebar-toggle" aria-label="Toggle settings">⚙</button>
       </div>
-      <div id="chrome-row2" style="display:none" data-if="ui.pcStats">
+      <div id="chrome-row2" data-cloak data-if="ui.pcStats">
         <span id="pc-header-stats" :innerHTML="ui.pcStats"></span>
       </div>
-      <div id="chrome-row3" style="display:none" data-if="ui.enemiesPresent">
+      <div id="chrome-row3" data-cloak data-if="ui.enemiesPresent">
         <span id="enemy-header-stats" :innerHTML="ui.enemyStats"></span>
       </div>
     </header>
@@ -208,25 +211,25 @@ html.styles-loaded #brand-bar {
     <main id="game">
       <div id="transcript" role="log" aria-live="polite" aria-atomic="false">
         <div id="transcript-bg" aria-hidden="true"></div>
-        <button id="tts-toggle" data-if="ai.key" style="display:none" aria-label="Toggle narration voice" aria-pressed="false" title="Toggle narration voice">{{ui.ttsIcon}}</button>
+        <button id="tts-toggle" data-cloak data-if="ai.key" :ariaPressed="ui.ttsActive" aria-pressed="false" aria-label="Toggle narration voice" title="Toggle narration voice">{{ui.ttsIcon}}</button>
         <div id="skeleton-loading" class="entry entry-system" aria-hidden="true">⚔ Dan's Dungeons is loading…</div>
       </div>
 
       <aside id="sidebar" aria-label="Settings">
         <div id="sidebar-header">
           <span id="sidebar-title">Settings</span>
-          <button id="copy-key-btn" data-if="ai.key" style="display:none" aria-label="Copy API key" title="Copy API key to clipboard">🔑</button>
+          <button id="copy-key-btn" data-cloak data-if="ai.key" aria-label="Copy API key" title="Copy API key to clipboard">🔑</button>
           <button id="sidebar-close" aria-label="Close settings">✕</button>
         </div>
-        <div id="sketch-controls" style="display:none" data-if="settings.sceneImage" role="group" aria-labelledby="sketch-controls-label">
+        <div id="sketch-controls" data-cloak data-if="settings.sceneImage" role="group" aria-labelledby="sketch-controls-label">
           <span id="sketch-controls-label">Sketch</span>
-          <button id="sketch-btn-min" aria-pressed="false" title="Minimize sketch" aria-label="Minimize sketch">⊟</button>
-          <button id="sketch-btn-win" aria-pressed="true"  title="Windowed sketch" aria-label="Windowed sketch">⊡</button>
-          <button id="sketch-btn-max" aria-pressed="false" title="Maximize sketch" aria-label="Maximize sketch">⊞</button>
+          <button id="sketch-btn-min" :ariaPressed="ui.sketchMinPressed" aria-pressed="false" title="Minimize sketch" aria-label="Minimize sketch">⊟</button>
+          <button id="sketch-btn-win" :ariaPressed="ui.sketchWinPressed" aria-pressed="true"  title="Windowed sketch" aria-label="Windowed sketch">⊡</button>
+          <button id="sketch-btn-max" :ariaPressed="ui.sketchMaxPressed" aria-pressed="false" title="Maximize sketch" aria-label="Maximize sketch">⊞</button>
         </div>
         <div id="ab-toggle-row">
           <span class="ab-toggle-label">Action bar</span>
-          <button id="action-bar-toggle" aria-pressed="true" aria-label="Toggle action bar" title="Show the action bar above the input">{{ui.actionBarLabel}}</button>
+          <button id="action-bar-toggle" :ariaPressed="ui.actionBarActive" aria-pressed="true" aria-label="Toggle action bar" title="Show the action bar above the input">{{ui.actionBarLabel}}</button>
         </div>
         <div id="export-zone">
           <div class="export-zone-label">Export / Import</div>
@@ -242,7 +245,7 @@ html.styles-loaded #brand-bar {
     </main>
 
     <footer id="footer">
-      <div id="action-bar" style="display:none" data-if="ui.actionBarVisible" aria-label="Action bar">
+      <div id="action-bar" data-cloak data-if="ui.actionBarVisible" aria-label="Action bar">
         <div class="ab-zone ab-move-zone" role="group" aria-labelledby="ab-label-move">
           <div class="ab-zone-label" id="ab-label-move">Move</div>
           <div id="ab-compass">
@@ -277,7 +280,7 @@ html.styles-loaded #brand-bar {
           placeholder="What do you do?"
           aria-label="Command input"
         >
-        <button id="mic-btn" class="input-icon-btn" aria-label="Record voice input" aria-pressed="false" title="Speak your action" data-if="settings.stt">🎤</button>
+        <button id="mic-btn" class="input-icon-btn" data-cloak :ariaPressed="ui.recording" aria-pressed="false" aria-label="Record voice input" title="Speak your action" data-if="settings.stt">🎤</button>
       </div>
     </footer>
 

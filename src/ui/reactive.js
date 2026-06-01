@@ -53,6 +53,14 @@ export function registerReactiveSidebar() {
     return (s.settings?.actionBar ?? true) ? 'ON' : 'OFF';
   });
 
+  // aria-pressed state for action bar toggle button.
+  computed('ui.actionBarActive', ['settings.actionBar'], (s) => !!(s.settings?.actionBar ?? true));
+
+  // aria-pressed states for the three sketch view buttons.
+  computed('ui.sketchMinPressed', ['settings.sketchView'], (s) => (s.settings?.sketchView ?? 'windowed') === 'minimized');
+  computed('ui.sketchWinPressed', ['settings.sketchView'], (s) => (s.settings?.sketchView ?? 'windowed') === 'windowed');
+  computed('ui.sketchMaxPressed', ['settings.sketchView'], (s) => (s.settings?.sketchView ?? 'windowed') === 'maximized');
+
   // TTS state — drive icon on the toggle button.
   computed('ui.ttsActive', ['settings.tts'], s => !!(s.settings?.tts));
   computed('ui.ttsIcon',   ['settings.tts'], s => s.settings?.tts ? '🔊' : '🔇');

@@ -167,21 +167,16 @@ export function initMicButton() {
       return;
     }
 
-    btn.setAttribute('aria-pressed', 'true');
     setValue('ui.recording', true);
 
     try {
       const blob       = await startRecording();
-      // Immediately update recording state — user stopped
-      btn.setAttribute('aria-pressed', 'false');
       setValue('ui.recording', false);
-
       const transcript = await transcribeAudio(blob);
       if (transcript) fireChip(transcript);
     } catch (e) {
       appendEntry('error', `Microphone error: ${e.message}`);
     } finally {
-      btn.setAttribute('aria-pressed', 'false');
       setValue('ui.recording', false);
     }
   });

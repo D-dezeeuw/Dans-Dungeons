@@ -22,18 +22,14 @@ async function boot() {
 
   const actionBarToggle = document.getElementById('action-bar-toggle');
   actionBarToggle?.addEventListener('click', () => {
-    const next = !(appState.settings?.actionBar ?? true);
-    setValue('settings.actionBar', next);
-    actionBarToggle.setAttribute('aria-pressed', String(next));
+    setValue('settings.actionBar', !(appState.settings?.actionBar ?? true));
     saveToStorage();
   });
 
-  // TTS toggle — 🔊 button in chrome-row1
+  // TTS toggle — 🔊/🔇 button inside #transcript
   const ttsToggle = document.getElementById('tts-toggle');
   ttsToggle?.addEventListener('click', () => {
-    const next = !(appState.settings?.tts ?? false);
-    setValue('settings.tts', next);
-    ttsToggle.setAttribute('aria-pressed', String(next));
+    setValue('settings.tts', !(appState.settings?.tts ?? false));
     saveToStorage();
   });
 
@@ -59,13 +55,6 @@ async function boot() {
   tick();
   bindDOM(document.body);
   document.body.classList.add('spektrum-ready');
-
-  if (actionBarToggle) {
-    actionBarToggle.setAttribute('aria-pressed', String(appState.settings?.actionBar ?? true));
-  }
-  if (ttsToggle) {
-    ttsToggle.setAttribute('aria-pressed', String(appState.settings?.tts ?? false));
-  }
 
   // STT defaults to on when a key is present (mic button shows via data-if="settings.stt")
   if (!appState.settings?.hasOwnProperty('stt')) {
