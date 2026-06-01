@@ -53,8 +53,7 @@ export function registerReactiveSidebar() {
     return (s.settings?.actionBar ?? true) ? 'ON' : 'OFF';
   });
 
-  // TTS / STT state — drive aria-pressed on the chrome and input buttons.
+  // TTS state — drive icon on the toggle button.
   computed('ui.ttsActive', ['settings.tts'], s => !!(s.settings?.tts));
   computed('ui.ttsIcon',   ['settings.tts'], s => s.settings?.tts ? '🔊' : '🔇');
-  computed('ui.recording', ['ui.recording'],  s => !!(s.ui?.recording));
 }

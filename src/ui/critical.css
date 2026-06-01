@@ -64,12 +64,16 @@ body.spektrum-ready { opacity: 1; transition: opacity 0.1s ease; }
   align-items: center;
   gap: 1rem;
 }
-#chrome-row2 {
+#chrome-row2,
+#chrome-row3 {
   display: flex;
   align-items: center;
+  gap: 0.4rem;
   min-height: 0;
+  padding: 0.1rem 0;
 }
-#chrome-row2:empty { display: none; }
+#chrome-row2:empty,
+#chrome-row3:empty { display: none; }
 #title { font-weight: bold; color: var(--gm); letter-spacing: 0.05em; }
 
 /* ─── Game area ──────────────────────────────────────────── */
