@@ -440,7 +440,8 @@ async function resumeGame() {
 // ─── Action bar ───────────────────────────────────────────────────────────────
 
 function applyActionBarState(on) {
-  document.getElementById('action-bar').style.display = on ? '' : 'none';
+  const hasKey = !!(appState.ai?.key);
+  document.getElementById('action-bar').style.display = (on && hasKey) ? '' : 'none';
 }
 
 // ─── Export helpers ───────────────────────────────────────────────────────────
@@ -665,6 +666,7 @@ async function boot() {
   applyActionBarState(abOn);
 
   await ensureKey();
+  applyActionBarState(appState.settings?.actionBar ?? true);
 
   if (save && appState.session?.phase === 'play') { await resumeGame(); return; }
 
