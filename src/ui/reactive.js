@@ -51,9 +51,9 @@ export function registerReactiveSidebar() {
     return !!(s.settings?.actionBar && s.ai?.key);
   });
 
-  computed('ui.actionBarLabel', ['settings.actionBar'], (s) => {
-    return (s.settings?.actionBar ?? true) ? 'ON' : 'OFF';
-  });
+  computed('ui.actionBarLabel',    ['settings.actionBar'],  (s) => (s.settings?.actionBar ?? true) ? 'ON' : 'OFF');
+  computed('ui.sceneImageActive',  ['settings.sceneImage'], (s) => !!(s.settings?.sceneImage));
+  computed('ui.sceneImageLabel',   ['settings.sceneImage'], (s) => (s.settings?.sceneImage) ? 'ON' : 'OFF');
 
   // aria-pressed state for action bar toggle button.
   computed('ui.actionBarActive', ['settings.actionBar'], (s) => !!(s.settings?.actionBar ?? true));

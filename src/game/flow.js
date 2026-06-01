@@ -342,8 +342,8 @@ export async function playLoop() {
     if (appState.settings?.sceneImage) requestSceneImage(result?.narration, journalEntry);
 
     if (appState.settings?.roleplayMode) {
-      await _speakAsync(result?.narration);
       UI.showRoleplayOverlay(false);
+      _speakAsync(result?.narration);
     } else {
       _speak(result?.narration);
     }

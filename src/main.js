@@ -26,6 +26,11 @@ async function boot() {
     saveToStorage();
   });
 
+  document.getElementById('sketch-toggle')?.addEventListener('click', () => {
+    setValue('settings.sceneImage', !(appState.settings?.sceneImage ?? false));
+    saveToStorage();
+  });
+
   // TTS toggle — 🔊/🔇 button inside #transcript
   const ttsToggle = document.getElementById('tts-toggle');
   ttsToggle?.addEventListener('click', () => {

@@ -219,6 +219,10 @@ html.styles-loaded #brand-bar {
           <button id="copy-key-btn" data-cloak data-if="ai.key" aria-label="Copy API key" title="Copy API key to clipboard">🔑</button>
           <button id="sidebar-close" aria-label="Close settings">✕</button>
         </div>
+        <div id="sketch-toggle-row">
+          <span class="ab-toggle-label">Scene sketch</span>
+          <button id="sketch-toggle" :ariaPressed="ui.sceneImageActive" aria-pressed="false" aria-label="Toggle scene sketch" title="Generate an AI scene sketch after each turn">{{ui.sceneImageLabel}}</button>
+        </div>
         <div id="sketch-controls" data-cloak data-if="settings.sceneImage" role="group" aria-labelledby="sketch-controls-label">
           <span id="sketch-controls-label">Sketch</span>
           <button id="sketch-btn-min" :ariaPressed="ui.sketchMinPressed" aria-pressed="false" title="Minimize sketch" aria-label="Minimize sketch">⊟</button>
