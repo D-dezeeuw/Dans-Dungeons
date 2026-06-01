@@ -101,7 +101,7 @@ const DEFAULT_BASE_URL = 'https://openrouter.ai/api/v1';
 
 async function setupKey() {
   UI.clear();
-  UI.appendEntry('gm',     '⚔  DUNGEONS & DANS  ⚔');
+  UI.appendEntry('gm',     "Dan's Dungeons");
   UI.appendEntry('system', '');
   UI.appendEntry('system', 'To play, you need a free OpenRouter API key.');
   UI.appendEntry('system', 'Sign up at openrouter.ai → API Keys.');

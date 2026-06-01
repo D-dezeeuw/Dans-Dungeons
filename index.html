@@ -135,7 +135,7 @@ html, body {
   }
 
   /* Reserve space for fixed footer so transcript isn't hidden behind it */
-  #game { padding-bottom: 56px; }
+  #game { padding-bottom: 145px; }
 }
 </style><!-- /BUILD:CSS-CRITICAL -->
   <!-- BUILD:CSS-DEFERRED --><link rel="stylesheet" href="src/ui/style.css" media="print" onload="this.media='all'"><noscript><link rel="stylesheet" href="src/ui/style.css"></noscript><!-- /BUILD:CSS-DEFERRED -->
@@ -154,7 +154,7 @@ html, body {
 
     <header id="chrome">
       <div id="chrome-row1">
-        <span id="title">⚔ Dan's Dungeons</span>
+        <span id="title"><img src="favicon.svg" alt="" aria-hidden="true" id="title-icon"> DnD – Dan's Dungeons</span>
         <span id="turn-counter" data-if="session.turnCount">Turn {{session.turnCount}}</span>
         <span id="cost-meter" title="Estimated AI cost this session" data-if="ui.costDisplay">{{ui.costDisplay}}</span>
         <button id="sidebar-toggle" aria-label="Toggle settings">⚙</button>
