@@ -50,8 +50,9 @@ const DEFAULTS = {
   flags: {},
   transcript: [],
   settings: {
-    sceneImage: false,  // generate a journal-sketch scene image after each turn
-    actionBar:  true,   // show the action bar above the debug bar
+    sceneImage: false,      // generate a journal-sketch scene image after each turn
+    actionBar:  true,       // show the action bar above the debug bar
+    sketchView: 'windowed', // 'minimized' | 'windowed' | 'maximized'
   },
 };
 

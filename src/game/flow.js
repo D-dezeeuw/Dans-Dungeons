@@ -26,19 +26,11 @@ const journalLog = [];
 export function getJournalLog() { return journalLog; }
 
 // ─── Sketch view state ────────────────────────────────────────────────────────
-// 'minimized' | 'windowed' | 'maximized' — local UI preference, not persisted.
-
-let sketchView = 'windowed';
 
 export function applySketchView(view) {
-  sketchView = view;
+  setValue('settings.sketchView', view);
   UI.setSketchOpacity(view === 'minimized' ? 'off' : view === 'maximized' ? 'hi' : 'normal');
   if (view !== 'minimized') UI.restoreSceneImage();
-  ['min', 'win', 'max'].forEach(id => {
-    const map = { min: 'minimized', win: 'windowed', max: 'maximized' };
-    document.getElementById(`sketch-btn-${id}`)
-      ?.setAttribute('aria-pressed', String(map[id] === view));
-  });
 }
 
 // ─── Scene image helpers ──────────────────────────────────────────────────────
@@ -54,7 +46,7 @@ function buildImagePrompt(narration) {
 }
 
 function requestSceneImage(narration, journalEntry = null) {
-  if (sketchView === 'minimized') return Promise.resolve(null);
+  if ((appState.settings?.sketchView ?? 'windowed') === 'minimized') return Promise.resolve(null);
   UI.showSceneImageLoading();
   return generateTurnImage(buildImagePrompt(narration))
     .then(src => {
