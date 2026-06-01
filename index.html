@@ -180,11 +180,11 @@ html.styles-loaded #brand-bar {
         <span id="cost-meter" title="Estimated AI cost this session" data-if="ui.costDisplay">{{ui.costDisplay}}</span>
         <button id="sidebar-toggle" aria-label="Toggle settings">⚙</button>
       </div>
-      <div id="chrome-row2" style="display:none">
-        <span id="pc-header-stats"></span>
+      <div id="chrome-row2" style="display:none" data-if="party.pc">
+        <span id="pc-header-stats" :innerHTML="ui.pcStats"></span>
       </div>
-      <div id="chrome-row3" style="display:none">
-        <span id="enemy-header-stats"></span>
+      <div id="chrome-row3" style="display:none" data-if="ui.enemiesPresent">
+        <span id="enemy-header-stats" :innerHTML="ui.enemyStats"></span>
       </div>
     </header>
 
@@ -202,7 +202,7 @@ html.styles-loaded #brand-bar {
           <button id="copy-key-btn" data-if="ai.key" style="display:none" aria-label="Copy API key" title="Copy API key to clipboard">🔑</button>
           <button id="sidebar-close" aria-label="Close settings">✕</button>
         </div>
-        <div id="sketch-controls" style="display:none">
+        <div id="sketch-controls" style="display:none" data-if="settings.sceneImage">
           <span id="sketch-controls-label">Sketch</span>
           <button id="sketch-btn-min" aria-pressed="false" title="Minimize sketch" aria-label="Minimize sketch">⊟</button>
           <button id="sketch-btn-win" aria-pressed="true"  title="Windowed sketch" aria-label="Windowed sketch">⊡</button>
@@ -210,7 +210,7 @@ html.styles-loaded #brand-bar {
         </div>
         <div id="ab-toggle-row">
           <span class="ab-toggle-label">Action bar</span>
-          <button id="action-bar-toggle" aria-pressed="true" aria-label="Toggle action bar" title="Show the action bar above the input">ON</button>
+          <button id="action-bar-toggle" aria-pressed="true" aria-label="Toggle action bar" title="Show the action bar above the input">{{ui.actionBarLabel}}</button>
         </div>
         <div id="export-zone">
           <div class="export-zone-label">Export / Import</div>
@@ -226,7 +226,7 @@ html.styles-loaded #brand-bar {
     </main>
 
     <footer id="footer">
-      <div id="action-bar" style="display:none" aria-label="Action bar">
+      <div id="action-bar" style="display:none" data-if="ui.actionBarVisible" aria-label="Action bar">
         <div class="ab-zone ab-move-zone">
           <div class="ab-zone-label">Move</div>
           <div id="ab-compass">

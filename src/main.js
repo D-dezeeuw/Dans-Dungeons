@@ -6,9 +6,6 @@
 import {
   appState,
   setValue,
-  addValue,
-  watch,
-  addSystem,
   computed,
   bindDOM,
   initState,
@@ -48,9 +45,17 @@ function applySketchView(view) {
 
 const journalLog = [];
 
-// ─── Reactive sidebar (subscribes to appState) ────────────────────────────────
+// ─── HTML escape helper ───────────────────────────────────────────────────────
 
-// Registered in boot() before the first tick so the initial state fires them.
+function escHtml(str) {
+  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// ─── Reactive bindings (computed → Spektrum → DOM via data-if / :innerHTML) ──
+//
+// All UI state flows through computed() values; the DOM picks them up via
+// Spektrum directives (data-if, {{expr}}, :prop) after bindDOM(document.body).
+
 function registerReactiveSidebar() {
   computed('ui.costDisplay', ['ai.totalTokens', 'ai.totalCostUsd'], (s) => {
     const tokens = s.ai?.totalTokens ?? 0;
@@ -58,12 +63,45 @@ function registerReactiveSidebar() {
     return tokens > 0 ? '$' + cost.toFixed(4) + ' · ' + tokens.toLocaleString() + ' tok' : '';
   });
 
-  addSystem(['party.pc', 'party.inventory', 'world.currentRoom', 'world.npcs'], () => {
-    const pc = appState.party?.pc;
-    UI.updatePCHeaderStats(pc?.record, pc?.sheet);
-    const currentRoom = appState.world?.currentRoom;
-    const roomNpcs = Object.values(appState.world?.npcs ?? {}).filter(n => n.roomId === currentRoom);
-    UI.updateEnemyHeaderStats(roomNpcs);
+  // PC header stats — rendered as HTML so HP colour classes work.
+  computed('ui.pcStats', ['party.pc'], (s) => {
+    const pc = s.party?.pc;
+    if (!pc?.record || !pc?.sheet) return '';
+    const hp    = pc.record.hpCurrent ?? pc.sheet.hp.max;
+    const maxHp = pc.sheet.hp.max;
+    const low   = hp <= Math.floor(maxHp / 4);
+    const cap   = str => str.charAt(0).toUpperCase() + str.slice(1);
+    return `<span class="hs-name">${escHtml(pc.record.name)}</span>` +
+           `<span class="hs-sep">·</span>${escHtml(cap(pc.record.classId))}` +
+           `<span class="hs-sep">·</span>HP <span class="${low ? 'hs-hp-low' : 'hs-hp-ok'}">${hp}/${maxHp}</span>` +
+           `<span class="hs-sep">·</span>AC ${pc.sheet.ac.value}`;
+  });
+
+  // Enemy header stats — alive enemies in current room.
+  computed('ui.enemiesPresent', ['world.npcs', 'world.currentRoom'], (s) => {
+    const room = s.world?.currentRoom;
+    return Object.values(s.world?.npcs ?? {}).some(n => n.roomId === room && n.alive);
+  });
+
+  computed('ui.enemyStats', ['world.npcs', 'world.currentRoom'], (s) => {
+    const room  = s.world?.currentRoom;
+    const alive = Object.values(s.world?.npcs ?? {}).filter(n => n.roomId === room && n.alive);
+    if (!alive.length) return '';
+    return alive.map(n => {
+      const low = n.hp <= Math.floor(n.maxHp / 4);
+      return `<span class="hs-enemy-name">${escHtml(n.name)}</span>` +
+             `<span class="hs-sep">·</span>HP <span class="${low ? 'hs-hp-low' : 'hs-hp-ok'}">${n.hp}/${n.maxHp}</span>`;
+    }).join('<span class="hs-enemy-divider"> &nbsp; </span>');
+  });
+
+  // Action bar visibility — requires both an API key and the toggle enabled.
+  computed('ui.actionBarVisible', ['settings.actionBar', 'ai.key'], (s) => {
+    return !!(s.settings?.actionBar && s.ai?.key);
+  });
+
+  // Action bar toggle label text.
+  computed('ui.actionBarLabel', ['settings.actionBar'], (s) => {
+    return (s.settings?.actionBar ?? true) ? 'ON' : 'OFF';
   });
 }
 
@@ -167,8 +205,6 @@ async function startNewGame() {
   );
   const wantsSketch = sketchChoice === 'yes';
   setValue('settings.sceneImage', wantsSketch);
-  const sketchControls = document.getElementById('sketch-controls');
-  if (sketchControls) sketchControls.style.display = wantsSketch ? '' : 'none';
 
   setValue('session.phase', 'play');
   tick(); // Flush delta → appState before beginAdventure reads it (rAF hasn't fired yet)
@@ -437,13 +473,6 @@ async function resumeGame() {
   await playLoop();
 }
 
-// ─── Action bar ───────────────────────────────────────────────────────────────
-
-function applyActionBarState(on) {
-  const hasKey = !!(appState.ai?.key);
-  document.getElementById('action-bar').style.display = (on && hasKey) ? '' : 'none';
-}
-
 // ─── Export helpers ───────────────────────────────────────────────────────────
 
 function triggerDownload(blob, filename) {
@@ -614,14 +643,12 @@ async function boot() {
   document.getElementById('sketch-btn-win')?.addEventListener('click', () => applySketchView('windowed'));
   document.getElementById('sketch-btn-max')?.addEventListener('click', () => applySketchView('maximized'));
 
-  // Action bar toggle.
+  // Action bar toggle — Spektrum keeps textContent ({{ui.actionBarLabel}}) in sync.
   const actionBarToggle = document.getElementById('action-bar-toggle');
   actionBarToggle?.addEventListener('click', () => {
     const next = !(appState.settings?.actionBar ?? true);
     setValue('settings.actionBar', next);
     actionBarToggle.setAttribute('aria-pressed', String(next));
-    actionBarToggle.textContent = next ? 'ON' : 'OFF';
-    applyActionBarState(next);
     saveToStorage();
   });
 
@@ -652,25 +679,14 @@ async function boot() {
 
   tick();
 
-  // Bind declarative {{expr}} / data-if to live appState after first tick.
-  bindDOM(document.getElementById('chrome'));
-  bindDOM(document.getElementById('sidebar-header'));
+  // Bind all declarative Spektrum directives (data-if, {{expr}}, :prop) in one pass.
+  bindDOM(document.body);
 
-  // Sync sketch controls to restored setting.
-  const sketchOn = appState.settings?.sceneImage ?? false;
-  const sketchControls = document.getElementById('sketch-controls');
-  if (sketchControls) sketchControls.style.display = sketchOn ? '' : 'none';
-
-  // Sync action bar toggle to restored setting.
+  // Sync aria-pressed for the action bar toggle from restored setting.
   const abOn = appState.settings?.actionBar ?? true;
-  if (actionBarToggle) {
-    actionBarToggle.setAttribute('aria-pressed', String(abOn));
-    actionBarToggle.textContent = abOn ? 'ON' : 'OFF';
-  }
-  applyActionBarState(abOn);
+  if (actionBarToggle) actionBarToggle.setAttribute('aria-pressed', String(abOn));
 
   await ensureKey();
-  applyActionBarState(appState.settings?.actionBar ?? true);
 
   if (save && appState.session?.phase === 'play') { await resumeGame(); return; }
 
