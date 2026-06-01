@@ -60,11 +60,10 @@ function registerReactiveSidebar() {
 
   addSystem(['party.pc', 'party.inventory', 'world.currentRoom', 'world.npcs'], () => {
     const pc = appState.party?.pc;
-    UI.updatePCStats(pc?.record, pc?.sheet, appState.party?.inventory ?? []);
     UI.updatePCHeaderStats(pc?.record, pc?.sheet);
     const currentRoom = appState.world?.currentRoom;
     const roomNpcs = Object.values(appState.world?.npcs ?? {}).filter(n => n.roomId === currentRoom);
-    UI.updateEnemyStats(roomNpcs);
+    UI.updateEnemyHeaderStats(roomNpcs);
   });
 }
 

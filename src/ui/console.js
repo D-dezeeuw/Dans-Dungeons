@@ -34,8 +34,6 @@ let   _historyCursor = -1;
 let   _historyDraft  = ''; // preserves in-progress text when UP is first pressed
 
 const transcriptEl  = () => document.getElementById('transcript');
-const pcStatsEl     = () => document.getElementById('pc-stats');
-const enemyStatsEl  = () => document.getElementById('enemy-stats');
 const actionChipsEl = () => document.getElementById('action-chips');
 const cmdEl         = () => document.getElementById('cmd');
 
@@ -202,38 +200,16 @@ export function updatePCHeaderStats(record, sheet) {
     `<span class="hs-sep">·</span>AC ${sheet.ac.value}`;
 }
 
-export function updatePCStats(record, sheet, inventory = []) {
-  if (!record || !sheet) { pcStatsEl().innerHTML = ''; return; }
-  const hp    = record.hpCurrent ?? sheet.hp.max;
-  const maxHp = sheet.hp.max;
-  const low   = hp <= Math.floor(maxHp / 4);
-  const bagRow = inventory.length
-    ? `<div class="stat-row">Bag  ${inventory.map(i => i.name).join(', ')}</div>`
-    : '';
-  pcStatsEl().innerHTML = `
-    <div class="stat-block">
-      <div class="stat-name">${record.name}</div>
-      <div class="stat-row">HP  <span class="hp${low ? ' low' : ''}">${hp}/${maxHp}</span></div>
-      <div class="stat-row">AC  ${sheet.ac.value}</div>
-      <div class="stat-row">${record.classId.charAt(0).toUpperCase() + record.classId.slice(1)} ${record.level}</div>
-      <div class="stat-row">PB  +${sheet.proficiencyBonus}</div>
-      ${bagRow}
-    </div>`;
-}
-
-export function updateEnemyStats(npcs) {
+export function updateEnemyHeaderStats(npcs) {
+  const el = document.getElementById('enemy-header-stats');
+  if (!el) return;
   const alive = (Array.isArray(npcs) ? npcs : Object.values(npcs ?? {})).filter(n => n.alive);
-  if (!alive.length) {
-    enemyStatsEl().innerHTML = '<div class="muted">No enemies</div>';
-    return;
-  }
-  enemyStatsEl().innerHTML = alive.map(n => {
+  if (!alive.length) { el.innerHTML = ''; return; }
+  el.innerHTML = alive.map(n => {
     const low = n.hp <= Math.floor(n.maxHp / 4);
-    return `<div class="stat-block enemy">
-      <div class="stat-name">${n.name}</div>
-      <div class="stat-row">HP <span class="hp${low ? ' low' : ''}">${n.hp}/${n.maxHp}</span></div>
-    </div>`;
-  }).join('');
+    return `<span class="hs-enemy-name">${escHtml(n.name)}</span>` +
+           `<span class="hs-sep">·</span>HP <span class="${low ? 'hs-hp-low' : 'hs-hp-ok'}">${n.hp}/${n.maxHp}</span>`;
+  }).join('<span class="hs-enemy-divider"> &nbsp; </span>');
 }
 
 // ─── Collapsibles (sidebar + debug panel) ────────────────────────────────────

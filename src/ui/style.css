@@ -53,6 +53,27 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
 }
 #chrome-row2:empty { display: none; }
 
+#chrome-row3 {
+  display: flex;
+  align-items: center;
+  min-height: 0;
+}
+#chrome-row3:empty { display: none; }
+
+#enemy-header-stats {
+  font-size: 11px;
+  color: var(--system);
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#enemy-header-stats .hs-enemy-name { color: var(--error); font-weight: bold; }
+#enemy-header-stats .hs-sep        { color: var(--system); margin: 0 0.3rem; }
+#enemy-header-stats .hs-hp-ok      { color: var(--hp-ok); }
+#enemy-header-stats .hs-hp-low     { color: var(--hp-low); }
+#enemy-header-stats .hs-enemy-divider { color: var(--border); }
+
 #title { font-weight: bold; color: var(--gm); letter-spacing: 0.05em; }
 #pc-header-stats {
   font-size: 11px;
@@ -278,12 +299,6 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
 }
 #sidebar-toggle:hover { color: var(--text); }
 
-.stat-block { font-size: 13px; }
-.stat-name  { color: var(--gm); font-weight: bold; margin-bottom: 0.2rem; border-bottom: 1px solid var(--border); padding-bottom: 0.2rem; }
-.stat-row   { color: var(--system); margin-top: 0.15rem; }
-.stat-row .hp     { color: var(--hp-ok); }
-.stat-row .hp.low { color: var(--hp-low); }
-.stat-block.enemy .stat-name { color: var(--error); }
 .muted { color: var(--system); font-size: 12px; }
 
 /* ─── Action chips ───────────────────────────────────────── */
