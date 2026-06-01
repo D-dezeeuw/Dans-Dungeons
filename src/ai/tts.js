@@ -80,15 +80,11 @@ export async function speakText(text) {
   let res;
   let usedModel;
   for (const model of models) {
-    const isPcm = PCM_MODELS.has(model);
-    // PCM models (e.g. Gemini) don't accept the OpenAI-specific `voice` param.
-    const bodyObj = isPcm
-      ? { model, input: text, response_format: 'pcm' }
-      : { model, input: text, voice: 'alloy', response_format: 'mp3' };
+    const fmt = PCM_MODELS.has(model) ? 'pcm' : 'mp3';
     res = await fetch(`${base}/audio/speech`, {
       method:  'POST',
       headers: reqHeaders,
-      body:    JSON.stringify(bodyObj),
+      body:    JSON.stringify({ model, input: text, voice: 'alloy', response_format: fmt }),
     });
     if (res.status !== 429) { usedModel = model; break; }
   }
