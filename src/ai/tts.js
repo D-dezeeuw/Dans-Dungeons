@@ -38,16 +38,24 @@ export async function speakText(text) {
 
   cancelSpeech(); // stop any ongoing audio before fetching new
 
-  const res = await fetch(`${base}/audio/speech`, {
-    method:  'POST',
-    headers: headers(ai.key || '', location.origin),
-    body:    JSON.stringify({
-      model:           modelFor('tts', ai),
-      input:           text,
-      voice:           'alloy',
-      response_format: 'mp3',
-    }),
+  const body = JSON.stringify({
+    model:           modelFor('tts', ai),
+    input:           text,
+    voice:           'alloy',
+    response_format: 'mp3',
   });
+
+  // OpenRouter routes TTS to OpenAI which can 429 on capacity even for a first
+  // request. One retry after a short backoff is enough to clear transient spikes.
+  let res = await fetch(`${base}/audio/speech`, {
+    method: 'POST', headers: headers(ai.key || '', location.origin), body,
+  });
+  if (res.status === 429) {
+    await new Promise(r => setTimeout(r, 3000));
+    res = await fetch(`${base}/audio/speech`, {
+      method: 'POST', headers: headers(ai.key || '', location.origin), body,
+    });
+  }
 
   if (!res.ok) {
     const err = await res.text().catch(() => '');
