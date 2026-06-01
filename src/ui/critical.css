@@ -128,5 +128,5 @@ html, body {
   }
 
   /* Reserve space for fixed footer so transcript isn't hidden behind it */
-  #game { padding-bottom: 56px; }
+  #game { padding-bottom: 145px; }
 }
