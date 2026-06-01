@@ -52,4 +52,8 @@ export function registerReactiveSidebar() {
   computed('ui.actionBarLabel', ['settings.actionBar'], (s) => {
     return (s.settings?.actionBar ?? true) ? 'ON' : 'OFF';
   });
+
+  // TTS / STT state — drive aria-pressed on the chrome and input buttons.
+  computed('ui.ttsActive', ['settings.tts'], s => !!(s.settings?.tts));
+  computed('ui.recording', ['ui.recording'],  s => !!(s.ui?.recording));
 }

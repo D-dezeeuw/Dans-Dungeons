@@ -1,7 +1,8 @@
 // src/ui/input.js — player input: keyboard history, prompt/pickFrom,
-// prefillChip/fireChip for chip-to-input wiring.
+// prefillChip/fireChip for chip-to-input wiring, and mic-button STT wiring.
 
 import { appendEntry } from './transcript.js';
+import { setValue }    from '../core/state.js';
 
 // ─── Input history ────────────────────────────────────────────────────────────
 // Stores submitted strings for UP/DOWN recall. Newest at the end.
@@ -51,17 +52,7 @@ cmdEl().addEventListener('keydown', (e) => {
   }
 
   if (e.key !== 'Enter') return;
-  const val = cmdEl().value.trim();
-  cmdEl().value = '';
-  _historyCursor = -1;
-  _historyDraft  = '';
-  if (val) _history.push(val);
-  if (_resolveInput) {
-    const fn  = _resolveInput;
-    _resolveInput = null;
-    setInputEnabled(false);
-    fn(val);
-  }
+  _submit(cmdEl().value.trim());
 });
 
 cmdEl().addEventListener('focus', () => inputRowEl()?.classList.add('active'));
@@ -70,6 +61,26 @@ cmdEl().addEventListener('blur',  () => inputRowEl()?.classList.remove('active')
 transcriptEl().addEventListener('click', () => {
   if (!cmdEl().disabled) cmdEl().focus();
 });
+
+// Internal submit — clears input, pushes history, resolves the pending promise.
+// Also cancels any in-progress TTS so old narration doesn't overlap the next turn.
+function _submit(val) {
+  cmdEl().value  = '';
+  _historyCursor = -1;
+  _historyDraft  = '';
+  if (val) _history.push(val);
+
+  // Stop narration audio when the player takes an action (dynamic import so
+  // tts.js stays out of the critical path when TTS is not in use).
+  import('../ai/tts.js').then(({ cancelSpeech }) => cancelSpeech()).catch(() => {});
+
+  if (_resolveInput) {
+    const fn  = _resolveInput;
+    _resolveInput = null;
+    setInputEnabled(false);
+    fn(val);
+  }
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -97,6 +108,9 @@ export function fireChip(val) {
     _resolveInput = null;
     setInputEnabled(false);
     cmdEl().value = '';
+
+    import('../ai/tts.js').then(({ cancelSpeech }) => cancelSpeech()).catch(() => {});
+
     fn(val);
   } else {
     prefillChip(val);
@@ -134,4 +148,41 @@ export async function pickFrom(message, options, labelFn = (x) => x, defaultIdx 
     if (match) return match;
     appendEntry('error', `Please enter 1–${options.length} or the option name.`);
   }
+}
+
+// ─── Mic button (STT) ─────────────────────────────────────────────────────────
+// initMicButton() is called once in boot(). The button toggles recording state:
+// first click → start recording; second click → stop, transcribe, submit.
+
+export function initMicButton() {
+  const btn = document.getElementById('mic-btn');
+  if (!btn) return;
+
+  btn.addEventListener('click', async () => {
+    const { isRecording, startRecording, stopRecording, transcribeAudio } =
+      await import('../ai/stt.js');
+
+    if (isRecording()) {
+      stopRecording();
+      return;
+    }
+
+    btn.setAttribute('aria-pressed', 'true');
+    setValue('ui.recording', true);
+
+    try {
+      const blob       = await startRecording();
+      // Immediately update recording state — user stopped
+      btn.setAttribute('aria-pressed', 'false');
+      setValue('ui.recording', false);
+
+      const transcript = await transcribeAudio(blob);
+      if (transcript) fireChip(transcript);
+    } catch (e) {
+      appendEntry('error', `Microphone error: ${e.message}`);
+    } finally {
+      btn.setAttribute('aria-pressed', 'false');
+      setValue('ui.recording', false);
+    }
+  });
 }

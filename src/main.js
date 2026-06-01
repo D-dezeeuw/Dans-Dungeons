@@ -5,6 +5,8 @@ import { appState, setValue, bindDOM, initState, restoreState, loadFromStorage, 
 import { registerReactiveSidebar }                                                           from './ui/reactive.js';
 import { createJournal, exportScreenshot, exportAllSketches, importSave, handleImportFile } from './ui/exports.js';
 import { startNewGame, resumeGame, ensureKey, applySketchView }                             from './game/flow.js';
+import { initSpeakHover }                                                                   from './ui/transcript.js';
+import { initMicButton }                                                                    from './ui/input.js';
 import * as UI from './ui/console.js';
 
 async function boot() {
@@ -23,6 +25,15 @@ async function boot() {
     const next = !(appState.settings?.actionBar ?? true);
     setValue('settings.actionBar', next);
     actionBarToggle.setAttribute('aria-pressed', String(next));
+    saveToStorage();
+  });
+
+  // TTS toggle — 🔊 button in chrome-row1
+  const ttsToggle = document.getElementById('tts-toggle');
+  ttsToggle?.addEventListener('click', () => {
+    const next = !(appState.settings?.tts ?? false);
+    setValue('settings.tts', next);
+    ttsToggle.setAttribute('aria-pressed', String(next));
     saveToStorage();
   });
 
@@ -52,6 +63,17 @@ async function boot() {
   if (actionBarToggle) {
     actionBarToggle.setAttribute('aria-pressed', String(appState.settings?.actionBar ?? true));
   }
+  if (ttsToggle) {
+    ttsToggle.setAttribute('aria-pressed', String(appState.settings?.tts ?? false));
+  }
+
+  // STT defaults to on when a key is present (mic button shows via data-if="settings.stt")
+  if (!appState.settings?.hasOwnProperty('stt')) {
+    setValue('settings.stt', true);
+  }
+
+  initSpeakHover();
+  initMicButton();
 
   await ensureKey();
 

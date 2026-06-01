@@ -515,6 +515,72 @@
   gap: 1px;
 }
 
+/* ─── Hover-speak button (TTS on GM entries) ─────────────── */
+#speak-hover-btn {
+  position: fixed;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s;
+  background: var(--bg-mid);
+  border: 1px solid var(--border);
+  color: var(--system);
+  border-radius: 4px;
+  padding: 2px 7px;
+  font-size: 13px;
+  cursor: pointer;
+  z-index: 100;
+  line-height: 1.8;
+}
+#speak-hover-btn.visible   { opacity: 1; pointer-events: auto; }
+#speak-hover-btn.speaking  { color: var(--gm); }
+#speak-hover-btn:hover     { background: var(--bg-edge); }
+
+/* ─── Mic button in input row ────────────────────────────── */
+/* .input-icon-btn is the shared class; #mic-btn adds the pulse state */
+.input-icon-btn {
+  background: none;
+  border: none;
+  color: var(--system);
+  cursor: pointer;
+  padding: 0 6px;
+  font-size: 16px;
+  line-height: 1;
+  flex-shrink: 0;
+  transition: color 0.15s;
+}
+#mic-btn {
+  background: none;
+  border: none;
+  color: var(--system);
+  cursor: pointer;
+  padding: 0 6px;
+  font-size: 16px;
+  line-height: 1;
+  flex-shrink: 0;
+  transition: color 0.15s;
+}
+#mic-btn[aria-pressed="true"] {
+  color: var(--error, #e07070);
+  animation: mic-pulse 1s ease-in-out infinite;
+}
+@keyframes mic-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.35; }
+}
+
+/* ─── TTS toggle in chrome-row1 ──────────────────────────── */
+.chrome-icon-btn {
+  background: none;
+  border: none;
+  color: var(--system);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0 4px;
+  line-height: 1;
+  transition: color 0.15s;
+}
+.chrome-icon-btn[aria-pressed="true"] { color: var(--gm); }
+
 /* ─── Action bar tooltips ────────────────────────────────── */
 #ab-tooltip {
   position: fixed;

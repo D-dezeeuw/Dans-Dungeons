@@ -9,6 +9,15 @@ import { createCharacter } from './character.js';
 import { processTurn, checkApiKey, generateTurnImage } from './loop.js';
 import * as UI from '../ui/console.js';
 
+// TTS helper — imported lazily so the audio module is a no-op when TTS is off.
+function _speak(text) {
+  if (!appState.settings?.tts || !appState.ai?.key || !text?.trim()) return;
+  import('../ai/tts.js').then(({ speakText }) => speakText(text)).catch(() => {});
+}
+function _cancelSpeech() {
+  import('../ai/tts.js').then(({ cancelSpeech }) => cancelSpeech()).catch(() => {});
+}
+
 // ─── Journal log ──────────────────────────────────────────────────────────────
 // Accumulates {turn, narration, imageSrc} entries for the current session.
 // Exported so exports.js can generate the journal and sketch gallery.
@@ -208,6 +217,7 @@ export async function beginAdventure() {
   journalLog.push(openingEntry);
   if (appState.settings?.sceneImage) requestSceneImage(room.description, openingEntry);
   if (appState.settings?.actionBar)  UI.updateActionBar(room.exits ?? [], pc.record, pc.sheet, {});
+  _speak(room.description);
 
   await playLoop();
 }
@@ -227,6 +237,8 @@ export async function playLoop() {
 
     const pcHp = appState.party?.pc?.record?.hpCurrent ?? 1;
     if (pcHp <= 0) { await doDefeat(); break; }
+
+    _cancelSpeech(); // stop any leftover narration before awaiting player input
 
     const room = appState.world?.rooms?.[appState.world?.currentRoom];
     UI.showRoomChips(room?.exits ?? [], room?.loot ?? []);
@@ -320,6 +332,7 @@ export async function playLoop() {
     journalLog.push(journalEntry);
 
     if (appState.settings?.sceneImage) requestSceneImage(result?.narration, journalEntry);
+    _speak(result?.narration);
     UI.updateDebugPanel(result?._debug);
   }
 }
@@ -330,27 +343,29 @@ async function doVictory() {
   setValue('session.phase', 'game-over');
   const room     = appState.world?.rooms?.[appState.world?.exitRoomId];
   const treasure = (room?.loot ?? []).find(i => i.type === 'treasure');
+  const victoryText =
+    `You have found ${treasure?.name ?? 'the treasure'} and made it out alive. ` +
+    `The adventure ends in triumph — for now.`;
   UI.appendEntry('system', '');
   UI.appendEntry('system', '══ VICTORY ══════════════════════════════════');
-  UI.appendEntry('gm',
-    `You have found ${treasure?.name ?? 'the treasure'} and made it out alive. ` +
-    `The adventure ends in triumph — for now.`
-  );
+  UI.appendEntry('gm', victoryText);
   UI.appendEntry('system', '');
   UI.appendEntry('system', 'Type /restart to play again.');
+  _speak(victoryText);
   await awaitRestart();
 }
 
 async function doDefeat() {
   setValue('session.phase', 'game-over');
+  const defeatText =
+    'The world dims. Grizzik\'s mocking cackle echoes through the stone ' +
+    'as you collapse to the cold floor. Your adventure ends here — for now.';
   UI.appendEntry('system', '');
   UI.appendEntry('system', '══ DEFEAT ════════════════════════════════════');
-  UI.appendEntry('gm',
-    'The world dims. Grizzik\'s mocking cackle echoes through the stone ' +
-    'as you collapse to the cold floor. Your adventure ends here — for now.'
-  );
+  UI.appendEntry('gm', defeatText);
   UI.appendEntry('system', '');
   UI.appendEntry('system', 'Type /restart to try again.');
+  _speak(defeatText);
   await awaitRestart();
 }
 

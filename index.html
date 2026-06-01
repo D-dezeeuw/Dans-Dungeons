@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="A browser-based AI dungeon master. Bring your own OpenRouter key and adventure through a procedurally generated world — no install, no backend.">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-tAUjT3wKLNTnmsNWU+RI09/9OXYPvgyVs4hlkuw4C0I='; style-src 'self' 'unsafe-inline'; connect-src https:; img-src 'self' data: blob:; font-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none';">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-tAUjT3wKLNTnmsNWU+RI09/9OXYPvgyVs4hlkuw4C0I='; style-src 'self' 'unsafe-inline'; connect-src https:; img-src 'self' data: blob:; media-src 'self' blob:; font-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none';">
   <meta property="og:title" content="Dan's Dungeons">
   <meta property="og:description" content="A browser-based AI dungeon master. Bring your own OpenRouter key and adventure through a procedurally generated world.">
   <meta property="og:type" content="website">
@@ -189,6 +189,7 @@ html.styles-loaded #brand-bar {
         <span id="title"><img src="favicon.svg" alt="" aria-hidden="true" id="title-icon" style="width:18px;height:18px;display:inline-block;vertical-align:middle;"> DnD – Dan's Dungeons</span>
         <span id="turn-counter" data-if="session.turnCount">Turn {{session.turnCount}}</span>
         <span id="cost-meter" title="Estimated AI cost this session" data-if="ui.costDisplay">{{ui.costDisplay}}</span>
+        <button id="tts-toggle" class="chrome-icon-btn" aria-label="Toggle narration voice" aria-pressed="false" title="Toggle narration voice" data-if="ai.key">🔊</button>
         <button id="sidebar-toggle" aria-label="Toggle settings">⚙</button>
       </div>
       <div id="chrome-row2" style="display:none" data-if="party.pc">
@@ -272,6 +273,7 @@ html.styles-loaded #brand-bar {
           placeholder="What do you do?"
           aria-label="Command input"
         >
+        <button id="mic-btn" class="input-icon-btn" aria-label="Record voice input" aria-pressed="false" title="Speak your action" data-if="settings.stt">🎤</button>
       </div>
     </footer>
 
