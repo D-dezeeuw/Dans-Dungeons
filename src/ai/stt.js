@@ -1,7 +1,7 @@
 // src/ai/stt.js — Speech-to-text via OpenRouter.
 //
 // Records audio with MediaRecorder (outputs webm/ogg depending on browser),
-// then POSTs the blob to /audio/transcriptions and returns the transcript string.
+// converts to base64, then POSTs JSON to /audio/transcriptions per the OpenRouter API.
 
 import { appState } from '../core/state.js';
 import { modelFor } from './client.js';
@@ -57,28 +57,35 @@ export function stopRecording() {
   }
 }
 
+// Converts a Blob to a base64 string (no data-URL prefix).
+async function _blobToBase64(blob) {
+  const buf   = await blob.arrayBuffer();
+  const bytes = new Uint8Array(buf);
+  let binary  = '';
+  for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+  return btoa(binary);
+}
+
 // Sends an audio Blob to OpenRouter for transcription.
 // Returns the transcript string or throws on API error.
 export async function transcribeAudio(blob) {
-  const ai   = appState.ai || {};
-  const base = (ai.baseUrl || 'https://openrouter.ai/api/v1').replace(/\/$/, '');
-
-  // Derive a filename extension from the blob's MIME type.
-  const ext  = blob.type.includes('ogg') ? 'ogg' : 'webm';
-  const file = new File([blob], `clip.${ext}`, { type: blob.type });
-
-  const form = new FormData();
-  form.append('model', modelFor('stt', ai));
-  form.append('file', file);
+  const ai     = appState.ai || {};
+  const base   = (ai.baseUrl || 'https://openrouter.ai/api/v1').replace(/\/$/, '');
+  const format = blob.type.includes('ogg') ? 'ogg' : 'webm';
+  const data64 = await _blobToBase64(blob);
 
   const res = await fetch(`${base}/audio/transcriptions`, {
     method:  'POST',
     headers: {
       'Authorization': `Bearer ${ai.key || ''}`,
+      'Content-Type':  'application/json',
       'HTTP-Referer':  location.origin,
       'X-Title':       "Dan's Dungeons",
     },
-    body: form,
+    body: JSON.stringify({
+      model:       modelFor('stt', ai),
+      input_audio: { data: data64, format },
+    }),
   });
 
   if (!res.ok) {
@@ -86,6 +93,6 @@ export async function transcribeAudio(blob) {
     throw new Error(`AI ${res.status}: ${err.slice(0, 200)}`);
   }
 
-  const data = await res.json();
-  return (data.text ?? '').trim();
+  const result = await res.json();
+  return (result.text ?? '').trim();
 }
