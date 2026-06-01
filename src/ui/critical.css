@@ -105,3 +105,28 @@ html, body {
 .entry-system  { color: var(--system); }
 .entry-option  { color: var(--option); }
 .entry-error   { color: var(--error); }
+
+/* ─── Sidebar pre-init (prevents CLS on boot) ────────────── */
+/* Applied by inline script before render; JS removes it once it takes over */
+[data-sidebar-init="collapsed"] #sidebar {
+  width: 0 !important;
+  padding: 0 !important;
+  border-left-color: transparent !important;
+}
+
+/* ─── Mobile layout — in critical CSS to prevent CLS ────── */
+/* These rules must apply before first paint; duplicated from style.css */
+@media (max-width: 767px) {
+  #brand-bar { display: none; }
+
+  #footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 10;
+  }
+
+  /* Reserve space for fixed footer so transcript isn't hidden behind it */
+  #game { padding-bottom: 56px; }
+}

@@ -112,8 +112,42 @@ html, body {
 .entry-system  { color: var(--system); }
 .entry-option  { color: var(--option); }
 .entry-error   { color: var(--error); }
+
+/* ─── Sidebar pre-init (prevents CLS on boot) ────────────── */
+/* Applied by inline script before render; JS removes it once it takes over */
+[data-sidebar-init="collapsed"] #sidebar {
+  width: 0 !important;
+  padding: 0 !important;
+  border-left-color: transparent !important;
+}
+
+/* ─── Mobile layout — in critical CSS to prevent CLS ────── */
+/* These rules must apply before first paint; duplicated from style.css */
+@media (max-width: 767px) {
+  #brand-bar { display: none; }
+
+  #footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 10;
+  }
+
+  /* Reserve space for fixed footer so transcript isn't hidden behind it */
+  #game { padding-bottom: 56px; }
+}
 </style><!-- /BUILD:CSS-CRITICAL -->
   <!-- BUILD:CSS-DEFERRED --><link rel="stylesheet" href="src/ui/style.css" media="print" onload="this.media='all'"><noscript><link rel="stylesheet" href="src/ui/style.css"></noscript><!-- /BUILD:CSS-DEFERRED -->
+  <script>
+    // Pre-collapse sidebar before first render to prevent CLS.
+    // Reads the same localStorage key used by makePanel() in console.js.
+    try {
+      var _sv = localStorage.getItem('dg-sidebar');
+      var _open = _sv !== null ? _sv === 'open' : innerWidth >= 768;
+      if (!_open) document.documentElement.dataset.sidebarInit = 'collapsed';
+    } catch(e) {}
+  </script>
 </head>
 <body>
   <div id="app">

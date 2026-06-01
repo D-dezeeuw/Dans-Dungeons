@@ -262,6 +262,8 @@ export function initCollapsibles() {
       // Backdrop: only active on mobile (CSS hides it on desktop)
       if (backdrop) backdrop.classList.toggle('active', open);
     });
+    // Hand off from CSS pre-init (data attribute) to JS class-based control.
+    document.documentElement.removeAttribute('data-sidebar-init');
     set(storedOrDefault());
     const closeSidebar = () => set(false);
     sidebarBtn.addEventListener('click', () => set(sidebar.classList.contains('collapsed')));
