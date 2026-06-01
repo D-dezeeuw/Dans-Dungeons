@@ -8,13 +8,38 @@ import { modelFor, headers }  from './client.js';
 
 // ─── Fallback model chain ─────────────────────────────────────────────────────
 // Tried in order when the primary model returns 429 (capacity exceeded).
-// All share the same /audio/speech API shape.
+// All use the same /audio/speech endpoint; format differs per model.
 
 const TTS_FALLBACKS = [
   'google/gemini-3.1-flash-tts-preview',
   'x-ai/grok-voice-tts-1.0',
   'mistralai/voxtral-mini-tts-2603',
 ];
+
+// Models that require response_format "pcm" instead of "mp3".
+// PCM responses are wrapped in a WAV header before playback.
+const PCM_MODELS = new Set([
+  'google/gemini-3.1-flash-tts-preview',
+]);
+
+// Wraps a raw PCM buffer in a RIFF/WAV header so HTMLAudioElement can play it.
+// Gemini TTS outputs 16-bit linear PCM at 24 000 Hz, mono.
+function _pcmToWav(pcmBuffer, sampleRate = 24000, bits = 16, channels = 1) {
+  const byteRate   = sampleRate * channels * bits / 8;
+  const blockAlign = channels * bits / 8;
+  const dataLen    = pcmBuffer.byteLength;
+  const out = new ArrayBuffer(44 + dataLen);
+  const v   = new DataView(out);
+  const str = (off, s) => [...s].forEach((c, i) => v.setUint8(off + i, c.charCodeAt(0)));
+  str(0,  'RIFF'); v.setUint32(4,  36 + dataLen,  true);
+  str(8,  'WAVE'); str(12, 'fmt '); v.setUint32(16, 16, true);
+  v.setUint16(20, 1,           true); v.setUint16(22, channels,    true);
+  v.setUint32(24, sampleRate,  true); v.setUint32(28, byteRate,    true);
+  v.setUint16(32, blockAlign,  true); v.setUint16(34, bits,        true);
+  str(36, 'data'); v.setUint32(40, dataLen, true);
+  new Uint8Array(out).set(new Uint8Array(pcmBuffer), 44);
+  return out;
+}
 
 // ─── Playback state ───────────────────────────────────────────────────────────
 
@@ -53,13 +78,15 @@ export async function speakText(text) {
   // Try the configured model first, then each fallback on 429 (capacity exceeded).
   const models = [modelFor('tts', ai), ...TTS_FALLBACKS];
   let res;
+  let usedModel;
   for (const model of models) {
+    const fmt = PCM_MODELS.has(model) ? 'pcm' : 'mp3';
     res = await fetch(`${base}/audio/speech`, {
       method:  'POST',
       headers: reqHeaders,
-      body:    JSON.stringify({ model, input: text, voice: 'alloy', response_format: 'mp3' }),
+      body:    JSON.stringify({ model, input: text, voice: 'alloy', response_format: fmt }),
     });
-    if (res.status !== 429) break;
+    if (res.status !== 429) { usedModel = model; break; }
   }
 
   if (!res.ok) {
@@ -71,7 +98,14 @@ export async function speakText(text) {
   const charCount = text.length;
   addValue('ai.totalCostUsd', parseFloat((charCount * 0.000015).toFixed(6)));
 
-  const blob = await res.blob();
+  // PCM models (e.g. Gemini) return raw samples — wrap in WAV before playback.
+  let blob;
+  if (PCM_MODELS.has(usedModel)) {
+    const pcmBuf = await res.arrayBuffer();
+    blob = new Blob([_pcmToWav(pcmBuf)], { type: 'audio/wav' });
+  } else {
+    blob = await res.blob();
+  }
   const url  = URL.createObjectURL(blob);
 
   return new Promise((resolve, reject) => {
