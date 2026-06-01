@@ -51,6 +51,7 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
   align-items: center;
   min-height: 0;
 }
+#chrome-row2 { display: flex; }
 #chrome-row2:empty { display: none; }
 
 #chrome-row3 {
@@ -58,6 +59,7 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
   align-items: center;
   min-height: 0;
 }
+#chrome-row3 { display: flex; }
 #chrome-row3:empty { display: none; }
 
 #enemy-header-stats {
@@ -417,7 +419,6 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  min-height: 145px;
   border-top: 1px solid var(--border);
   background: var(--bg-mid);
 }
@@ -563,6 +564,7 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
 #action-bar {
   display: flex;
   flex-direction: row;
+  min-height: 145px;
   align-items: flex-start;
   gap: 0;
   border-bottom: 1px solid var(--border);
