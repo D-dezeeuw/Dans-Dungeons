@@ -8,6 +8,6 @@ export const DEFAULT_MODELS = {
   medium: 'deepseek/deepseek-v4-pro',              // narrator — quality matters
   large:  'deepseek/deepseek-v4-pro',              // world gen — not used in Phase 3
   image:  'google/gemini-2.5-flash-image',         // scene sketch — optional, fires after each turn
-  tts:    'openai/gpt-4o-mini-tts-2025-12-15',     // text-to-speech narration
+  tts:    'google/gemini-3.1-flash-tts-preview',    // text-to-speech narration
   stt:    'nvidia/parakeet-tdt-0.6b-v3',           // speech-to-text player input
 };

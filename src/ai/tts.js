@@ -11,7 +11,7 @@ import { modelFor, headers }  from './client.js';
 // All use the same /audio/speech endpoint; format differs per model.
 
 const TTS_FALLBACKS = [
-  'google/gemini-3.1-flash-tts-preview',
+  'openai/gpt-4o-mini-tts-2025-12-15',
   'x-ai/grok-voice-tts-1.0',
   'mistralai/voxtral-mini-tts-2603',
 ];
@@ -75,16 +75,19 @@ export async function speakText(text) {
 
   const reqHeaders = headers(ai.key || '', location.origin);
 
-  // Try the configured model first, then each fallback on 429 (capacity exceeded).
+  // TODO: static test payload — swap back to dynamic once Gemini TTS is verified.
   const models = [modelFor('tts', ai), ...TTS_FALLBACKS];
   let res;
   let usedModel;
   for (const model of models) {
     const fmt = PCM_MODELS.has(model) ? 'pcm' : 'mp3';
+    const body = PCM_MODELS.has(model)
+      ? JSON.stringify({ model: 'google/gemini-3.1-flash-tts-preview', input: 'Hello, where am I. What is happening?', voice: 'Umbriel', response_format: 'pcm' })
+      : JSON.stringify({ model, input: text, voice: 'alloy', response_format: fmt });
     res = await fetch(`${base}/audio/speech`, {
       method:  'POST',
       headers: reqHeaders,
-      body:    JSON.stringify({ model, input: text, voice: 'alloy', response_format: fmt }),
+      body,
     });
     if (res.status !== 429) { usedModel = model; break; }
   }
