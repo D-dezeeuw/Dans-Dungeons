@@ -681,6 +681,8 @@ async function boot() {
 
   // Bind all declarative Spektrum directives (data-if, {{expr}}, :prop) in one pass.
   bindDOM(document.body);
+  // DOM is now fully bound and reactive — reveal the page.
+  document.body.classList.add('spektrum-ready');
 
   // Sync aria-pressed for the action bar toggle from restored setting.
   const abOn = appState.settings?.actionBar ?? true;

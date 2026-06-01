@@ -44,6 +44,12 @@ html, body {
   line-height: 1.6;
 }
 
+/* ─── Spektrum gate ──────────────────────────────────────── */
+/* Body stays invisible (but full 100vw/100vh) until Spektrum  */
+/* has ticked and bound the DOM — then fades in cleanly.       */
+body { opacity: 0; }
+body.spektrum-ready { opacity: 1; transition: opacity 0.1s ease; }
+
 /* ─── App shell ──────────────────────────────────────────── */
 #app {
   display: flex;
