@@ -151,80 +151,80 @@
     "default": "← standaard"
   },
   "world": {
-    "houseStyles": ["vervallen landhuis", "verlaten landgoed", "vergeten burcht", "bouwvallig herenhuis"],
-    "startRooms": [
-      {
-        "name": "Entreehal",
-        "desc": "Je staat in de entreehal van een {{style}}. Gescheurde wandtapijten hangen aan vochtige stenen muren en de geur van schimmel vult je longen. Een zware houten deur verderop wijst erop dat het huis dieper gaat."
-      },
-      {
-        "name": "Hal",
-        "desc": "De hal van dit {{style}} verwelkomt je met kromgetrokken vloerplanken en de geest van oude grandeur. Een gebarsten spiegel weerkaatst je waakzame gezicht. Vanuit de verre muur wenkt een doorgang naar binnen."
-      },
-      {
-        "name": "Bijkeuken",
-        "desc": "Een smalle bijkeuken aan de drempel van het {{style}}. Allang vergane laarzen staan langs de ene muur; verroeste kapstokhaken langs de andere. Een doorgezakte deur leidt verder naar binnen."
-      }
-    ],
-    "hubRooms": [
-      {
-        "name": "Grote Zaal",
-        "desc": "Een gewelfde grote zaal strekt zich voor je uit, de lange feesttafel omgegooid. Maanlicht sijpelt door een gebarsten dakraam erboven. Eén doorgang verdwijnt in de schaduw aan de zijkant, en een op slot zittende deur domineert de verre muur — het sleutelgat donker en wachtend."
-      },
-      {
-        "name": "Salon",
-        "desc": "De salon stinkt naar oude rook en iets ergers. Meubels zijn tegen de muren geschoven. Een zijdoorgang gaapt open aan je linkerhand, en aan de overkant hangt een deur verzegeld door een zwaar slot."
-      },
-      {
-        "name": "Gang",
-        "desc": "Een lange gang doorkruist het hart van het huis. Wandlamphouders bevatten niets meer dan kaarsenstompjes. Aan de ene kant staat een deuropening open; aan de andere draagt een op slot zittende deur een sleutelgat gevormd voor iets specifieks."
-      }
-    ],
-    "keyRooms": [
-      {
-        "name": "Keuken",
-        "desc": "De keuken draagt nog de geest van oude maaltijden. Potten hangen aan verroeste haken en een hakblok is diep getekend door jarenlang gebruik. Iets glanst op de plank boven de koude haard — het vangt het zwakke licht."
-      },
-      {
-        "name": "Voorraadkamer",
-        "desc": "Rijen lege planken bekleden de voorraadkamer, hun inhoud allang bedorven of gestolen. Een enkel voorwerp rust op de onderste plank alsof het met opzet is achtergelaten — het trekt meteen je aandacht."
-      },
-      {
-        "name": "Dienstbodekamer",
-        "desc": "Een krappe kamer ooit gedeeld door bedienden, nu ontdaan van elk comfort. Kale slaapmatten liggen tegen de muren. Op een klein nachtkastje glanst iets metaalachtig — achtergelaten, of hier met opzet verstopt?"
-      }
-    ],
-    "vaultRooms": [
-      {
-        "name": "Studeerkamer",
-        "desc": "De studeerkamer van de meester is in wanorde — boekenplanken geplunderd, papieren verspreid. Maar in het midden van de kamer zit {{treasure}} onaangeroerd, alsof beschermd door een oude bezwering. Een raam naar buiten staat op een kier — een uitweg."
-      },
-      {
-        "name": "Trofeekamer",
-        "desc": "Glazen vitrines staan langs de trofeekamer, de meeste gebroken en leeg. Maar één sokkel draagt nog zijn prijs: {{treasure}}. Stofdeeltjes dwarrelen als je binnenkomst de muffe lucht verstoort. Een achterdeur kraakt open naar buiten — je uitweg."
-      },
-      {
-        "name": "Kluis",
-        "desc": "Stenen muren en een met ijzer beslagen vloer markeren dit als de eigenlijke kluis. Iemand heeft hem lang geleden opengebroken, maar het meest waardevolle achtergelaten: {{treasure}}. Een afvoerpassage in de verre muur leidt omhoog — en naar buiten."
-      }
-    ],
+    "houseStyles": ["vervallen landhuis", "verlaten landgoed", "vergeten burcht", "bouwvallig herenhuis", "vervallen priorij", "verzonken keldercomplex"],
+    "rooms": {
+      "entrance": [
+        { "name": "Entreehal", "desc": "Je staat in de entreehal van een {{style}}. Gescheurde wandtapijten hangen aan vochtige stenen muren en de geur van schimmel vult je longen." },
+        { "name": "Hal", "desc": "De hal van dit {{style}} verwelkomt je met kromgetrokken vloerplanken en de geest van oude grandeur. Een gebarsten spiegel weerkaatst je waakzame gezicht." },
+        { "name": "Bijkeuken", "desc": "Een smalle bijkeuken aan de drempel van het {{style}}. Allang vergane laarzen staan langs de ene muur; verroeste kapstokhaken langs de andere." },
+        { "name": "Poortgebouw", "desc": "Een laag poortgebouw opent zich voor je, het ijzeren valhek half omhoog geroest. Daarachter wacht het {{style}} in stilte." },
+        { "name": "Drempel", "desc": "Gebarsten plavuizen markeren de drempel van het {{style}}. Een koude tocht draagt de geur van vochtige aarde en iets ouders." }
+      ],
+      "hall": [
+        { "name": "Grote Zaal", "desc": "Een gewelfde grote zaal strekt zich voor je uit, de lange feesttafel omgegooid. Maanlicht sijpelt door een gebarsten dakraam erboven." },
+        { "name": "Salon", "desc": "De salon stinkt naar oude rook en iets ergers. Meubels zijn tegen de muren geschoven alsof ze gebarricadeerd en toen verlaten zijn." },
+        { "name": "Feestzaal", "desc": "Een enorme feestzaal met een kroonluchter die scheef aan een enkele ketting hangt. Borden staan nog op tafel — een feest dat tientallen jaren geleden werd onderbroken." },
+        { "name": "Galerij", "desc": "Een lange galerij met lege portretlijsten. De schilderijen zijn weg, maar vage omtrekken op de muren suggereren wat er ooit hing." },
+        { "name": "Audiëntiekamer", "desc": "Een verhoogd podium aan het ene uiteinde suggereert dat dit ooit een audiëntiekamer was. De stoel erop is tot brandhout geslagen." }
+      ],
+      "corridor": [
+        { "name": "Stenen Gang", "desc": "Een lange gang doorkruist het hart van het gebouw. Wandlamphouders bevatten niets meer dan kaarsenstompjes. Je voetstappen echoën tegen het kale steen." },
+        { "name": "Smalle Doorgang", "desc": "Een smalle doorgang, amper breed genoeg voor één persoon. De muren drukken dicht en de lucht is muf. Iets krast zwak in het donker voor je." },
+        { "name": "Gewelfde Gang", "desc": "Een gewelfde gang met afbrokkelend pleisterwerk dat ruw metselwerk onthult. Spinnenwebben hangen als gordijnen van het gewelf." },
+        { "name": "Bediendegang", "desc": "Een verborgen bediendegang, laag en krap. Haken aan de muren hielden ooit lantaarns; nu houden ze alleen stof vast." },
+        { "name": "Keldertrap", "desc": "Versleten stenen treden spiralen naar beneden, glad van het vocht. De temperatuur daalt met elke stap en de muren glinsteren." }
+      ],
+      "chamber": [
+        { "name": "Stoffige Kamer", "desc": "Een vierkante kamer dik onder het stof. Voetstappen anders dan de jouwe kruisen de vloer — iemand was hier recent." },
+        { "name": "Ronde Kamer", "desc": "Een merkwaardige ronde kamer met een koepelplafond. Akoestische trucs laten elk geluid weergalmen — zelfs je ademhaling voelt versterkt." },
+        { "name": "Voorkamer", "desc": "Een kleine voorkamer met een mozaïekvloer, de meeste tegels gebarsten of ontbrekend. Wat rest toont een slang die zijn eigen staart opeet." },
+        { "name": "Wachtkamer", "desc": "Een wachtkamer met wapenrekken aan elke muur — allemaal leeg. Een tafel bevat dobbelstenen en de resten van een onderbroken kaartspel." },
+        { "name": "Koude Kamer", "desc": "Een onnatuurlijk koude kamer. Je adem vormt wolkjes voor je. Rijp bedekt de hoeken en het steen voelt als ijs door je laarzen." }
+      ],
+      "storage": [
+        { "name": "Keuken", "desc": "De keuken draagt nog de geest van oude maaltijden. Potten hangen aan verroeste haken en een hakblok is diep getekend door jarenlang gebruik." },
+        { "name": "Voorraadkamer", "desc": "Rijen lege planken bekleden de voorraadkamer, hun inhoud allang bedorven of gestolen. De lucht is dik van de herinnering aan specerijen." },
+        { "name": "Wijnkelder", "desc": "Gebroken vaten staan langs de muren van deze wijnkelder. Een donkere vlek bedekt de vloer — wijn of bloed, moeilijk te zeggen. Eén vat blijft verzegeld." },
+        { "name": "Wapenkamer", "desc": "Een wapenkamer bijna leeggeroofd. Wapenstandaards houden niets vast dan roestvormige omtrekken. Een enkel gedeukt schild leunt vergeten in een hoek." },
+        { "name": "Opslagruimte", "desc": "Een rommelige opslagruimte met kratten gestapeld tot het plafond. De meeste zijn leeg; een paar bevatten beschimmeld textiel of aangelopen gespen." }
+      ],
+      "quarters": [
+        { "name": "Dienstbodekamer", "desc": "Een krappe kamer ooit gedeeld door bedienden, nu ontdaan van elk comfort. Kale slaapmatten liggen tegen de muren." },
+        { "name": "Slaapkamer", "desc": "Een slaapkamer met een hemelbed — matras en gordijnen allang verdwenen. Krassen op de bedstijl tellen de dagen dat iemand hier opgesloten zat." },
+        { "name": "Studeerkamer", "desc": "Een kleine studeerkamer met een schrijfbureau en een stoel. Inkt is opgedroogd in het potje. Een halfgeschreven brief ligt op het bureau, de woorden te vervaagd om te lezen." },
+        { "name": "Kinderkamer", "desc": "Een kinderkamer met een schommelwieg in de hoek. Speelgoed ligt verspreid op de vloer — houten soldaatjes en een stoffen pop zonder gezicht." },
+        { "name": "Monnikencel", "desc": "Een kale monnikencel: stenen bed, stenen vloer, stenen muren. Iemand heeft een gebed in de muur gekrast met zijn vingernagels." }
+      ],
+      "shrine": [
+        { "name": "Vervallen Kapel", "desc": "Een kleine kapel met omgeworpen kerkbanken en een bezoedeld altaar. Kaarsenstompjes omringen het gebroken altaar — iemand bad hier niet lang geleden." },
+        { "name": "Crypte", "desc": "Een crypte met nissen die stenen doodskisten bevatten. De meeste zijn verzegeld. Eén is open — en leeg. Grafstof bedekt alles." },
+        { "name": "Rituele Kamer", "desc": "Arcane symbolen bedekken elk oppervlak van deze kamer. Een cirkel van gesmolten kaarsen omringt een donkere vlek in het midden." },
+        { "name": "Ossuarium", "desc": "Botten gestapeld van vloer tot plafond in nette rijen — schedels gerangschikt in geometrische patronen. De lucht is droog met een minerale smaak." },
+        { "name": "Schrijn", "desc": "Een klein schrijn voor een vergeten godheid. Het gezicht van het beeld is weggebeiteld. Offers van aangelopen munten liggen in een stenen schaal." }
+      ],
+      "vault": [
+        { "name": "Studeerkamer", "desc": "De studeerkamer is in wanorde — boekenplanken geplunderd, papieren verspreid. Maar in het midden zit {{treasure}} onaangeroerd, alsof beschermd door een oude bezwering. Een uitweg wenkt." },
+        { "name": "Trofeekamer", "desc": "Glazen vitrines staan langs de muren, de meeste gebroken en leeg. Maar één sokkel draagt nog zijn prijs: {{treasure}}. Een achteruitgang staat op een kier." },
+        { "name": "Kluis", "desc": "Stenen muren en een met ijzer beslagen vloer markeren dit als de eigenlijke kluis. Het meest waardevolle werd achtergelaten: {{treasure}}. Een passage leidt naar buiten." },
+        { "name": "Verborgen Kamer", "desc": "Een verborgen kamer achter een valse muur. Spinnenwebben wijken om {{treasure}} te onthullen, rustend op een fluwelen kussen. Licht filtert binnen door een scheur in het plafond — vrijheid." },
+        { "name": "Schatkamer", "desc": "Een kleine schatkamer met ijzeren kisten — allemaal leeg op één na. Erin: {{treasure}}. Een afvoerrooster in de vloer leidt naar de buitenlucht." }
+      ]
+    },
     "enemies": [
-      {
-        "name": "Grizzik de Goblin",
-        "intro": "Een goblin hurkt bovenop de omgeworpen meubels, gele ogen die openspringen als je binnenkomt. Hij grijpt een gebutst kromzwaard en ontbloot zijn tanden: \"Dit {{style}} is van Grizzik! Ga terug of bloed, grootvolk!\""
-      },
-      {
-        "name": "Wachtskelet",
-        "intro": "Botten rammelen terwijl het skelet dat dit {{style}} bewaakt overeind komt. Zijn holle oogkassen richten zich op jou; een verroest lang zwaard rijst met verschrikkelijk doelbewustheid in een gevechtshouding."
-      },
-      {
-        "name": "Verwilderde Cultist",
-        "intro": "Een figuur in een gewaad draait zich naar je toe, waanzin helder in zijn ogen. Hij heeft in dit {{style}} gewacht om een reden die je nog niet begrijpt — en richt een lange dolk op je keel."
-      },
-      {
-        "name": "Reusachtige Rat",
-        "intro": "Een rat zo groot als een terriër barst los onder het puin van het {{style}}, nekharen overeind en gele tanden ontbloot. Hij valt aan voordat je adem kunt halen."
-      }
+      { "name": "Grizzik de Goblin", "intro": "Een goblin hurkt in de schaduwen, gele ogen die openspringen als je binnenkomt. Hij grijpt een gebutst kromzwaard en ontbloot zijn tanden: \"Deze plek is van Grizzik! Ga terug of bloed, grootvolk!\"" },
+      { "name": "Wachtskelet", "intro": "Botten rammelen terwijl een skelet overeind komt vanuit de hoek. Zijn holle oogkassen richten zich op jou; een verroest lang zwaard rijst in een gevechtshouding met verschrikkelijke doelbewustheid." },
+      { "name": "Verwilderde Cultist", "intro": "Een figuur in een gewaad draait zich naar je toe, waanzin helder in zijn ogen. Hij heeft hier gewacht om een reden die je nog niet begrijpt — en richt een lange dolk op je keel." },
+      { "name": "Reusachtige Rat", "intro": "Een rat zo groot als een terriër barst los onder het puin, nekharen overeind en gele tanden ontbloot. Hij valt aan voordat je adem kunt halen." },
+      { "name": "Slepend Lijk", "intro": "Iets rijst op van de vloer — een lijk in verroest harnas, gewrichten krakend terwijl het opstaat. Zijn kaak hangt los en een guttural gekreun ontsnapt aan wat er over is van zijn keel." },
+      { "name": "Grotspin", "intro": "Zijdedraden vangen het licht een moment voordat je de spin ziet — opgezwollen, met zwarte poten, en snel. Hij laat zich van het plafond vallen met een nat gesis." }
+    ],
+    "enemyStats": [
+      { "hp": 7, "maxHp": 7, "ac": 15, "toHit": 4, "damageDie": "1d6", "damageBonus": 2, "damageType": "slashing" },
+      { "hp": 9, "maxHp": 9, "ac": 13, "toHit": 4, "damageDie": "1d6", "damageBonus": 2, "damageType": "slashing" },
+      { "hp": 8, "maxHp": 8, "ac": 12, "toHit": 3, "damageDie": "1d6", "damageBonus": 1, "damageType": "piercing" },
+      { "hp": 5, "maxHp": 5, "ac": 12, "toHit": 3, "damageDie": "1d4", "damageBonus": 0, "damageType": "piercing" },
+      { "hp": 10, "maxHp": 10, "ac": 8, "toHit": 3, "damageDie": "1d6", "damageBonus": 1, "damageType": "bludgeoning" },
+      { "hp": 6, "maxHp": 6, "ac": 13, "toHit": 5, "damageDie": "1d4", "damageBonus": 2, "damageType": "piercing" }
     ],
     "keys": [
       { "name": "koperen sleutel", "desc": "Een aangelopen koperen sleutel, de greep gegoten in de vorm van een halve maan." },
@@ -237,6 +237,12 @@
       { "name": "saffieren amulet", "desc": "Een diepblauwe saffier gevat in gefiligraneerd zilver, pulserend met een zwak innerlijk licht." },
       { "name": "verzegeld arcaan boek", "desc": "Een dik boek verzegeld met was en koord, zijn kaft warm ondanks de koude kamer." },
       { "name": "juwelen ceremonieel zwaard", "desc": "Een zwaard meer kunst dan wapen — het gevest bezet met robijnen en gegraveerd zilver." }
+    ],
+    "loot": [
+      { "name": "genezingsdrank", "desc": "Een klein glazen flesje met rode vloeistof dat klotst met een zwakke warmte." },
+      { "name": "zilveren ring", "desc": "Een eenvoudige zilveren ring met kleine runen gegraveerd aan de binnenkant." },
+      { "name": "oud dagboek", "desc": "Een in leer gebonden dagboek vol gejaagd handschrift. De laatste vermelding is onafgemaakt." },
+      { "name": "handvol munten", "desc": "Een verzameling koperen en zilveren munten, misschien tien in totaal." }
     ]
   },
   "chips": {

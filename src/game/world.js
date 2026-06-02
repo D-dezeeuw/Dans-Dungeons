@@ -1,140 +1,279 @@
 // src/game/world.js
 //
-// Procedural world generator. Every call to generateWorld() returns a fresh
-// 4-room house with randomised directions and flavour.
+// Procedural dungeon generator. Every call to generateWorld() returns a fresh
+// dungeon with 7-12 rooms, branching paths, multiple enemies, and a key-lock
+// puzzle. The topology varies each run.
 //
-// Topology (fixed):
-//   [Start] ──enterDir──▶ [Hub (enemy)] ──keyDir──▶ [Key (key item)]
-//                                 │
-//                            lockedDir 🔒
-//                                 │
-//                                 ▼
-//                         [Vault (treasure + exit)]
+// Algorithm:
+//   1. Generate a spine of 4-6 rooms (start → ... → vault)
+//   2. Attach 2-4 branch rooms off the spine
+//   3. Place rooms on a 2D grid, derive cardinal-direction exits
+//   4. Pick a lock gate on the spine; place the key in a pre-gate branch
+//   5. Place 1-3 enemies in non-start, non-vault rooms
+//   6. Scatter loot in branch rooms
+//   7. Dress rooms with locale-driven descriptions
 
 import { t, tRaw } from '../i18n/i18n.js';
 
-// ─── Direction helpers ────────────────────────────────────────────────────────
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
-const ALL_DIRS = ['north', 'south', 'east', 'west'];
 const OPPOSITE = { north: 'south', south: 'north', east: 'west', west: 'east' };
 
-function pick(arr) {
-  return arr[Math.floor(Math.random() * arr.length)];
+function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+function randInt(min, max) { return min + Math.floor(Math.random() * (max - min + 1)); }
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
 }
 
-// Interpolates {{key}} placeholders in a string.
 function interp(str, params) {
   let out = str;
-  for (const [k, v] of Object.entries(params)) {
-    out = out.replaceAll(`{{${k}}}`, v);
-  }
+  for (const [k, v] of Object.entries(params)) out = out.replaceAll(`{{${k}}}`, v);
   return out;
+}
+
+// ─── Grid placement ──────────────────────────────────────────────────────────
+// Each room gets a (col, row) position. Connections between adjacent grid cells
+// map to cardinal directions.
+
+function dirBetween(from, to) {
+  const dc = to.col - from.col;
+  const dr = to.row - from.row;
+  if (dc === 1 && dr === 0) return 'east';
+  if (dc === -1 && dr === 0) return 'west';
+  if (dc === 0 && dr === -1) return 'north';
+  if (dc === 0 && dr === 1) return 'south';
+  return null;
+}
+
+function neighbourOffsets() {
+  return shuffle([
+    { dc: 1, dr: 0 },
+    { dc: -1, dr: 0 },
+    { dc: 0, dr: -1 },
+    { dc: 0, dr: 1 },
+  ]);
+}
+
+// Place a chain of rooms on a grid using a random walk.
+function placeOnGrid(count) {
+  const grid = new Map(); // "col,row" → roomIndex
+  const positions = [];   // roomIndex → { col, row }
+
+  let col = 0, row = 0;
+  grid.set(`${col},${row}`, 0);
+  positions.push({ col, row });
+
+  for (let i = 1; i < count; i++) {
+    const offsets = neighbourOffsets();
+    let placed = false;
+    for (const { dc, dr } of offsets) {
+      const nc = col + dc, nr = row + dr;
+      if (!grid.has(`${nc},${nr}`)) {
+        grid.set(`${nc},${nr}`, i);
+        positions.push({ col: nc, row: nr });
+        col = nc;
+        row = nr;
+        placed = true;
+        break;
+      }
+    }
+    if (!placed) {
+      // Backtrack: find any placed room with a free neighbour.
+      for (let j = positions.length - 1; j >= 0; j--) {
+        const p = positions[j];
+        for (const { dc, dr } of neighbourOffsets()) {
+          const nc = p.col + dc, nr = p.row + dr;
+          if (!grid.has(`${nc},${nr}`)) {
+            grid.set(`${nc},${nr}`, i);
+            positions.push({ col: nc, row: nr });
+            col = nc;
+            row = nr;
+            placed = true;
+            break;
+          }
+        }
+        if (placed) break;
+      }
+    }
+  }
+
+  return { grid, positions };
+}
+
+// Try to attach a branch room adjacent to a given room on the grid.
+function attachBranch(parentIdx, positions, grid) {
+  const p = positions[parentIdx];
+  for (const { dc, dr } of neighbourOffsets()) {
+    const nc = p.col + dc, nr = p.row + dr;
+    if (!grid.has(`${nc},${nr}`)) {
+      const idx = positions.length;
+      grid.set(`${nc},${nr}`, idx);
+      positions.push({ col: nc, row: nr });
+      return idx;
+    }
+  }
+  return -1; // no free neighbour
+}
+
+// ─── Room types ──────────────────────────────────────────────────────────────
+
+const MID_TYPES = ['hall', 'corridor', 'chamber', 'storage', 'quarters', 'shrine'];
+
+function assignRoomType(idx, spineLen, totalRooms, isSpine) {
+  if (idx === 0) return 'entrance';
+  if (idx === spineLen - 1 && isSpine) return 'vault';
+  return pick(MID_TYPES);
 }
 
 // ─── Generator ────────────────────────────────────────────────────────────────
 
 export function generateWorld() {
-  // Randomise directions
-  const enterDir  = pick(ALL_DIRS);
-  const backDir   = OPPOSITE[enterDir];
-  const sideDirs  = ALL_DIRS.filter(d => d !== enterDir && d !== backDir);
-  const keyDir    = sideDirs[0];
-  const lockedDir = sideDirs[1];
+  const style = pick(tRaw('world.houseStyles'));
 
-  // Locale-driven flavour tables
-  const houseStyles = tRaw('world.houseStyles');
-  const startRooms  = tRaw('world.startRooms');
-  const hubRooms    = tRaw('world.hubRooms');
-  const keyRooms    = tRaw('world.keyRooms');
-  const vaultRooms  = tRaw('world.vaultRooms');
-  const enemies     = tRaw('world.enemies');
-  const keys        = tRaw('world.keys');
-  const treasures   = tRaw('world.treasures');
+  // 1. Spine: 4-6 rooms
+  const spineLen  = randInt(4, 6);
+  const { grid, positions } = placeOnGrid(spineLen);
+  const spineIds  = Array.from({ length: spineLen }, (_, i) => i);
 
-  // Randomise flavour
-  const style    = pick(houseStyles);
-  const startDef = pick(startRooms);
-  const hubDef   = pick(hubRooms);
-  const keyDef   = pick(keyRooms);
-  const vaultDef = pick(vaultRooms);
-  const enemyDef = pick(enemies);
-  const keyItem  = { ...pick(keys) };
-  const treasure = { ...pick(treasures) };
+  // 2. Branches: attach 2-4 side rooms to random spine rooms (not start/vault)
+  const branchCount  = randInt(2, 4);
+  const branchIds    = [];
+  const branchParent = {}; // branchIdx → spineIdx it's attached to
+  const candidates   = spineIds.slice(1, -1); // skip start and vault
+  for (let b = 0; b < branchCount; b++) {
+    const parent = pick(candidates.length ? candidates : spineIds.slice(1));
+    const idx = attachBranch(parent, positions, grid);
+    if (idx >= 0) {
+      branchIds.push(idx);
+      branchParent[idx] = parent;
+    }
+  }
 
-  // Enemy stats (not locale-dependent — only name/intro are translated)
-  const ENEMY_STATS = [
-    { hp: 7, maxHp: 7, ac: 15, toHit: 4, damageDie: '1d6', damageBonus: 2, damageType: 'slashing' },
-    { hp: 9, maxHp: 9, ac: 13, toHit: 4, damageDie: '1d6', damageBonus: 2, damageType: 'slashing' },
-    { hp: 8, maxHp: 8, ac: 12, toHit: 3, damageDie: '1d6', damageBonus: 1, damageType: 'piercing' },
-    { hp: 5, maxHp: 5, ac: 12, toHit: 3, damageDie: '1d4', damageBonus: 0, damageType: 'piercing' },
-  ];
-  const enemyIdx = enemies.indexOf(enemyDef);
-  const stats    = ENEMY_STATS[enemyIdx] ?? ENEMY_STATS[0];
+  const totalRooms = positions.length;
 
-  const rooms = {
-    'room-start': {
-      id:          'room-start',
-      name:        startDef.name,
-      description: interp(startDef.desc, { style }),
-      exits: [
-        { dir: enterDir, roomId: 'room-hub' },
-      ],
+  // 3. Build adjacency from grid positions
+  const adjacency = Array.from({ length: totalRooms }, () => []);
+  for (let i = 0; i < totalRooms; i++) {
+    for (let j = i + 1; j < totalRooms; j++) {
+      const dir = dirBetween(positions[i], positions[j]);
+      if (dir) {
+        adjacency[i].push({ target: j, dir });
+        adjacency[j].push({ target: i, dir: OPPOSITE[dir] });
+      }
+    }
+  }
+
+  // 4. Assign room types and build room objects
+  const roomTypes = [];
+  for (let i = 0; i < totalRooms; i++) {
+    const isSpine = spineIds.includes(i);
+    roomTypes[i] = assignRoomType(i, spineLen, totalRooms, isSpine);
+  }
+
+  const treasure   = { ...pick(tRaw('world.treasures')) };
+  const keyItem    = { ...pick(tRaw('world.keys')) };
+
+  const rooms = {};
+  for (let i = 0; i < totalRooms; i++) {
+    const id   = `room-${i}`;
+    const type = roomTypes[i];
+    const pool = tRaw(`world.rooms.${type}`) ?? tRaw('world.rooms.chamber');
+    const def  = pick(pool);
+
+    const descParams = { style };
+    if (type === 'vault') descParams.treasure = treasure.name;
+
+    rooms[id] = {
+      id,
+      name:        def.name,
+      description: interp(def.desc, descParams),
+      exits:       adjacency[i].map(a => ({
+        dir:    a.dir,
+        roomId: `room-${a.target}`,
+        locked: false,
+      })),
       loot: [],
-    },
+    };
+  }
 
-    'room-hub': {
-      id:          'room-hub',
-      name:        hubDef.name,
-      description: hubDef.desc,
-      exits: [
-        { dir: backDir,   roomId: 'room-start' },
-        { dir: keyDir,    roomId: 'room-key' },
-        { dir: lockedDir, roomId: 'room-vault', locked: true, keyId: 'found-key' },
-      ],
-      loot: [],
-    },
+  // 5. Lock gate: pick a spine room (not first, not last) and lock its exit toward the next spine room
+  const gateSpineIdx = randInt(1, spineLen - 2); // index within spine
+  const gateRoomId   = `room-${spineIds[gateSpineIdx]}`;
+  const nextSpineId  = `room-${spineIds[gateSpineIdx + 1]}`;
+  const gateRoom     = rooms[gateRoomId];
+  const gateExit     = gateRoom.exits.find(e => e.roomId === nextSpineId);
+  if (gateExit) {
+    gateExit.locked = true;
+    gateExit.keyId  = 'found-key';
+  }
 
-    'room-key': {
-      id:          'room-key',
-      name:        keyDef.name,
-      description: keyDef.desc,
-      exits: [
-        { dir: OPPOSITE[keyDir], roomId: 'room-hub' },
-      ],
-      loot: [
-        { id: 'found-key', name: keyItem.name, description: keyItem.desc, taken: false },
-      ],
-    },
+  // Place key in a branch room reachable before the gate, or in an early spine room
+  let keyPlaced = false;
+  // Prefer branch rooms attached to spine rooms before the gate
+  for (const bIdx of branchIds) {
+    const parentSpineOrder = spineIds.indexOf(branchParent[bIdx]);
+    if (parentSpineOrder >= 0 && parentSpineOrder <= gateSpineIdx) {
+      rooms[`room-${bIdx}`].loot.push({ id: 'found-key', name: keyItem.name, description: keyItem.desc, taken: false });
+      keyPlaced = true;
+      break;
+    }
+  }
+  // Fallback: place in an early spine room (before the gate, not start)
+  if (!keyPlaced) {
+    const earlySpine = spineIds.slice(1, gateSpineIdx + 1);
+    const keyRoomIdx = pick(earlySpine);
+    rooms[`room-${keyRoomIdx}`].loot.push({ id: 'found-key', name: keyItem.name, description: keyItem.desc, taken: false });
+  }
 
-    'room-vault': {
-      id:          'room-vault',
-      name:        vaultDef.name,
-      description: interp(vaultDef.desc, { treasure: treasure.name }),
-      exits: [
-        { dir: OPPOSITE[lockedDir], roomId: 'room-hub', locked: false },
-      ],
-      loot: [
-        { id: 'treasure', name: treasure.name, description: treasure.desc, type: 'treasure', value: 250, taken: false },
-      ],
-    },
-  };
+  // Place treasure in vault
+  const vaultId = `room-${spineLen - 1}`;
+  rooms[vaultId].loot.push({ id: 'treasure', name: treasure.name, description: treasure.desc, type: 'treasure', value: 250, taken: false });
 
-  const npcs = {
-    'enemy-1': {
-      id:          'enemy-1',
-      roomId:      'room-hub',
-      name:        enemyDef.name,
+  // 6. Place enemies (1-3) in non-start, non-vault rooms
+  const enemyDefs  = tRaw('world.enemies');
+  const enemyStats = tRaw('world.enemyStats');
+  const enemyCount = randInt(1, Math.min(3, totalRooms - 2));
+  const enemyCandidates = shuffle(
+    Array.from({ length: totalRooms }, (_, i) => i).filter(i => i !== 0 && i !== spineLen - 1)
+  ).slice(0, enemyCount);
+
+  const npcs = {};
+  for (let e = 0; e < enemyCandidates.length; e++) {
+    const roomIdx  = enemyCandidates[e];
+    const eIdx     = e % enemyDefs.length;
+    const def      = enemyDefs[eIdx];
+    const stats    = enemyStats[eIdx] ?? enemyStats[0];
+    const npcId    = `enemy-${e + 1}`;
+    npcs[npcId] = {
+      id:          npcId,
+      roomId:      `room-${roomIdx}`,
+      name:        def.name,
       ...stats,
       conditions:  [],
       attitude:    'hostile',
       alive:       true,
-      intro:       interp(enemyDef.intro, { style }),
-    },
-  };
+      intro:       interp(def.intro, { style }),
+    };
+  }
+
+  // 7. Scatter optional loot in branch rooms that don't have the key
+  const lootPool = tRaw('world.loot') ?? [];
+  for (const bIdx of branchIds) {
+    const room = rooms[`room-${bIdx}`];
+    if (room.loot.length === 0 && lootPool.length > 0) {
+      const item = pick(lootPool);
+      room.loot.push({ id: `loot-${bIdx}`, name: item.name, description: item.desc, taken: false });
+    }
+  }
 
   return {
-    currentRoom: 'room-start',
-    exitRoomId:  'room-vault',
+    currentRoom: 'room-0',
+    exitRoomId:  vaultId,
     rooms,
     npcs,
   };

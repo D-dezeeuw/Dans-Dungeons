@@ -151,80 +151,80 @@
     "default": "← default"
   },
   "world": {
-    "houseStyles": ["crumbling manor", "abandoned estate", "forsaken keep", "derelict townhouse"],
-    "startRooms": [
-      {
-        "name": "Entrance Hall",
-        "desc": "You stand in the entrance hall of a {{style}}. Tattered tapestries cling to damp stone walls, and the reek of mildew fills your lungs. A heavy timber door ahead suggests the house goes deeper."
-      },
-      {
-        "name": "Foyer",
-        "desc": "The foyer of this {{style}} greets you with warped floorboards and the ghost of old grandeur. A cracked mirror reflects your wary face. Passage inward beckons from the far wall."
-      },
-      {
-        "name": "Mudroom",
-        "desc": "A narrow mudroom at the threshold of the {{style}}. Boots long rotted away line one wall; rusted coat-hooks the other. A sagging door leads further inside."
-      }
-    ],
-    "hubRooms": [
-      {
-        "name": "Great Hall",
-        "desc": "A vaulted great hall stretches before you, its long feasting table overturned. Moonlight bleeds through a cracked skylight above. One passage disappears into shadow to the side, and a locked door dominates the far wall — its keyhole dark and waiting."
-      },
-      {
-        "name": "Drawing Room",
-        "desc": "The drawing room reeks of old smoke and something worse. Furniture has been shoved to the walls. A side passage gapes open to your left, and across the room a door hangs sealed by a heavy lock."
-      },
-      {
-        "name": "Corridor",
-        "desc": "A long corridor bisects the heart of the house. Sconces hold nothing but wax stumps. To one side a doorway stands open; to the other a locked door bears a keyhole shaped for something specific."
-      }
-    ],
-    "keyRooms": [
-      {
-        "name": "Kitchen",
-        "desc": "The kitchen still holds the ghost of old meals. Pots hang from rusted hooks, and a butcher's block is scarred deep by years of use. Something glints on the shelf above the cold hearth — catching the faint light."
-      },
-      {
-        "name": "Pantry",
-        "desc": "Rows of empty shelves line the pantry, their contents long since spoiled or stolen. A single item rests on the lowest shelf as if left deliberately — it catches your eye immediately."
-      },
-      {
-        "name": "Servants' Quarters",
-        "desc": "A cramped room once shared by servants, now empty of all comfort. Bare pallets are pushed against the walls. On a small bedside table something metallic glints — left behind, or hidden here on purpose?"
-      }
-    ],
-    "vaultRooms": [
-      {
-        "name": "Master Study",
-        "desc": "The master's study is in disarray — shelves ransacked, papers scattered. Yet in the centre of the room, {{treasure}} sits untouched, as though protected by some old ward. A window to the outside stands unlatched — a way out."
-      },
-      {
-        "name": "Trophy Room",
-        "desc": "Glass cases line the trophy room, most shattered and empty. But one pedestal still bears its prize: {{treasure}}. Dust motes swirl as your entrance disturbs the stale air. A back door creaks open to the outside — your way out."
-      },
-      {
-        "name": "Vault",
-        "desc": "Stone walls and an iron-banded floor mark this as the vault proper. Someone breached it long ago, but left the most valuable thing behind: {{treasure}}. A drainage passage in the far wall leads upward — and out."
-      }
-    ],
+    "houseStyles": ["crumbling manor", "abandoned estate", "forsaken keep", "derelict townhouse", "ruined priory", "sunken cellar complex"],
+    "rooms": {
+      "entrance": [
+        { "name": "Entrance Hall", "desc": "You stand in the entrance hall of a {{style}}. Tattered tapestries cling to damp stone walls, and the reek of mildew fills your lungs." },
+        { "name": "Foyer", "desc": "The foyer of this {{style}} greets you with warped floorboards and the ghost of old grandeur. A cracked mirror reflects your wary face." },
+        { "name": "Mudroom", "desc": "A narrow mudroom at the threshold of the {{style}}. Boots long rotted away line one wall; rusted coat-hooks the other." },
+        { "name": "Gatehouse", "desc": "A low-ceilinged gatehouse opens before you, its iron portcullis rusted halfway up. Beyond it the {{style}} waits in silence." },
+        { "name": "Threshold", "desc": "Cracked flagstones mark the threshold of the {{style}}. A cold draught carries the scent of damp earth and something older." }
+      ],
+      "hall": [
+        { "name": "Great Hall", "desc": "A vaulted great hall stretches before you, its long feasting table overturned. Moonlight bleeds through a cracked skylight above." },
+        { "name": "Drawing Room", "desc": "The drawing room reeks of old smoke and something worse. Furniture has been shoved to the walls as if barricaded, then abandoned." },
+        { "name": "Banquet Chamber", "desc": "A vast banquet chamber with a chandelier hanging crooked from a single chain. Plates still sit on the table — a feast interrupted decades ago." },
+        { "name": "Gallery", "desc": "A long gallery lined with empty portrait frames. The paintings are gone, but faint outlines on the walls hint at what once hung here." },
+        { "name": "Audience Room", "desc": "A raised dais at one end suggests this was once an audience room. The chair atop it has been smashed to kindling." }
+      ],
+      "corridor": [
+        { "name": "Stone Corridor", "desc": "A long corridor bisects the heart of the building. Sconces hold nothing but wax stumps. Your footsteps echo off the bare stone." },
+        { "name": "Narrow Passage", "desc": "A narrow passage barely wide enough for one. The walls press close and the air is stale. Something scratches faintly in the dark ahead." },
+        { "name": "Arched Hallway", "desc": "An arched hallway with crumbling plaster revealing rough brick beneath. Cobwebs hang in curtains from the vaulting." },
+        { "name": "Servants' Passage", "desc": "A hidden servants' passage, low and cramped. Hooks on the walls once held lanterns; now they hold only dust." },
+        { "name": "Cellar Stairs", "desc": "Worn stone steps spiral downward, slick with moisture. The temperature drops with each step, and the walls glisten." }
+      ],
+      "chamber": [
+        { "name": "Dusty Chamber", "desc": "A square chamber thick with dust. Footprints other than your own cross the floor — someone was here recently." },
+        { "name": "Round Room", "desc": "A curious round room with a domed ceiling. Acoustic tricks make every sound reverberate — even your breathing feels amplified." },
+        { "name": "Antechamber", "desc": "A small antechamber with a mosaic floor, most tiles cracked or missing. What remains shows a serpent eating its own tail." },
+        { "name": "Guard Room", "desc": "A guard room with weapon racks mounted on every wall — all empty. A table holds dice and the remnants of an interrupted card game." },
+        { "name": "Cold Room", "desc": "An unnaturally cold room. Your breath clouds in front of you. Frost rimes the corners and the stone feels like ice through your boots." }
+      ],
+      "storage": [
+        { "name": "Kitchen", "desc": "The kitchen still holds the ghost of old meals. Pots hang from rusted hooks, and a butcher's block is scarred deep by years of use." },
+        { "name": "Pantry", "desc": "Rows of empty shelves line the pantry, their contents long since spoiled or stolen. The air is thick with the memory of spice." },
+        { "name": "Wine Cellar", "desc": "Broken casks line the walls of this wine cellar. A dark stain covers the floor — wine or blood, hard to tell. One barrel remains sealed." },
+        { "name": "Armoury", "desc": "An armoury picked nearly clean. Armour stands hold nothing but rust-shaped outlines. A single dented shield leans forgotten in a corner." },
+        { "name": "Storeroom", "desc": "A cluttered storeroom with crates stacked to the ceiling. Most are empty; a few hold mouldy cloth or tarnished buckles." }
+      ],
+      "quarters": [
+        { "name": "Servants' Quarters", "desc": "A cramped room once shared by servants, now empty of all comfort. Bare pallets are pushed against the walls." },
+        { "name": "Bedchamber", "desc": "A bedchamber with a four-poster frame — the mattress and curtains long gone. Scratches on the bedpost count the days someone was trapped here." },
+        { "name": "Study", "desc": "A small study with a writing desk and a chair. Ink has dried in the well. A half-written letter sits on the desk, the words too faded to read." },
+        { "name": "Nursery", "desc": "A nursery with a rocking crib in the corner. Toys are scattered on the floor — wooden soldiers and a cloth doll with no face." },
+        { "name": "Monk's Cell", "desc": "A bare monk's cell: stone bed, stone floor, stone walls. Someone scratched a prayer into the wall with their fingernails." }
+      ],
+      "shrine": [
+        { "name": "Ruined Chapel", "desc": "A small chapel with pews overturned and an altar defaced. Candle stubs still ring the broken altar — someone prayed here not long ago." },
+        { "name": "Crypt", "desc": "A crypt lined with niches holding stone coffins. Most are sealed. One is open — and empty. Grave dust coats everything." },
+        { "name": "Ritual Chamber", "desc": "Arcane symbols cover every surface of this chamber. A circle of melted candles surrounds a dark stain in the centre." },
+        { "name": "Ossuary", "desc": "Bones stacked floor to ceiling in neat rows — skulls arranged in geometric patterns. The air is dry and carries a mineral tang." },
+        { "name": "Shrine", "desc": "A small shrine to a forgotten deity. The idol's face has been chiselled away. Offerings of tarnished coin sit in a stone bowl." }
+      ],
+      "vault": [
+        { "name": "Master Study", "desc": "The master's study is in disarray — shelves ransacked, papers scattered. Yet in the centre of the room, {{treasure}} sits untouched, as though protected by some old ward. A way out beckons." },
+        { "name": "Trophy Room", "desc": "Glass cases line the trophy room, most shattered and empty. But one pedestal still bears its prize: {{treasure}}. A back exit stands ajar." },
+        { "name": "Vault", "desc": "Stone walls and an iron-banded floor mark this as the vault proper. The most valuable thing was left behind: {{treasure}}. A passage leads out." },
+        { "name": "Hidden Chamber", "desc": "A concealed chamber behind a false wall. Cobwebs part to reveal {{treasure}}, resting on a velvet cushion. Light filters in from a crack in the ceiling — freedom." },
+        { "name": "Treasury", "desc": "A small treasury with iron-bound chests — all empty save one. Inside: {{treasure}}. A drainage grate in the floor leads to open air." }
+      ]
+    },
     "enemies": [
-      {
-        "name": "Grizzik the Goblin",
-        "intro": "A goblin crouches atop the overturned furniture, yellow eyes snapping open as you enter. It snatches up a battered scimitar and bares its teeth: \"This {{style}} belongs to Grizzik! Turn back or bleed, big-folk!\""
-      },
-      {
-        "name": "Guard Skeleton",
-        "intro": "Bones rattle as the skeleton assigned to guard this {{style}} lurches upright. Its hollow eye sockets fix on you; a rusted longsword rises into a fighting stance with terrible purpose."
-      },
-      {
-        "name": "Feral Cultist",
-        "intro": "A robed figure spins to face you, madness bright in its eyes. It has been waiting in this {{style}} for a reason you don't yet understand — and it levels a long dagger at your throat."
-      },
-      {
-        "name": "Giant Rat",
-        "intro": "A rat the size of a terrier erupts from beneath the debris of the {{style}}, hackles raised and yellow teeth bared. It lunges before you can take a breath."
-      }
+      { "name": "Grizzik the Goblin", "intro": "A goblin crouches in the shadows, yellow eyes snapping open as you enter. It snatches up a battered scimitar and bares its teeth: \"This place belongs to Grizzik! Turn back or bleed, big-folk!\"" },
+      { "name": "Guard Skeleton", "intro": "Bones rattle as a skeleton lurches upright from the corner. Its hollow eye sockets fix on you; a rusted longsword rises into a fighting stance with terrible purpose." },
+      { "name": "Feral Cultist", "intro": "A robed figure spins to face you, madness bright in its eyes. It has been waiting here for a reason you don't yet understand — and it levels a long dagger at your throat." },
+      { "name": "Giant Rat", "intro": "A rat the size of a terrier erupts from beneath the debris, hackles raised and yellow teeth bared. It lunges before you can take a breath." },
+      { "name": "Shambling Corpse", "intro": "Something rises from the floor — a corpse in rusted armour, joints cracking as it stands. Its jaw hangs loose and a guttural moan escapes what remains of its throat." },
+      { "name": "Cave Spider", "intro": "Silk threads catch the light a moment before you see the spider — bloated, black-legged, and fast. It drops from the ceiling with a wet hiss." }
+    ],
+    "enemyStats": [
+      { "hp": 7, "maxHp": 7, "ac": 15, "toHit": 4, "damageDie": "1d6", "damageBonus": 2, "damageType": "slashing" },
+      { "hp": 9, "maxHp": 9, "ac": 13, "toHit": 4, "damageDie": "1d6", "damageBonus": 2, "damageType": "slashing" },
+      { "hp": 8, "maxHp": 8, "ac": 12, "toHit": 3, "damageDie": "1d6", "damageBonus": 1, "damageType": "piercing" },
+      { "hp": 5, "maxHp": 5, "ac": 12, "toHit": 3, "damageDie": "1d4", "damageBonus": 0, "damageType": "piercing" },
+      { "hp": 10, "maxHp": 10, "ac": 8, "toHit": 3, "damageDie": "1d6", "damageBonus": 1, "damageType": "bludgeoning" },
+      { "hp": 6, "maxHp": 6, "ac": 13, "toHit": 5, "damageDie": "1d4", "damageBonus": 2, "damageType": "piercing" }
     ],
     "keys": [
       { "name": "brass key", "desc": "A tarnished brass key, its bow cast in the shape of a crescent moon." },
@@ -237,6 +237,12 @@
       { "name": "sapphire amulet", "desc": "A deep-blue sapphire set in filigreed silver, pulsing with faint inner light." },
       { "name": "sealed arcane tome", "desc": "A thick book sealed with wax and cord, its cover warm despite the cold room." },
       { "name": "jewelled ceremonial sword", "desc": "A sword more art than weapon — its hilt crusted with rubies and engraved silver." }
+    ],
+    "loot": [
+      { "name": "healing potion", "desc": "A small glass vial of red liquid that sloshes with a faint warmth." },
+      { "name": "silver ring", "desc": "A plain silver ring engraved with tiny runes on the inside band." },
+      { "name": "old journal", "desc": "A leather-bound journal filled with frantic handwriting. The last entry is unfinished." },
+      { "name": "handful of coins", "desc": "A scatter of copper and silver coins, perhaps ten in all." }
     ]
   },
   "chips": {
