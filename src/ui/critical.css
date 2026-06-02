@@ -38,6 +38,7 @@ html, body {
   font-family: var(--font);
   font-size: 14px;
   line-height: 1.6;
+  touch-action: manipulation;
 }
 
 /* ─── Spektrum gate ──────────────────────────────────────── */
