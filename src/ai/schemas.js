@@ -17,6 +17,15 @@ export const CLASSIFIER_SCHEMA = {
   additionalProperties: false,
 };
 
+export const AUTOPLAY_SCHEMA = {
+  type: 'object',
+  properties: {
+    action: { type: 'string' },
+  },
+  required: ['action'],
+  additionalProperties: false,
+};
+
 export const NARRATOR_SCHEMA = {
   type: 'object',
   properties: {

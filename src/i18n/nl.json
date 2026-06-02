@@ -55,7 +55,9 @@
     "micError": "Microfoonfout: {{msg}}",
     "micLabel": "Spraakinvoer opnemen",
     "micTitle": "Spreek je actie in (spatiebalk)",
-    "cmdLabel": "Opdracht invoer"
+    "cmdLabel": "Opdracht invoer",
+    "autoplayLabel": "Automatisch spelen aan/uit",
+    "autoplayTitle": "Laat AI automatisch spelen"
   },
   "transcript": {
     "thinking": "⏳ De Dungeon Master overdenkt…",
@@ -315,6 +317,8 @@
   "ai": {
     "classifierPrompt": "You are a D&D action classifier. Classify the player's intent from their free-text input.\n\nIMPORTANT: The player writes in Dutch (Nederlands). Interpret Dutch input correctly.\nExamples: \"ga naar het noorden\" → move north, \"pak de sleutel\" → take, \"val aan\" → attack, \"sluip langs\" → skill stealth.\nCardinal directions in Dutch: noorden=north, zuiden=south, oosten=east, westen=west.\n\nCurrent scene (use this to identify valid targets):\n{{scene}}\n\nOutput a single JSON object. Be generous in interpretation.\n- movement → move (set direction to north/south/east/west in ENGLISH)\n- pick up items → take (set target_id to the item's id from scene loot)\n- open/unlock → unlock\n- direction: the cardinal direction for move (ENGLISH), null otherwise\n- target_id: NPC id for attack, item id for take, null otherwise\nFor skill checks suggest a dc between 10 and 20.",
     "narratorPrompt": "You are the Game Master narrating a D&D 5e dungeon encounter.\n\nSetting: gritty low fantasy, second person (\"je slaat\", \"je ontwijkt\").\nNarrate ENTIRELY in Dutch (Nederlands). All output text must be in Dutch.\n\nRules:\n- Do NOT invent dice results — use only the resolved facts in the data\n- 2–4 sentences; vivid but concise\n- If a hit: describe the impact and the enemy's reaction\n- If a miss: describe the near-miss\n- If the enemy retaliated: weave it into the same narration\n- End on tension or consequence\n- If intent is 'move': describe entering the new room (use newRoom.description); introduce any enemies using their intro text; mention visible items\n- If intent is 'take': describe picking up the item\n- If intent is 'unlock': describe unlocking the door with a satisfying click\n- CRITICAL — if intent is 'impossible': the action simply cannot happen. Do NOT describe it succeeding or partially succeeding. Describe only the failure and its reason. No enemy dies, no item is taken, nothing changes.\n\nRecent transcript (last 3 turns, for continuity):\n{{transcript}}\n\nCurrent scene:\n{{scene}}\n\nResolved mechanics:\n{{resolved}}\n\nOutput ONLY a JSON object — no markdown, no extra text:\n{\"narration\":\"...\",\"combat_ended\":true/false,\"outcome\":\"continue\"|\"victory\"|\"defeat\"|\"flee\"}",
-    "narrateTurnPrompt": "Narrate the outcome of this turn. Respond in Dutch."
+    "narrateTurnPrompt": "Narrate the outcome of this turn. Respond in Dutch.",
+    "autoplayPrompt": "Je bent een AI-speler in een D&D kerkerverkenning. Kies de beste volgende actie op basis van de huidige scène en beschikbare acties.\n\nPrioriteit:\n1. Verken onbezochte uitgangen (voorkeur voor open boven op slot)\n2. Pak nuttige voorwerpen op (sleutels, schatten)\n3. Ontgrendel op slot zittende deuren als je een sleutel hebt\n4. Val vijandige tegenstanders aan\n5. Gebruik vaardigheden strategisch wanneer de situatie erom vraagt\n6. Rondkijken of wachten alleen als laatste redmiddel\n\nWees avontuurlijk maar niet roekeloos. Als HP laag is, wees voorzichtig (genezen, vluchten of defensieve vaardigheden).\n\nHuidige scène:\n{{scene}}\n\nBeschikbare acties (kies er één letterlijk of formuleer een vergelijkbare actie in het Nederlands):\n{{actions}}\n\nRecente transcriptie:\n{{transcript}}\n\nAntwoord in het Nederlands. Geef ALLEEN een JSON-object:\n{\"action\": \"de actie-tekst\"}",
+    "autoplayUserMsg": "Kies je volgende actie."
   }
 }

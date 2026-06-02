@@ -6,9 +6,11 @@
 import { appState, setValue, tick, saveToStorage, clearSave, restoreState } from '../core/state.js';
 import { generateWorld }   from './world.js';
 import { createCharacter } from './character.js';
-import { processTurn, checkApiKey, generateTurnImage } from './loop.js';
+import { processTurn, checkApiKey, generateTurnImage, buildScene } from './loop.js';
 import * as UI from '../ui/console.js';
 import { t } from '../i18n/i18n.js';
+import { fireChip, cmdEl } from '../ui/input.js';
+import { getSkills } from '../ui/chips.js';
 
 // TTS helpers — imported lazily so the audio module is a no-op when TTS is off.
 function _speak(text) {
@@ -260,6 +262,37 @@ export async function beginAdventure() {
   await playLoop();
 }
 
+// ─── Autoplay helpers ─────────────────────────────────────────────────────────
+
+let _autoplayGen = 0;
+
+function _collectChipValues(room, pc) {
+  const values = [];
+  for (const e of (room?.exits ?? [])) {
+    values.push(t('chips.goDir', { dir: t(`directions.${e.dir}`) }));
+  }
+  for (const i of (room?.loot ?? []).filter(i => !i.taken)) {
+    values.push(t('chips.takeCmd', { name: i.name }));
+  }
+  if ((room?.exits ?? []).some(e => e.locked)) {
+    values.push(t('chips.unlockCmd'));
+  }
+  values.push(t('chips.attackCmd'));
+  values.push(t('chips.lookCmd'));
+  values.push(t('chips.talkCmd'));
+  values.push(t('chips.waitCmd'));
+  for (const atk of (pc?.sheet?.attacks ?? [])) {
+    values.push(t('chips.attackWith', { name: atk.name }));
+  }
+  const cooldowns = appState.session?.skillCooldowns ?? {};
+  for (const skill of getSkills()) {
+    if ((cooldowns[skill.id] ?? 0) <= 0) {
+      values.push(t('chips.useSkill', { name: skill.label }));
+    }
+  }
+  return values;
+}
+
 // ─── Main play loop ───────────────────────────────────────────────────────────
 
 const RETRY_DELAYS = [1000, 2000, 4000];
@@ -291,7 +324,25 @@ export async function playLoop() {
       pendingRetry = null;
     }
 
-    const raw = await UI.prompt('');
+    // Start prompt (awaits player input or autoplay fireChip).
+    const thisGen = ++_autoplayGen;
+    const promptPromise = UI.prompt('');
+
+    // Autoplay: kick off LLM action generation in parallel.
+    if (appState.settings?.autoplay) {
+      const cancelAutoplay = () => { _autoplayGen++; };
+      cmdEl().addEventListener('input', cancelAutoplay, { once: true });
+
+      import('../ai/autoplay.js').then(async ({ generateAutoAction }) => {
+        const scene   = buildScene();
+        const actions = _collectChipValues(room, appState.party?.pc);
+        const action  = await generateAutoAction(scene, actions, appState.transcript ?? []);
+        if (action && _autoplayGen === thisGen) fireChip(action);
+      }).catch(e => console.warn('Autoplay error:', e.message));
+    }
+
+    const raw = await promptPromise;
+    _autoplayGen++; // invalidate any late autoplay response
     if (!raw.trim()) continue;
 
     if (raw.startsWith('/')) { await handleMeta(raw); continue; }

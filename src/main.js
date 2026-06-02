@@ -68,6 +68,15 @@ async function boot() {
     saveToStorage();
   });
 
+  // Autoplay toggle
+  const autoplayBtn = document.getElementById('autoplay-btn');
+  autoplayBtn?.addEventListener('click', () => {
+    const next = !(appState.settings?.autoplay ?? false);
+    setValue('settings.autoplay', next);
+    autoplayBtn.classList.toggle('active', next);
+    saveToStorage();
+  });
+
   document.getElementById('export-journal')?.addEventListener('click', createJournal);
   document.getElementById('export-screenshot')?.addEventListener('click', exportScreenshot);
   document.getElementById('export-sketches')?.addEventListener('click', exportAllSketches);
@@ -81,6 +90,7 @@ async function boot() {
   const save = loadFromStorage();
   if (save) restoreState(save);
   if (appState.settings?.roleplayMode) document.body.classList.add('roleplay-mode');
+  if (appState.settings?.autoplay) document.getElementById('autoplay-btn')?.classList.add('active');
 
   const urlKey = new URLSearchParams(location.search).get('key');
   if (urlKey) {

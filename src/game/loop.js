@@ -16,7 +16,7 @@ import { resolveRules, goblinRetaliates, commitAll, appendTranscript } from './r
 
 // ─── Scene context (pure snapshot for AI) ────────────────────────────────────
 
-function buildScene() {
+export function buildScene() {
   const { record, sheet } = appState.party?.pc ?? {};
   const roomId = appState.world?.currentRoom;
   const room   = appState.world?.rooms?.[roomId];

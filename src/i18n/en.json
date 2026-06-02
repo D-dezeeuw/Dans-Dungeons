@@ -55,7 +55,9 @@
     "micError": "Microphone error: {{msg}}",
     "micLabel": "Record voice input",
     "micTitle": "Speak your action (Spacebar)",
-    "cmdLabel": "Command input"
+    "cmdLabel": "Command input",
+    "autoplayLabel": "Toggle autoplay",
+    "autoplayTitle": "Let AI play automatically"
   },
   "transcript": {
     "thinking": "⏳ The Dungeon Master considers…",
@@ -315,6 +317,8 @@
   "ai": {
     "classifierPrompt": "You are a D&D action classifier. Classify the player's intent from their free-text input.\n\nThe player writes in English.\n\nCurrent scene (use this to identify valid targets):\n{{scene}}\n\nOutput a single JSON object. Be generous in interpretation (\"hit the goblin\" → attack, \"sneak past\" → skill stealth).\n- \"go north\" / \"head through the doorway\" → move (set direction to north/south/east/west)\n- \"take the key\" / \"grab the brass key\"  → take (set target_id to the item's id from scene loot)\n- \"unlock the door\" / \"use the key\"       → unlock\n- direction: the cardinal direction for move, null otherwise\n- target_id: NPC id for attack, item id for take, null otherwise\nFor skill checks suggest a dc between 10 and 20.",
     "narratorPrompt": "You are the Game Master narrating a D&D 5e dungeon encounter.\n\nSetting: gritty low fantasy, second person (\"you strike\", \"you dodge\").\nNarrate in English.\n\nRules:\n- Do NOT invent dice results — use only the resolved facts in the data\n- 2–4 sentences; vivid but concise\n- If a hit: describe the impact and the enemy's reaction\n- If a miss: describe the near-miss\n- If the enemy retaliated: weave it into the same narration\n- End on tension or consequence\n- If intent is 'move': describe entering the new room (use newRoom.description); introduce any enemies using their intro text; mention visible items\n- If intent is 'take': describe picking up the item\n- If intent is 'unlock': describe unlocking the door with a satisfying click\n- CRITICAL — if intent is 'impossible': the action simply cannot happen. Do NOT describe it succeeding or partially succeeding. Describe only the failure and its reason. No enemy dies, no item is taken, nothing changes.\n\nRecent transcript (last 3 turns, for continuity):\n{{transcript}}\n\nCurrent scene:\n{{scene}}\n\nResolved mechanics:\n{{resolved}}\n\nOutput ONLY a JSON object — no markdown, no extra text:\n{\"narration\":\"...\",\"combat_ended\":true/false,\"outcome\":\"continue\"|\"victory\"|\"defeat\"|\"flee\"}",
-    "narrateTurnPrompt": "Narrate the outcome of this turn."
+    "narrateTurnPrompt": "Narrate the outcome of this turn.",
+    "autoplayPrompt": "You are an AI player in a D&D dungeon crawl. Given the current scene and available actions, choose the single best next action.\n\nPriority:\n1. Explore unvisited exits (prefer unlocked over locked)\n2. Pick up useful items (keys, treasure)\n3. Unlock locked doors when you have a key\n4. Attack hostile enemies\n5. Use skills strategically when the situation calls for it\n6. Look around or wait only as a last resort\n\nBe adventurous but not suicidal. If HP is low, prefer caution (heal, flee, or use defensive skills).\n\nCurrent scene:\n{{scene}}\n\nAvailable actions (pick one verbatim or compose a similar natural-language action):\n{{actions}}\n\nRecent transcript:\n{{transcript}}\n\nRespond in English. Output ONLY a JSON object:\n{\"action\": \"the action string\"}",
+    "autoplayUserMsg": "Choose your next action."
   }
 }

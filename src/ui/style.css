@@ -592,6 +592,28 @@
   50%       { opacity: 0.35; }
 }
 
+/* ─── Autoplay button ────────────────────────────────────── */
+#autoplay-btn {
+  background: none;
+  border: none;
+  color: #9090a0;
+  cursor: pointer;
+  padding: 0 6px;
+  line-height: 1;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  transition: color 0.15s;
+}
+#autoplay-btn.active {
+  color: #4ade80;
+  animation: autoplay-pulse 2s ease-in-out infinite;
+}
+@keyframes autoplay-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.5; }
+}
+
 /* ─── TTS toggle — sticky in top-right of transcript ────── */
 #tts-toggle {
   position: sticky;
