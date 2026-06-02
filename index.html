@@ -324,6 +324,14 @@ html.styles-loaded #brand-bar {
   <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/Dans-Dungeons/sw.js');
+      // Eagerly check for a new version on every page load.
+      fetch('/Dans-Dungeons/vendor/app.version', { cache: 'no-store' })
+        .then(r => r.ok ? r.text() : null)
+        .then(remote => {
+          if (!remote) return;
+          var sw = navigator.serviceWorker.controller;
+          if (sw) sw.postMessage({ type: 'VERSION_CHECK', version: remote.trim() });
+        }).catch(function(){});
     }
   </script>
 </body>
