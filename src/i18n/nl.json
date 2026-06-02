@@ -5,7 +5,7 @@
     "costTitle": "Geschatte AI-kosten deze sessie",
     "toggleSettings": "Instellingen",
     "roleplayMode": "Rollenspelmodus",
-    "loading": "⚔ Dan's Dungeons wordt geladen…"
+    "loading": "Dan's Dungeons wordt geladen…"
   },
   "sidebar": {
     "title": "Instellingen",
@@ -60,7 +60,7 @@
     "autoplayTitle": "Laat AI automatisch spelen"
   },
   "transcript": {
-    "thinking": "⏳ De Dungeon Master overdenkt…",
+    "thinking": "De Dungeon Master overdenkt…",
     "readAloud": "Voorlezen"
   },
   "debug": {
@@ -93,11 +93,11 @@
   "newgame": {
     "sketchHint": "(zwarte inkt op sepia perkament — kost een paar extra credits per beurt)",
     "sketchQuestion": "Na elke beurt een AI-scèneschets genereren?",
-    "sketchYes": "🖼 Ja, schets elke scène",
-    "sketchNo": "✗ Nee, bedankt",
+    "sketchYes": "Ja, schets elke scène",
+    "sketchNo": "Nee, bedankt",
     "ttsQuestion": "Spraakvertelling inschakelen?",
-    "ttsYes": "🔊 Ja, lees het verhaal voor",
-    "ttsNo": "🔇 Nee, bedankt"
+    "ttsYes": "Ja, lees het verhaal voor",
+    "ttsNo": "Nee, bedankt"
   },
   "adventure": {
     "banner": "── HET AVONTUUR BEGINT ───────────────────────",
@@ -123,12 +123,12 @@
     "template": "Je bent {{name}}, een {{health}} {{exp}} {{class}} met {{armor}}."
   },
   "loop": {
-    "retrying": "⏳ Opnieuw proberen… ({{n}}/{{total}})",
+    "retrying": "Opnieuw proberen… ({{n}}/{{total}})",
     "authFail": "Nog steeds mislukt na herauthenticatie. Gebruik /settings om je API-sleutel bij te werken.",
     "gmUnavailable": "De Game Master was niet beschikbaar. Probeer het opnieuw wanneer je klaar bent.",
     "error": "Fout: {{msg}}",
     "turnFail": "De beurt kon niet worden afgehandeld. Probeer opnieuw of typ /restart.",
-    "restart": "🔄 Herstarten"
+    "restart": "Herstarten"
   },
   "victory": {
     "banner": "══ OVERWINNING ══════════════════════════════",
@@ -249,15 +249,15 @@
     "goDir": "Ik ga naar het {{dir}}",
     "takeItem": "Pak {{name}}",
     "takeCmd": "Ik pak de {{name}}",
-    "unlock": "🔑 Ontgrendelen",
+    "unlock": "Ontgrendelen",
     "unlockCmd": "Ik gebruik de sleutel om de deur te openen",
-    "attack": "⚔ Aanvallen",
+    "attack": "Aanvallen",
     "attackCmd": "Ik val aan",
-    "look": "👁 Rondkijken",
+    "look": "Rondkijken",
     "lookCmd": "Ik kijk goed rond",
-    "talk": "💬 Praten",
+    "talk": "Praten",
     "talkCmd": "Ik probeer te praten",
-    "wait": "⏳ Wachten",
+    "wait": "Wachten",
     "waitCmd": "Ik wacht en observeer",
     "attackWith": "Ik val aan met mijn {{name}}",
     "useSkill": "Ik gebruik {{name}}",
@@ -302,7 +302,7 @@
     }
   },
   "exports": {
-    "crafting": "📖 Je verhaal wordt geschreven…",
+    "crafting": "Je verhaal wordt geschreven…",
     "craftFail": "Kon geen verhaal genereren — ruwe versie wordt geëxporteerd.",
     "noSketch": "Nog geen scèneschets om te exporteren.",
     "noSketches": "Nog geen schetsen gegenereerd deze sessie.",

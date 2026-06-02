@@ -48,7 +48,7 @@ async function boot() {
     saveToStorage();
   });
 
-  // TTS toggle — 🔊/🔇 button inside #transcript
+  // TTS toggle — volume on/off button inside #transcript
   const ttsToggle = document.getElementById('tts-toggle');
   ttsToggle?.addEventListener('click', () => {
     setValue('settings.tts', !(appState.settings?.tts ?? false));

@@ -41,7 +41,7 @@ export function setThinking(on) {
   const ID = 'thinking-indicator';
   if (on) {
     if (document.getElementById(ID)) return;
-    const el = appendEntry('thinking', '⏳');
+    const el = appendEntry('thinking', '…');
     el.id = ID;
   } else {
     document.getElementById(ID)?.remove();
@@ -61,7 +61,7 @@ export function initSpeakHover() {
   const btn = document.createElement('button');
   btn.id = 'speak-hover-btn';
   btn.setAttribute('aria-label', t('transcript.readAloud'));
-  btn.textContent = '🔊';
+  btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z"/><path d="M16 9a5 5 0 0 1 0 6"/><path d="M19.364 18.364a9 9 0 0 0 0-12.728"/></svg>';
   document.body.appendChild(btn);
 
   let _hovered = null; // the .entry-gm currently under the pointer

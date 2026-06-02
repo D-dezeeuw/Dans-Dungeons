@@ -5,7 +5,7 @@
     "costTitle": "Estimated AI cost this session",
     "toggleSettings": "Toggle settings",
     "roleplayMode": "Roleplay mode",
-    "loading": "⚔ Dan's Dungeons is loading…"
+    "loading": "Dan's Dungeons is loading…"
   },
   "sidebar": {
     "title": "Settings",
@@ -60,7 +60,7 @@
     "autoplayTitle": "Let AI play automatically"
   },
   "transcript": {
-    "thinking": "⏳ The Dungeon Master considers…",
+    "thinking": "The Dungeon Master considers…",
     "readAloud": "Read aloud"
   },
   "debug": {
@@ -93,11 +93,11 @@
   "newgame": {
     "sketchHint": "(black ink on sepia parchment — costs a few extra credits per turn)",
     "sketchQuestion": "Generate an AI scene sketch after each turn?",
-    "sketchYes": "🖼 Yes, sketch each scene",
-    "sketchNo": "✗ No thanks",
+    "sketchYes": "Yes, sketch each scene",
+    "sketchNo": "No thanks",
     "ttsQuestion": "Enable voice narration?",
-    "ttsYes": "🔊 Yes, read the story aloud",
-    "ttsNo": "🔇 No thanks"
+    "ttsYes": "Yes, read the story aloud",
+    "ttsNo": "No thanks"
   },
   "adventure": {
     "banner": "── THE ADVENTURE BEGINS ──────────────────────",
@@ -123,12 +123,12 @@
     "template": "You are {{name}}, a {{health}} {{exp}} {{class}} with {{armor}}."
   },
   "loop": {
-    "retrying": "⏳ Retrying… ({{n}}/{{total}})",
+    "retrying": "Retrying… ({{n}}/{{total}})",
     "authFail": "Still failing after re-authentication. Use /settings to update your API key.",
     "gmUnavailable": "The Game Master was not available. Try again when you are ready.",
     "error": "Error: {{msg}}",
     "turnFail": "The turn was not resolved. Try again or type /restart.",
-    "restart": "🔄 Restart"
+    "restart": "Restart"
   },
   "victory": {
     "banner": "══ VICTORY ══════════════════════════════════",
@@ -249,15 +249,15 @@
     "goDir": "I go {{dir}}",
     "takeItem": "Take {{name}}",
     "takeCmd": "I take the {{name}}",
-    "unlock": "🔑 Unlock",
+    "unlock": "Unlock",
     "unlockCmd": "I use the key to unlock the door",
-    "attack": "⚔ Attack",
+    "attack": "Attack",
     "attackCmd": "I attack",
-    "look": "👁 Look around",
+    "look": "Look around",
     "lookCmd": "I look around carefully",
-    "talk": "💬 Talk",
+    "talk": "Talk",
     "talkCmd": "I try to talk",
-    "wait": "⏳ Wait",
+    "wait": "Wait",
     "waitCmd": "I wait and watch",
     "attackWith": "I attack with my {{name}}",
     "useSkill": "I use {{name}}",
@@ -302,7 +302,7 @@
     }
   },
   "exports": {
-    "crafting": "📖 Crafting your tale…",
+    "crafting": "Crafting your tale…",
     "craftFail": "Could not generate story — exporting raw journal instead.",
     "noSketch": "No scene sketch to export yet.",
     "noSketches": "No sketches generated this session yet.",

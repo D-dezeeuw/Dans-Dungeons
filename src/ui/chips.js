@@ -159,7 +159,7 @@ export function showRoomChips(exits, loot) {
   const ICON = { north: '↑', south: '↓', east: '→', west: '←' };
   const actions = [
     ...exits.map(e => ({
-      label:     `${ICON[e.dir] ?? '→'} ${t(`directions.${e.dir}`).charAt(0).toUpperCase() + t(`directions.${e.dir}`).slice(1)}${e.locked ? ' 🔒' : ''}`,
+      label:     `${ICON[e.dir] ?? '→'} ${t(`directions.${e.dir}`).charAt(0).toUpperCase() + t(`directions.${e.dir}`).slice(1)}${e.locked ? ' [locked]' : ''}`,
       ariaLabel: `${t(`actionbar.go${e.dir.charAt(0).toUpperCase() + e.dir.slice(1)}`)}${e.locked ? ` (${t('actionbar.locked')})` : ''}`,
       value:     t('chips.goDir', { dir: t(`directions.${e.dir}`) }),
     })),

@@ -2,6 +2,7 @@
 
 import { escHtml } from '../core/utils.js';
 import { t } from '../i18n/i18n.js';
+import { icon } from './icons.js';
 
 const MOBILE_BREAKPOINT = 768;
 
@@ -35,8 +36,8 @@ export function initCopyKeyButton(getKey) {
   if (!btn) return;
   btn.addEventListener('click', async () => {
     await navigator.clipboard.writeText(getKey());
-    btn.textContent = '✓';
-    setTimeout(() => { btn.textContent = '🔑'; }, 1200);
+    btn.innerHTML = icon.check(14);
+    setTimeout(() => { btn.innerHTML = icon.key(14); }, 1200);
   });
 }
 
@@ -85,7 +86,7 @@ export function initCollapsibles() {
   if (_debugPanel && _debugBar) {
     const { set, storedOrDefault } = makePanel(_debugBar, 'dg-debug', (open) => {
       _debugPanel.classList.toggle('collapsed', !open);
-      if (chevron) chevron.textContent = open ? '▴' : '▾';
+      if (chevron) chevron.innerHTML = open ? icon.chevronUp(12) : icon.chevronDown(12);
     });
     _setDebug = set;
     _setDebug._initial = storedOrDefault();

@@ -319,7 +319,7 @@ export async function playLoop() {
         UI.updateActionBar(room?.exits ?? [], appState.party?.pc?.record, appState.party?.pc?.sheet, appState.session?.skillCooldowns ?? {});
       }
       if (pendingRetry) {
-        UI.insertActionChip('↺ Retry', pendingRetry);
+        UI.insertActionChip('Retry', pendingRetry);
         pendingRetry = null;
       }
     }

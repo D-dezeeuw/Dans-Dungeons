@@ -76,7 +76,15 @@ export function registerReactiveSidebar() {
 
   // TTS state — drive icon on the toggle button.
   computed('ui.ttsActive',     ['settings.tts'],        s => !!(s.settings?.tts));
-  computed('ui.ttsIcon',       ['settings.tts'],        s => s.settings?.tts ? '🔊' : '🔇');
+  computed('ui.ttsIcon',       ['settings.tts'],        s => s.settings?.tts ? 'ON' : 'OFF');
+
+  // TTS toggle icon — push SVG via watch since {{}} can't render HTML.
+  const _volOn  = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z"/><path d="M16 9a5 5 0 0 1 0 6"/><path d="M19.364 18.364a9 9 0 0 0 0-12.728"/></svg>';
+  const _volOff = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 9a5 5 0 0 1 .95 2.293"/><path d="M19.364 5.636a9 9 0 0 1 1.889 9.96"/><path d="m2 2 20 20"/><path d="m7 7-2.187 2.187A1.4 1.4 0 0 1 3.816 9.6H2a1 1 0 0 0-1 1v4.8a1 1 0 0 0 1 1h1.815a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 9.4 19.702V15"/><path d="M9.4 4.702a.705.705 0 0 1 1.203-.498L13 6.6"/></svg>';
+  watch(['settings.tts'], (s) => {
+    const el = document.getElementById('tts-toggle');
+    if (el) el.innerHTML = s.settings?.tts ? _volOn : _volOff;
+  });
 
   // Roleplay mode — drives aria-pressed on the roleplay button.
   computed('ui.roleplayActive', ['settings.roleplayMode'], s => !!(s.settings?.roleplayMode));
