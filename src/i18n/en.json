@@ -302,6 +302,7 @@
     }
   },
   "exports": {
+    "noJournal": "Nothing to export yet — play a few turns first.",
     "step1": "Gathering narrations…",
     "step2": "Sending to the storyteller…",
     "step3detail": "Weaving {{n}} chapters…",

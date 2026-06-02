@@ -79,7 +79,14 @@ async function boot() {
     saveToStorage();
   });
 
-  document.getElementById('export-journal')?.addEventListener('click', createJournal);
+  document.getElementById('export-journal')?.addEventListener('click', () => {
+    createJournal().catch(e => {
+      console.error('Journal export error:', e);
+      import('./ui/transcript.js').then(({ appendEntry }) =>
+        appendEntry('error', `Journal export failed: ${e.message}`)
+      );
+    });
+  });
   document.getElementById('export-screenshot')?.addEventListener('click', exportScreenshot);
   document.getElementById('export-sketches')?.addEventListener('click', exportAllSketches);
   document.getElementById('export-import')?.addEventListener('click', importSave);

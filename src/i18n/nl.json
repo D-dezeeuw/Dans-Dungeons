@@ -302,6 +302,7 @@
     }
   },
   "exports": {
+    "noJournal": "Nog niets te exporteren — speel eerst een paar beurten.",
     "step1": "Vertellingen verzamelen…",
     "step2": "Naar de verteller sturen…",
     "step3detail": "{{n}} hoofdstukken weven…",

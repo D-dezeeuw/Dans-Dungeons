@@ -96,8 +96,21 @@ function esc(s) {
 // ─── Journal (LLM-enhanced) ──────────────────────────────────────────────────
 
 export async function createJournal() {
-  const journalLog = getJournalLog();
-  if (!journalLog.length) return;
+  let journalLog = getJournalLog();
+
+  // If journalLog is empty (e.g. after a page refresh/resume), build from transcript.
+  if (!journalLog.length) {
+    const transcript = appState.transcript ?? [];
+    const gmEntries  = transcript.filter(e => e.role === 'gm');
+    if (gmEntries.length) {
+      journalLog = gmEntries.map(e => ({ turn: e.turn ?? 0, narration: e.text, imageSrc: null }));
+    }
+  }
+
+  if (!journalLog.length) {
+    appendEntry('system', t('exports.noJournal'));
+    return;
+  }
 
   const pcName  = appState.party?.pc?.record?.name ?? 'Adventurer';
   const pcClass = appState.party?.pc?.record?.classId ?? '';
