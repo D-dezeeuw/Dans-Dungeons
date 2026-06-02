@@ -583,7 +583,7 @@
   align-items: center;
   transition: color 0.15s;
 }
-#mic-btn[aria-pressed="true"] {
+#mic-btn.recording {
   color: #f97316;
   animation: mic-pulse 1s ease-in-out infinite;
 }

@@ -2,7 +2,7 @@
 // prefillChip/fireChip for chip-to-input wiring, and mic-button STT wiring.
 
 import { appendEntry } from './transcript.js';
-import { appState, setValue } from '../core/state.js';
+import { appState } from '../core/state.js';
 import { t } from '../i18n/i18n.js';
 
 // ─── Input history ────────────────────────────────────────────────────────────
@@ -168,17 +168,17 @@ export function initMicButton() {
       return;
     }
 
-    setValue('ui.recording', true);
+    btn.classList.add('recording');
 
     try {
-      const blob       = await startRecording();
-      setValue('ui.recording', false);
+      const blob = await startRecording();
+      btn.classList.remove('recording');
       const transcript = await transcribeAudio(blob);
       if (transcript) fireChip(transcript);
     } catch (e) {
       appendEntry('error', t('input.micError', { msg: e.message }));
     } finally {
-      setValue('ui.recording', false);
+      btn.classList.remove('recording');
     }
   });
 
