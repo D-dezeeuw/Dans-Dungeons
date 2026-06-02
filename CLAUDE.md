@@ -6,6 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 npm run serve   # serves the repo root; open: http://localhost:8000
+node build.js   # esbuild bundle → vendor/app.bundle.js + version stamp
 npm test        # node --test tests/ — zero-dep test runner (Node 20+)
 ```
 
@@ -13,54 +14,155 @@ Run a single test file: `node --test tests/dnd/dice.test.js`
 
 ## Architecture
 
-**Dan's Dungeons** is a text-based, AI-driven D&D game that runs 100% in the browser — no backend, no build step, no installed npm dependencies.
+**Dan's Dungeons** is a text-based, AI-driven D&D game that runs 100% in the browser — no backend, no installed npm dependencies. esbuild bundles `src/main.js` into `vendor/app.bundle.js` for GitHub Pages.
 
 ### Key constraints
 
-- **Zero deps installed.** `node_modules` must stay empty. Runtime libraries (Spektrum, bag-of-holding) load from `unpkg` at pinned, SRI-hashed URLs. No CDN dependency is added without its exact version and `integrity` hash.
-- **No build step.** What's in the repo is what's served (GitHub Pages). ES modules only; no bundler.
-- **BYOK.** The player provides their own OpenRouter API key, stored in `localStorage`, sent only to the configured AI base URL. The app never proxies or stores it server-side.
+- **Zero deps installed.** `node_modules` holds only esbuild (dev). Runtime libraries (Spektrum, bag-of-holding) are vendored or load from `unpkg` at pinned URLs.
+- **esbuild bundles for prod.** `node build.js` produces `vendor/app.bundle.js`, stamps the git hash into `vendor/app.version` and `sw.js`. GitHub Pages serves the bundle.
+- **BYOK.** The player provides their own OpenRouter API key, stored in `localStorage`, sent only to the configured AI base URL.
+
+### Module map
+
+```
+src/
+├── main.js              Boot entry, settings wiring, locale init
+├── core/
+│   ├── state.js          Spektrum wrapper (setValue, tick, computed, etc.)
+│   └── utils.js          escHtml and other small helpers
+├── game/
+│   ├── flow.js           Game lifecycle FSM: setup, play loop, victory/defeat, autoplay
+│   ├── loop.js           Turn engine: classify → resolve → narrate → commit
+│   ├── resolver.js       Pure D&D rules: attack, skill, move, take, unlock
+│   ├── character.js      Character creation wizard
+│   ├── world.js          Procedural dungeon generator
+│   └── rules.js          Thin re-export shim for bag-of-holding
+├── ai/
+│   ├── client.js         OpenRouter HTTP transport, retry, streaming
+│   ├── classify.js       Intent classifier (tiny tier)
+│   ├── narrate.js        GM narrator + scene image generation (medium tier)
+│   ├── autoplay.js       LLM-driven autopilot (tiny tier)
+│   ├── journal.js        LLM story weaver for journal export (medium tier)
+│   ├── schemas.js        JSON schemas: CLASSIFIER, NARRATOR, AUTOPLAY, JOURNAL
+│   ├── tiers.js          Default model IDs per tier
+│   ├── stream.js         SSE stream parser / NarrationExtractor
+│   ├── tts.js            Text-to-speech via OpenRouter
+│   └── stt.js            Speech-to-text via OpenRouter
+├── i18n/
+│   ├── i18n.js           t(key, params), tRaw(key), locale(), setLocale()
+│   ├── en.json           English string table (~200 keys)
+│   └── nl.json           Dutch string table
+└── ui/
+    ├── console.js        Re-export barrel for UI modules
+    ├── input.js           Prompt, pickFrom, chip wiring, mic button
+    ├── transcript.js      Transcript DOM, thinking indicator, speak hover
+    ├── chips.js           Action/character/skill chips, room chips
+    ├── actionbar.js       Three-zone footer: compass, class, skills
+    ├── sidebar.js         Settings sidebar, debug panel
+    ├── reactive.js        Spektrum computed bindings for UI state
+    ├── sketch.js          Scene background image management
+    ├── exports.js         Journal (EPUB), screenshot, sketches, save import
+    ├── epub.js            Zero-dep EPUB builder (ZIP + XHTML + canvas cover)
+    └── icons.js           Lucide SVG icon catalog
+```
 
 ### State ownership (Spektrum)
 
-Spektrum is the **single source of truth** — all canonical state and the history needed for undo/rewind. It is not Redux-shaped; there is no `dispatch` or `getState()`. `appState` is a stable live reference:
+Spektrum is the **single source of truth**. `appState` is a stable live reference:
 
-- `setValue(path, value)` / `addValue(path, value)` for writes (both record into history).
+- `setValue(path, value)` / `addValue(path, value)` for writes.
 - `computed(path, deps, fn)` for derived values.
-- `addAsync(path, fn)` + `refresh(path)` for async fills (AI responses land at a path).
-- `serialize({ includeHistory })` for export/save.
+- `watch(deps, fn)` for imperative DOM updates (stat bars, TTS icon).
+- `serialize()` for export/save.
 
-Top-level `appState` paths: `world`, `secrets`, `party`, `flags`, `transcript`, `session`, `ai`.
+Top-level `appState` paths: `world`, `party`, `flags`, `transcript`, `session`, `ai`, `settings`, `ui`.
 
-### Turn loop boundary rules
+### Turn loop
 
-The game loop (`src/game/loop.js`) is the only thing that writes to Spektrum or calls the AI. The rules:
+The turn engine (`src/game/loop.js`) is the only module that calls AI and commits state:
 
-- **UI** never calls the AI directly.
-- **AI agents** return structured data; the loop validates and commits.
-- **Rules** (`src/game/rules.js`, a thin re-export of `bag-of-holding`) are deterministic JS — no AI calls.
-- **Persistence** mirrors Spektrum only; it never reads from the AI.
+1. **Build scene** — pure snapshot of room, PC, NPCs for AI context
+2. **Classify** — tiny tier LLM maps player input to structured intent
+3. **Resolve** — pure JS D&D rules (d20, damage, movement validation)
+4. **Enemy retaliation** — goblin counter-attack if applicable
+5. **Narrate** — medium tier LLM streams GM narration
+6. **Commit** — writes resolved state to Spektrum + appends transcript
 
-### Sibling repo: `bag-of-holding`
+### Procedural dungeon generator
 
-The D&D rules + beat runtime lives at `../bag-of-holding/` (a separate repo). During dev, imported via relative path. On release, swapped to a pinned `unpkg` URL. `src/game/rules.js` is the thin re-export shim — all app code imports from there, never directly across repos.
+`src/game/world.js` generates a unique dungeon each game:
+
+- **Grid-based placement** — rooms placed on a 2D grid, exits derived from cardinal adjacency
+- **Spine + branches** — main path of 4-6 rooms (start → vault), plus 2-4 branch rooms
+- **Lock-and-key puzzle** — one locked gate on the spine, key placed in a pre-gate branch room
+- **Multiple enemies** — 1-3 enemies from a pool of 6, placed in different rooms
+- **Room types** — `entrance`, `hall`, `corridor`, `chamber`, `storage`, `quarters`, `shrine`, `vault` — each with 5 locale-driven descriptions
+- **Output shape** — `{ currentRoom, exitRoomId, rooms: {}, npcs: {} }` consumed by resolver, narrator, and UI unchanged
+
+### i18n
+
+Zero-dep locale system in `src/i18n/`:
+
+- `t(key, params)` — string lookup with `{{param}}` interpolation
+- `tRaw(key)` — returns arrays/objects (flavour tables, room pools)
+- `locale()` / `setLocale(code)` — get/set, persisted to `localStorage` as `dg-locale`
+- Supported: `en` (default), `nl` (Dutch)
+- AI prompts are locale-conditional: classifier accepts Dutch input, narrator outputs Dutch, STT passes `language: locale()`, TTS auto-detects from text
+
+### Autoplay
+
+LLM-driven autopilot (`src/ai/autoplay.js`):
+
+- Toggle button (recycle arrow) next to mic in input row
+- When active: disables input, shows thinking indicator, calls tiny tier to pick next action from available chips
+- Scene context + 6 transcript entries + available actions → single action string
+- On failure: falls back to manual input
+- System prompt gives personality: curious, fights with flair, never backtracks
+
+### Journal export (EPUB)
+
+`src/ui/exports.js` + `src/ai/journal.js` + `src/ui/epub.js`:
+
+- Sends all narrations to medium tier LLM to weave into coherent prose with chapters
+- Chapters cached in `localStorage` (`dg-journal-cache`) — fingerprinted, only new turns re-processed
+- Zero-dep EPUB builder: minimal store-only ZIP, XHTML chapters, canvas-rendered cover
+- Cover: "DAN'S DUNGEONS: {title}" on sepia parchment, character name/class subtitle
+- Falls back to raw HTML journal if LLM fails
+- Step-by-step progress shown in transcript
 
 ### AI model tiers
 
-Each job maps to a named tier (`tiny` / `small` / `medium` / `large` / `summarizer` / `embedder` / `tts`). The player maps each tier to a real model id in settings. `tiny` runs on every player turn (classifier); `medium` is the narrator hot path; `large` is used only for world generation and story climaxes.
+| Tier | Purpose | Default model |
+|------|---------|---------------|
+| `tiny` | Classifier, autoplay (every turn) | gemini-2.5-flash-lite |
+| `medium` | Narrator, journal story | deepseek-v4-pro |
+| `image` | Scene sketches | gemini-2.5-flash-image |
+| `tts` | Text-to-speech | gemini-3.1-flash-tts |
+| `stt` | Speech-to-text | nvidia/parakeet-tdt |
 
-### Context / scope packets
+The `max_tokens` override in `chatCompletion()` opts allows per-call limits (journal uses 4000).
 
-Every AI call gets a **scope packet** — the smallest bundle of world facts for the current moment. The assembler (`src/ai/context/assemble.js`) is a **pure function**: no LLM calls, no side effects. It walks the geography graph outward from the current location (here → nearby → region → realm) and applies a token budget, pruning from the outside in. The packet is built once per turn and shared across the classifier → rules → narrator pipeline.
+### Service worker
 
-### Structured AI outputs
+Cache-first for speed, self-invalidating via version check:
 
-Every non-trivial AI call targets a JSON schema in `src/ai/schemas/*.schema.json`. The response is validated by a hand-rolled validator (zero deps). On schema failure: one repair retry with the error included; on second failure, surface to the player.
+- Page fetches `vendor/app.version` (`cache: no-store`) on every load
+- Posts hash to SW via `postMessage`
+- On mismatch: SW purges all caches, unregisters, reloads all tabs
+- Next load gets fresh files, new SW installs
+
+### Icons
+
+Lucide SVG icons (MIT) vendored in `vendor/icons/`. `src/ui/icons.js` exports inline SVG strings via `icon.name(size)`. No emoji in the UI — all icons are Lucide SVGs.
+
+### Sibling repo: `bag-of-holding`
+
+D&D rules engine at `../bag-of-holding/`. Imported via `src/game/rules.js` shim. Provides: dice, checks, combat, conditions, XP, character derivation, class/species/background SRD data.
 
 ### Persistence
 
-Saves live in `localStorage` (primary) with IndexedDB spillover for large data. The full save exports as a `.dnd.json` file via `serialize({ includeHistory: true })`.
+Saves in `localStorage` (key: `dans-dungeons`). Full state exported as `.dnd.json`. Journal cache in `dg-journal-cache`. Locale in `dg-locale`.
 
 ### Tests
 
-Tests live in `tests/` and use `node --test` (zero deps). Test deterministic logic only: dice, checks, combat, XP, schema validation, persistence migrators. AI-touching layers get smoke tests with mocked network responses — assert that given a valid response shape, the loop commits the correct Spektrum delta.
+Tests in `tests/` using `node --test` (zero deps). Test deterministic logic only: dice, checks, combat, XP, schema validation.
