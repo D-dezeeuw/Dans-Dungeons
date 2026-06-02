@@ -17,6 +17,27 @@ export const CLASSIFIER_SCHEMA = {
   additionalProperties: false,
 };
 
+export const JOURNAL_SCHEMA = {
+  type: 'object',
+  properties: {
+    title:    { type: 'string' },
+    chapters: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          heading: { type: 'string' },
+          text:    { type: 'string' },
+        },
+        required: ['heading', 'text'],
+        additionalProperties: false,
+      },
+    },
+  },
+  required: ['title', 'chapters'],
+  additionalProperties: false,
+};
+
 export const AUTOPLAY_SCHEMA = {
   type: 'object',
   properties: {

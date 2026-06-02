@@ -44,7 +44,7 @@ export async function checkKey() {
 
 // ─── Non-streaming fetch ──────────────────────────────────────────────────────
 
-async function _callOnce({ tier = 'medium', messages, schema }) {
+async function _callOnce({ tier = 'medium', messages, schema, max_tokens }) {
   const ai    = appState.ai || {};
   const base  = (ai.baseUrl || 'https://openrouter.ai/api/v1').replace(/\/$/, '');
   const model = modelFor(tier, ai);
@@ -53,7 +53,7 @@ async function _callOnce({ tier = 'medium', messages, schema }) {
     model,
     messages,
     temperature: tier === 'tiny' ? 0.1 : 0.85,
-    max_tokens:  tier === 'tiny' ? 250 : 700,
+    max_tokens:  max_tokens ?? (tier === 'tiny' ? 250 : 700),
   };
 
   if (schema) {

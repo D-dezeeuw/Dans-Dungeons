@@ -2,7 +2,7 @@
 // All functions are triggered by user action; none interact with the game loop.
 
 import { appState, restoreState, tick, saveToStorage } from '../core/state.js';
-import { appendEntry } from './transcript.js';
+import { appendEntry, setThinking } from './transcript.js';
 import { getJournalLog } from '../game/flow.js';
 import { t, locale } from '../i18n/i18n.js';
 
@@ -87,22 +87,182 @@ export function handleImportFile(e) {
   reader.readAsText(file);
 }
 
-// ─── Journal ──────────────────────────────────────────────────────────────────
+// ─── HTML escape ─────────────────────────────────────────────────────────────
 
-export function createJournal() {
+function esc(s) {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// ─── Journal (LLM-enhanced) ──────────────────────────────────────────────────
+
+export async function createJournal() {
   const journalLog = getJournalLog();
   if (!journalLog.length) return;
+
   const pcName  = appState.party?.pc?.record?.name ?? 'Adventurer';
   const pcClass = appState.party?.pc?.record?.classId ?? '';
+  const images  = journalLog.filter(e => e.imageSrc).map(e => e.imageSrc);
 
+  // Show progress in transcript.
+  appendEntry('system', t('exports.crafting'));
+
+  let story = null;
+  try {
+    const { generateJournalStory } = await import('../ai/journal.js');
+    story = await generateJournalStory(journalLog, pcName, pcClass);
+  } catch (e) {
+    console.warn('Journal LLM failed:', e.message);
+  }
+
+  if (story?.chapters?.length) {
+    _downloadStoryJournal(story, pcName, pcClass, images);
+  } else {
+    appendEntry('system', t('exports.craftFail'));
+    _downloadRawJournal(journalLog, pcName, pcClass);
+  }
+}
+
+// ─── Story journal (LLM-enhanced, book layout) ──────────────────────────────
+
+function _downloadStoryJournal(story, pcName, pcClass, images) {
+  const chapters = story.chapters;
+
+  const chaptersHtml = chapters.map((ch, i) => {
+    const img = images[i]
+      ? `<div class="spread-image"><img src="${images[i]}" alt="Scene illustration"></div>`
+      : '';
+    const text = esc(ch.text).replace(/\n/g, '</p><p>');
+    return `<section class="chapter">
+  <div class="spread">
+    ${img}
+    <div class="spread-text">
+      <h2>${esc(ch.heading)}</h2>
+      <p>${text}</p>
+    </div>
+  </div>
+</section>`;
+  }).join('\n');
+
+  // Any remaining images beyond the chapter count.
+  const extraImages = images.slice(chapters.length).map(src =>
+    `<figure class="extra-sketch"><img src="${src}" alt="Scene sketch"></figure>`
+  ).join('\n');
+
+  const html = `<!DOCTYPE html>
+<html lang="${locale()}">
+<head>
+<meta charset="UTF-8">
+<title>${esc(story.title)}</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #f5e6c8;
+    color: #3a2a1a;
+    font-family: Georgia, 'Times New Roman', serif;
+    line-height: 1.9;
+    padding: 2rem 1.5rem;
+    max-width: 960px;
+    margin: 0 auto;
+  }
+  h1 {
+    text-align: center;
+    font-size: 2.2rem;
+    color: #5c3d1a;
+    letter-spacing: 0.04em;
+    margin-bottom: 0.3rem;
+  }
+  .subtitle {
+    text-align: center;
+    color: #8c6a3a;
+    font-style: italic;
+    font-size: 1rem;
+    margin-bottom: 3rem;
+  }
+  .chapter {
+    margin-bottom: 3rem;
+    page-break-inside: avoid;
+  }
+  .spread {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    align-items: start;
+  }
+  .spread-image {
+    position: sticky;
+    top: 2rem;
+  }
+  .spread-image img {
+    width: 100%;
+    border: 1px solid #c8a878;
+    border-radius: 3px;
+  }
+  .spread-text h2 {
+    font-size: 1.1rem;
+    color: #5c3d1a;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    border-bottom: 1px solid #c8a878;
+    padding-bottom: 0.5rem;
+    margin-bottom: 1rem;
+  }
+  .spread-text p {
+    margin-bottom: 0.8rem;
+    text-align: justify;
+  }
+  /* Chapters without images: full-width text */
+  .spread:not(:has(.spread-image)) {
+    grid-template-columns: 1fr;
+  }
+  .extra-sketch {
+    margin: 2rem auto;
+    max-width: 480px;
+  }
+  .extra-sketch img {
+    width: 100%;
+    border: 1px solid #c8a878;
+    border-radius: 3px;
+  }
+  /* Ornamental divider between chapters */
+  .chapter + .chapter::before {
+    content: '⁂';
+    display: block;
+    text-align: center;
+    color: #c8a878;
+    font-size: 1.5rem;
+    margin-bottom: 2rem;
+  }
+  @media (max-width: 640px) {
+    .spread { grid-template-columns: 1fr; }
+    .spread-image { position: static; margin-bottom: 1rem; }
+  }
+  @media print {
+    .chapter { page-break-before: always; }
+    .chapter:first-child { page-break-before: auto; }
+  }
+</style>
+</head>
+<body>
+<h1>${esc(story.title)}</h1>
+<div class="subtitle">${t('exports.subtitle', { class: pcClass })}</div>
+${chaptersHtml}
+${extraImages}
+</body>
+</html>`;
+
+  triggerDownload(new Blob([html], { type: 'text/html' }),
+    `dans-dungeons-tale-${pcName.toLowerCase().replace(/\s+/g, '-')}.html`);
+}
+
+// ─── Raw journal (fallback) ──────────────────────────────────────────────────
+
+function _downloadRawJournal(journalLog, pcName, pcClass) {
   const entriesHtml = journalLog.map((entry, i) => {
     const heading = i === 0 ? t('exports.adventureBegins') : t('exports.turnN', { n: entry.turn });
     const img = entry.imageSrc
       ? `<img src="${entry.imageSrc}" alt="Scene sketch" style="width:100%;display:block;margin-bottom:1.2rem;border-radius:2px;">`
       : '';
-    const text = entry.narration
-      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-      .replace(/\n/g, '<br>');
+    const text = esc(entry.narration).replace(/\n/g, '<br>');
     return `<div class="entry">
   <div class="turn-label">${heading}</div>
   ${img}
