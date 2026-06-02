@@ -11,7 +11,7 @@ export async function generateAutoAction(scene, availableActions, transcript) {
   const system = t('ai.autoplayPrompt', {
     scene:      JSON.stringify(scene, null, 2),
     actions:    JSON.stringify(availableActions),
-    transcript: JSON.stringify(transcript.slice(-3)),
+    transcript: JSON.stringify(transcript.slice(-6)),
   });
 
   const result = await chatCompletion({
