@@ -41,7 +41,7 @@ export function setThinking(on) {
   const ID = 'thinking-indicator';
   if (on) {
     if (document.getElementById(ID)) return;
-    const el = appendEntry('thinking', t('transcript.thinking'));
+    const el = appendEntry('thinking', '⏳');
     el.id = ID;
   } else {
     document.getElementById(ID)?.remove();

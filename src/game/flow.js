@@ -9,7 +9,6 @@ import { createCharacter } from './character.js';
 import { processTurn, checkApiKey, generateTurnImage, buildScene } from './loop.js';
 import * as UI from '../ui/console.js';
 import { t } from '../i18n/i18n.js';
-import { fireChip, cmdEl } from '../ui/input.js';
 import { getSkills } from '../ui/chips.js';
 
 // TTS helpers — imported lazily so the audio module is a no-op when TTS is off.
@@ -264,8 +263,6 @@ export async function beginAdventure() {
 
 // ─── Autoplay helpers ─────────────────────────────────────────────────────────
 
-let _autoplayGen = 0;
-
 function _collectChipValues(room, pc) {
   const values = [];
   for (const e of (room?.exits ?? [])) {
@@ -312,38 +309,43 @@ export async function playLoop() {
     _cancelSpeech(); // stop any leftover narration before awaiting player input
 
     const room = appState.world?.rooms?.[appState.world?.currentRoom];
-    UI.showRoomChips(room?.exits ?? [], room?.loot ?? []);
-    UI.showCharacterChips(appState.party?.pc?.record, appState.party?.pc?.sheet);
-    UI.showSkillChips(appState.session?.skillCooldowns ?? {});
-    if (appState.settings?.actionBar) {
-      UI.updateActionBar(room?.exits ?? [], appState.party?.pc?.record, appState.party?.pc?.sheet, appState.session?.skillCooldowns ?? {});
+    const autoplay = appState.settings?.autoplay;
+
+    if (!autoplay) {
+      UI.showRoomChips(room?.exits ?? [], room?.loot ?? []);
+      UI.showCharacterChips(appState.party?.pc?.record, appState.party?.pc?.sheet);
+      UI.showSkillChips(appState.session?.skillCooldowns ?? {});
+      if (appState.settings?.actionBar) {
+        UI.updateActionBar(room?.exits ?? [], appState.party?.pc?.record, appState.party?.pc?.sheet, appState.session?.skillCooldowns ?? {});
+      }
+      if (pendingRetry) {
+        UI.insertActionChip('↺ Retry', pendingRetry);
+        pendingRetry = null;
+      }
     }
 
-    if (pendingRetry) {
-      UI.insertActionChip('↺ Retry', pendingRetry);
-      pendingRetry = null;
-    }
+    let raw;
 
-    // Start prompt (awaits player input or autoplay fireChip).
-    const thisGen = ++_autoplayGen;
-    const promptPromise = UI.prompt('');
-
-    // Autoplay: kick off LLM action generation in parallel.
-    if (appState.settings?.autoplay) {
-      const cancelAutoplay = () => { _autoplayGen++; };
-      cmdEl().addEventListener('input', cancelAutoplay, { once: true });
-
-      import('../ai/autoplay.js').then(async ({ generateAutoAction }) => {
+    if (autoplay) {
+      // Autoplay: disable input, show thinking, generate action via LLM.
+      UI.setInputEnabled(false);
+      UI.setThinking(true);
+      try {
+        const { generateAutoAction } = await import('../ai/autoplay.js');
         const scene   = buildScene();
         const actions = _collectChipValues(room, appState.party?.pc);
-        const action  = await generateAutoAction(scene, actions, appState.transcript ?? []);
-        if (action && _autoplayGen === thisGen) fireChip(action);
-      }).catch(e => console.warn('Autoplay error:', e.message));
+        raw = await generateAutoAction(scene, actions, appState.transcript ?? []);
+      } catch (e) {
+        console.warn('Autoplay error:', e.message);
+        raw = null;
+      }
+      UI.setThinking(false);
+      if (!raw?.trim()) { raw = await UI.prompt(''); } // fallback to manual on failure
+    } else {
+      raw = await UI.prompt('');
     }
 
-    const raw = await promptPromise;
-    _autoplayGen++; // invalidate any late autoplay response
-    if (!raw.trim()) continue;
+    if (!raw?.trim()) continue;
 
     if (raw.startsWith('/')) { await handleMeta(raw); continue; }
 
