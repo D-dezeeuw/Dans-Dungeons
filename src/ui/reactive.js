@@ -3,7 +3,7 @@
 // All UI state (cost display, PC/enemy stats, action bar visibility) is derived
 // here via computed() so the DOM always reflects the latest appState automatically.
 
-import { computed } from '../core/state.js';
+import { computed, watch } from '../core/state.js';
 import { escHtml } from '../core/utils.js';
 
 export function registerReactiveSidebar() {
@@ -44,6 +44,17 @@ export function registerReactiveSidebar() {
       return `<span class="hs-enemy-name">${escHtml(n.name)}</span>` +
              `<span class="hs-sep">·</span>HP <span class="${low ? 'hs-hp-low' : 'hs-hp-ok'}">${n.hp}/${n.maxHp}</span>`;
     }).join('<span class="hs-enemy-divider"> &nbsp; </span>');
+  });
+
+  // Direct DOM writes — Spektrum :innerHTML binding doesn't reliably push
+  // HTML into elements, so we use watch() to set innerHTML imperatively.
+  watch(['ui.pcStats'], (s) => {
+    const el = document.getElementById('pc-header-stats');
+    if (el) el.innerHTML = s.ui?.pcStats ?? '';
+  });
+  watch(['ui.enemyStats'], (s) => {
+    const el = document.getElementById('enemy-header-stats');
+    if (el) el.innerHTML = s.ui?.enemyStats ?? '';
   });
 
   // Action bar visibility — requires both an API key and the toggle enabled.
