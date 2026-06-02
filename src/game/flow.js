@@ -8,6 +8,7 @@ import { generateWorld }   from './world.js';
 import { createCharacter } from './character.js';
 import { processTurn, checkApiKey, generateTurnImage } from './loop.js';
 import * as UI from '../ui/console.js';
+import { t } from '../i18n/i18n.js';
 
 // TTS helpers — imported lazily so the audio module is a no-op when TTS is off.
 function _speak(text) {
@@ -67,22 +68,22 @@ const DEFAULT_BASE_URL = 'https://openrouter.ai/api/v1';
 
 export async function setupKey() {
   UI.clear();
-  UI.appendEntry('gm',     "Dan's Dungeons");
+  UI.appendEntry('gm',     t('setup.gameName'));
   UI.appendEntry('system', '');
-  UI.appendEntry('system', 'To play, you need a free OpenRouter API key.');
-  UI.appendEntry('system', 'Sign up at openrouter.ai → API Keys.');
+  UI.appendEntry('system', t('setup.needKey'));
+  UI.appendEntry('system', t('setup.signUp'));
   UI.appendEntry('system', '');
 
-  const key = await UI.prompt('Paste your OpenRouter API key:');
+  const key = await UI.prompt(t('setup.pasteKey'));
   setValue('ai.key', key.trim());
 
   UI.appendEntry('system', '');
-  UI.appendEntry('system', `Default base URL: ${DEFAULT_BASE_URL}`);
-  const customUrl = await UI.prompt('Custom base URL (press Enter to use the default):');
+  UI.appendEntry('system', t('setup.defaultUrl', { url: DEFAULT_BASE_URL }));
+  const customUrl = await UI.prompt(t('setup.customUrl'));
   if (customUrl.trim()) setValue('ai.baseUrl', customUrl.trim());
 
   UI.appendEntry('system', '');
-  UI.appendEntry('system', 'Key saved. You can change it later with /settings.');
+  UI.appendEntry('system', t('setup.keySaved'));
   saveToStorage();
 }
 
@@ -90,13 +91,13 @@ async function reAuthKey() {
   setValue('ai.key', '');
   tick();
   UI.appendEntry('system', '');
-  UI.appendEntry('error', 'API key rejected — Missing Authentication header (401).');
-  const key = await UI.prompt('Paste a valid OpenRouter API key to continue:');
+  UI.appendEntry('error', t('setup.keyRejected'));
+  const key = await UI.prompt(t('setup.pasteValid'));
   if (key.trim()) {
     setValue('ai.key', key.trim());
     tick();
     saveToStorage();
-    UI.appendEntry('system', 'Key updated — retrying…');
+    UI.appendEntry('system', t('setup.keyUpdated'));
   }
 }
 
@@ -127,30 +128,35 @@ async function handleMeta(raw) {
 
   if (cmd === 'save') {
     saveToStorage();
-    UI.appendEntry('system', 'Game saved to localStorage.');
+    UI.appendEntry('system', t('meta.saved'));
     return;
   }
 
   if (cmd === 'status') {
     const pc = appState.party?.pc;
     if (pc) {
-      UI.appendEntry('system', `${pc.record.name} — HP ${pc.record.hpCurrent}/${pc.sheet.hp.max}, AC ${pc.sheet.ac.value}`);
+      UI.appendEntry('system', t('meta.status', {
+        name: pc.record.name,
+        hp:   pc.record.hpCurrent,
+        max:  pc.sheet.hp.max,
+        ac:   pc.sheet.ac.value,
+      }));
     }
     return;
   }
 
   if (cmd === 'settings') {
-    UI.appendEntry('system', 'Re-running key setup…');
+    UI.appendEntry('system', t('setup.reRunSetup'));
     await setupKey();
     return;
   }
 
   if (cmd === 'help') {
-    UI.appendEntry('system', '/save · /status · /settings · /restart · /help');
+    UI.appendEntry('system', t('meta.helpList'));
     return;
   }
 
-  UI.appendEntry('system', `Unknown command: ${raw}  (try /help)`);
+  UI.appendEntry('system', t('meta.unknownCmd', { cmd: raw }));
 }
 
 // ─── Start a new adventure ────────────────────────────────────────────────────
@@ -166,26 +172,26 @@ export async function startNewGame() {
 
   const result = await createCharacter(UI);
   if (!result) {
-    UI.appendEntry('error', 'Character creation cancelled. Refresh to try again.');
+    UI.appendEntry('error', t('setup.createCancelled'));
     return;
   }
 
   setValue('party.pc', result);
 
   UI.appendEntry('system', '');
-  UI.appendEntry('system', '(black ink on sepia parchment — costs a few extra credits per turn)');
+  UI.appendEntry('system', t('newgame.sketchHint'));
   const sketchChoice = await UI.pickFrom(
-    'Generate an AI scene sketch after each turn?',
+    t('newgame.sketchQuestion'),
     ['yes', 'no'],
-    x => x === 'yes' ? '🖼 Yes, sketch each scene' : '✗ No thanks',
+    x => x === 'yes' ? t('newgame.sketchYes') : t('newgame.sketchNo'),
     1,
   );
   setValue('settings.sceneImage', sketchChoice === 'yes');
 
   const ttsChoice = await UI.pickFrom(
-    'Enable voice narration?',
+    t('newgame.ttsQuestion'),
     ['yes', 'no'],
-    x => x === 'yes' ? '🔊 Yes, read the story aloud' : '🔇 No thanks',
+    x => x === 'yes' ? t('newgame.ttsYes') : t('newgame.ttsNo'),
     1,
   );
   setValue('settings.tts', ttsChoice === 'yes');
@@ -207,28 +213,25 @@ function describePC(pc) {
   const ac      = pc.sheet.ac.value;
   const level   = pc.record.level ?? 1;
 
-  // health flavour
   const ratio = hp / maxHp;
-  const health = ratio >= 0.9 ? 'healthy'
-    : ratio >= 0.5 ? 'bruised'
-    : ratio >= 0.25 ? 'wounded'
-    : 'barely standing';
+  const health = ratio >= 0.9 ? t('describe.healthy')
+    : ratio >= 0.5 ? t('describe.bruised')
+    : ratio >= 0.25 ? t('describe.wounded')
+    : t('describe.barelyStanding');
 
-  // experience flavour
-  const exp = level <= 1 ? 'amateur'
-    : level <= 4 ? 'fledgling'
-    : level <= 8 ? 'seasoned'
-    : level <= 14 ? 'veteran'
-    : 'legendary';
+  const exp = level <= 1 ? t('describe.amateur')
+    : level <= 4 ? t('describe.fledgling')
+    : level <= 8 ? t('describe.seasoned')
+    : level <= 14 ? t('describe.veteran')
+    : t('describe.legendary');
 
-  // armour flavour
-  const armour = ac >= 20 ? 'near-impenetrable armor'
-    : ac >= 17 ? 'some tough armor'
-    : ac >= 14 ? 'decent protection'
-    : ac >= 11 ? 'light protection'
-    : 'little more than the clothes on your back';
+  const armor = ac >= 20 ? t('describe.armorImpenetrable')
+    : ac >= 17 ? t('describe.armorTough')
+    : ac >= 14 ? t('describe.armorDecent')
+    : ac >= 11 ? t('describe.armorLight')
+    : t('describe.armorNone');
 
-  return `You are ${name}, a ${health} ${exp} ${classId} with ${armour}.`;
+  return t('describe.template', { name, health, exp, class: classId, armor });
 }
 
 // ─── Intro scene ─────────────────────────────────────────────────────────────
@@ -238,12 +241,12 @@ export async function beginAdventure() {
   const pc   = appState.party.pc;
 
   UI.clear();
-  UI.appendEntry('system', '── THE ADVENTURE BEGINS ──────────────────────');
+  UI.appendEntry('system', t('adventure.banner'));
   UI.appendEntry('system', '');
   UI.appendEntry('gm', room.description);
   UI.appendEntry('system', '');
-  const exits = room.exits.map(e => e.dir).join(', ');
-  UI.appendEntry('system', `Exits: ${exits}`);
+  const exits = room.exits.map(e => t(`directions.${e.dir}`)).join(', ');
+  UI.appendEntry('system', t('adventure.exits', { dirs: exits }));
   UI.appendEntry('system', '');
   UI.appendEntry('system', describePC(pc));
   UI.appendEntry('system', '');
@@ -316,7 +319,7 @@ export async function playLoop() {
         streamEl?.remove();
         streamEl = null;
         UI.setThinking(false);
-        UI.appendEntry('system', `⏳ Retrying… (${attempt}/${RETRY_DELAYS.length})`);
+        UI.appendEntry('system', t('loop.retrying', { n: attempt, total: RETRY_DELAYS.length }));
         await new Promise(r => setTimeout(r, RETRY_DELAYS[attempt - 1]));
         UI.setThinking(true);
       }
@@ -350,13 +353,13 @@ export async function playLoop() {
       streamEl = null;
       UI.appendEntry('system', '');
       if (/^AI 401:/.test(caughtErr.message)) {
-        UI.appendEntry('error', 'Still failing after re-authentication. Use /settings to update your API key.');
+        UI.appendEntry('error', t('loop.authFail'));
       } else if (/^AI 4\d\d:/.test(caughtErr.message)) {
-        UI.appendEntry('gm', 'The Game Master was not available. Try again when you are ready.');
+        UI.appendEntry('gm', t('loop.gmUnavailable'));
         pendingRetry = raw;
       } else {
-        UI.appendEntry('error', `Error: ${caughtErr.message}`);
-        UI.appendEntry('system', 'The turn was not resolved. Try again or type /restart.');
+        UI.appendEntry('error', t('loop.error', { msg: caughtErr.message }));
+        UI.appendEntry('system', t('loop.turnFail'));
       }
       continue;
     }
@@ -389,34 +392,30 @@ async function doVictory() {
   setValue('session.phase', 'game-over');
   const room     = appState.world?.rooms?.[appState.world?.exitRoomId];
   const treasure = (room?.loot ?? []).find(i => i.type === 'treasure');
-  const victoryText =
-    `You have found ${treasure?.name ?? 'the treasure'} and made it out alive. ` +
-    `The adventure ends in triumph — for now.`;
+  const victoryText = t('victory.text', { treasure: treasure?.name ?? 'the treasure' });
   UI.appendEntry('system', '');
-  UI.appendEntry('system', '══ VICTORY ══════════════════════════════════');
+  UI.appendEntry('system', t('victory.banner'));
   UI.appendEntry('gm', victoryText);
   UI.appendEntry('system', '');
-  UI.appendEntry('system', 'Type /restart to play again.');
+  UI.appendEntry('system', t('victory.hint'));
   _speak(victoryText);
   await awaitRestart();
 }
 
 async function doDefeat() {
   setValue('session.phase', 'game-over');
-  const defeatText =
-    'The world dims. Grizzik\'s mocking cackle echoes through the stone ' +
-    'as you collapse to the cold floor. Your adventure ends here — for now.';
+  const defeatText = t('defeat.text');
   UI.appendEntry('system', '');
-  UI.appendEntry('system', '══ DEFEAT ════════════════════════════════════');
+  UI.appendEntry('system', t('defeat.banner'));
   UI.appendEntry('gm', defeatText);
   UI.appendEntry('system', '');
-  UI.appendEntry('system', 'Type /restart to try again.');
+  UI.appendEntry('system', t('defeat.hint'));
   _speak(defeatText);
   await awaitRestart();
 }
 
 async function awaitRestart() {
-  UI.showActionChips([{ label: '🔄 Restart', value: '/restart' }]);
+  UI.showActionChips([{ label: t('loop.restart'), value: '/restart' }]);
   while (true) {
     const input = await UI.prompt('');
     if (input.toLowerCase().startsWith('/restart')) {
@@ -430,7 +429,7 @@ async function awaitRestart() {
 // ─── Resume a saved game ──────────────────────────────────────────────────────
 
 export async function resumeGame() {
-  UI.appendEntry('system', '── RESUMING ADVENTURE ────────────────────────');
+  UI.appendEntry('system', t('adventure.resumeBanner'));
   UI.appendEntry('system', '');
 
   const entries = (appState.transcript ?? []).slice(-6);
@@ -440,10 +439,11 @@ export async function resumeGame() {
   }
 
   UI.appendEntry('system', '');
-  UI.appendEntry('system',
-    `HP: ${appState.party?.pc?.record?.hpCurrent}/${appState.party?.pc?.sheet?.hp?.max}  ` +
-    `Turn: ${appState.session?.turnCount}`
-  );
+  UI.appendEntry('system', t('adventure.resumeStats', {
+    hp:   appState.party?.pc?.record?.hpCurrent,
+    max:  appState.party?.pc?.sheet?.hp?.max,
+    turn: appState.session?.turnCount,
+  }));
   UI.appendEntry('system', '');
 
   await playLoop();

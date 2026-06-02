@@ -1,8 +1,9 @@
 // src/ui/actionbar.js — three-zone footer action bar (compass, class, skills)
 // and the floating tooltip system.
 
-import { SKILLS, classAbilities } from './chips.js';
+import { getSkills, classAbilities } from './chips.js';
 import { fireChip } from './input.js';
+import { t } from '../i18n/i18n.js';
 
 // ─── Floating tooltip ─────────────────────────────────────────────────────────
 // Single shared div appended to <body> so it's never clipped by overflow.
@@ -39,17 +40,19 @@ export function updateActionBar(exits, record, sheet, cooldowns) {
     const btn  = document.getElementById(`ab-${dir}`);
     if (!btn) continue;
     const exit = exits.find(e => e.dir === dir);
+    const dirName = t(`directions.${dir}`);
+    const cap = dirName.charAt(0).toUpperCase() + dirName.slice(1);
     btn.disabled = !exit;
     btn.classList.toggle('ab-locked', !!(exit?.locked));
     btn.onclick = exit
-      ? () => fireChip(exit.locked ? `I try to unlock the door to the ${dir}` : `I go ${dir}`)
+      ? () => fireChip(exit.locked ? t('chips.unlockCmd') : t('chips.goDir', { dir: dirName }))
       : null;
     if (exit?.locked) {
-      btn.dataset.tip = `${dir.charAt(0).toUpperCase() + dir.slice(1)} — locked\nTry to force or unlock the door.`;
+      btn.dataset.tip = `${cap} — ${t('actionbar.locked')}\n${t('actionbar.lockTip')}`;
     } else if (exit) {
-      btn.dataset.tip = `${dir.charAt(0).toUpperCase() + dir.slice(1)} — passage open\n${exit.description ?? 'Move in this direction.'}`;
+      btn.dataset.tip = `${cap} — ${t('actionbar.passageOpen')}\n${exit.description ?? t('actionbar.moveTip')}`;
     } else {
-      btn.dataset.tip = `${dir.charAt(0).toUpperCase() + dir.slice(1)} — no exit`;
+      btn.dataset.tip = `${cap} — ${t('actionbar.noExit')}`;
     }
   }
 
@@ -61,7 +64,7 @@ export function updateActionBar(exits, record, sheet, cooldowns) {
       for (const atk of (sheet.attacks ?? [])) {
         const span = document.createElement('span');
         span.className = 'ab-word ab-available';
-        span.dataset.tip = `Attack\n+${atk.attackBonus} to hit · ${atk.damageDice} damage`;
+        span.dataset.tip = `${t('actionbar.attackTip')}\n+${atk.attackBonus} to hit · ${atk.damageDice} damage`;
         span.textContent = atk.name;
         abEl.appendChild(span);
       }
@@ -79,13 +82,13 @@ export function updateActionBar(exits, record, sheet, cooldowns) {
   const skEl = document.getElementById('ab-skills-list');
   if (skEl) {
     skEl.innerHTML = '';
-    for (const skill of SKILLS) {
+    for (const skill of getSkills()) {
       const remaining = cooldowns[skill.id] ?? 0;
       const onCd = remaining > 0;
       const span = document.createElement('span');
       span.className = 'ab-word ' + (onCd ? 'ab-unavailable' : 'ab-available');
       span.dataset.tip = onCd
-        ? `${skill.label} · ${skill.ab}\n${skill.desc}\n\nCooldown: ${remaining} turn${remaining > 1 ? 's' : ''} remaining`
+        ? `${skill.label} · ${skill.ab}\n${skill.desc}\n\n${t('actionbar.cooldown', { n: remaining, s: remaining > 1 ? 'en' : '' })}`
         : `${skill.label} · ${skill.ab}\n${skill.desc}`;
       span.textContent = skill.label + (onCd ? ` (${remaining})` : '');
       skEl.appendChild(span);

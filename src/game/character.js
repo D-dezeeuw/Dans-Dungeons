@@ -4,6 +4,7 @@
 // Returns { record, sheet } or null if the player cancelled.
 
 import { SRD, Character, createEngine } from './rules.js';
+import { t } from '../i18n/i18n.js';
 
 // ─── Starter options ──────────────────────────────────────────────────────────
 
@@ -25,34 +26,34 @@ const STANDARD_ARRAY = [15, 14, 13, 12, 10, 8];
 
 export async function createCharacter(ui) {
   ui.clear();
-  ui.appendEntry('system', '═══════════════════════════');
-  ui.appendEntry('system', '    CHARACTER CREATION');
-  ui.appendEntry('system', '═══════════════════════════');
+  ui.appendEntry('system', t('charCreate.banner1'));
+  ui.appendEntry('system', t('charCreate.banner2'));
+  ui.appendEntry('system', t('charCreate.banner1'));
   ui.appendEntry('system', '');
 
   // Name — default: Dan
-  const nameRaw = await ui.prompt('What is your adventurer\'s name? [Dan]:');
+  const nameRaw = await ui.prompt(t('charCreate.namePrompt'));
   const name    = nameRaw.trim() || 'Dan';
 
   // Class — default: fighter (index 0)
-  const classId = await ui.pickFrom('Choose your class:', STARTER_CLASSES, (c) =>
+  const classId = await ui.pickFrom(t('charCreate.classPrompt'), STARTER_CLASSES, (c) =>
     c.charAt(0).toUpperCase() + c.slice(1), 0
   );
 
   // Species — default: human (index 0)
   const speciesIds = Object.keys(SRD.species);
-  const speciesId  = await ui.pickFrom('Choose your species:', speciesIds, (s) =>
+  const speciesId  = await ui.pickFrom(t('charCreate.speciesPrompt'), speciesIds, (s) =>
     SRD.species[s]?.name ?? (s.charAt(0).toUpperCase() + s.slice(1)), 0
   );
 
   // Background — default: soldier (index 3)
   const bgIds = Object.keys(SRD.backgrounds);
-  const bgId  = await ui.pickFrom('Choose your background:', bgIds, (b) =>
+  const bgId  = await ui.pickFrom(t('charCreate.bgPrompt'), bgIds, (b) =>
     SRD.backgrounds[b]?.name ?? (b.charAt(0).toUpperCase() + b.slice(1)), 3
   );
 
   ui.appendEntry('system', '');
-  ui.appendEntry('system', `Forging ${name.trim()}'s fate…`);
+  ui.appendEntry('system', t('charCreate.forging', { name: name.trim() }));
 
   // Build the host-owned record
   const record = {

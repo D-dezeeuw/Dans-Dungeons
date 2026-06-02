@@ -4,6 +4,7 @@
 import { appState, restoreState, tick, saveToStorage } from '../core/state.js';
 import { appendEntry } from './transcript.js';
 import { getJournalLog } from '../game/flow.js';
+import { t, locale } from '../i18n/i18n.js';
 
 // ─── Download helper ──────────────────────────────────────────────────────────
 
@@ -19,7 +20,7 @@ export function triggerDownload(blob, filename) {
 export function exportScreenshot() {
   const src = localStorage.getItem('sketch-last-image');
   if (!src?.startsWith('data:image')) {
-    appendEntry('system', 'No scene sketch to export yet.');
+    appendEntry('system', t('exports.noSketch'));
     return;
   }
   const [header, b64] = src.split(',');
@@ -36,19 +37,19 @@ export function exportAllSketches() {
   const journalLog = getJournalLog();
   const sketches   = journalLog.filter(e => e.imageSrc);
   if (!sketches.length) {
-    appendEntry('system', 'No sketches generated this session yet.');
+    appendEntry('system', t('exports.noSketches'));
     return;
   }
   const pcName = appState.party?.pc?.record?.name ?? 'Adventurer';
   const rows   = sketches.map((e, i) =>
     `<figure>
-  <figcaption>${i === 0 ? 'Opening scene' : 'Turn ' + e.turn}</figcaption>
+  <figcaption>${i === 0 ? t('exports.openingScene') : t('exports.turnN', { n: e.turn })}</figcaption>
   <img src="${e.imageSrc}" alt="Scene sketch turn ${e.turn}">
 </figure>`
   ).join('\n');
   const html = `<!DOCTYPE html>
-<html lang="en">
-<head><meta charset="UTF-8"><title>Sketches — ${pcName}</title>
+<html lang="${locale()}">
+<head><meta charset="UTF-8"><title>${t('exports.sketchesTitle', { name: pcName })}</title>
 <style>
   body{background:#f5e6c8;color:#3a2a1a;font-family:Georgia,serif;max-width:800px;margin:0 auto;padding:2rem}
   h1{text-align:center;color:#5c3d1a;margin-bottom:2rem}
@@ -56,7 +57,7 @@ export function exportAllSketches() {
   figcaption{font-size:.75rem;text-transform:uppercase;letter-spacing:.1em;color:#8c6a3a;margin-bottom:.6rem}
   img{width:100%;border:1px solid #c8a878;border-radius:2px}
 </style></head>
-<body><h1>Sketches of ${pcName}</h1>${rows}</body></html>`;
+<body><h1>${t('exports.sketchesOf', { name: pcName })}</h1>${rows}</body></html>`;
   triggerDownload(new Blob([html], { type: 'text/html' }),
     `dans-dungeons-sketches-${pcName.toLowerCase().replace(/\s+/g, '-')}.html`);
 }
@@ -78,9 +79,9 @@ export function handleImportFile(e) {
       restoreState(snap);
       tick();
       saveToStorage();
-      appendEntry('system', `Imported save: ${file.name}`);
+      appendEntry('system', t('exports.imported', { file: file.name }));
     } catch {
-      appendEntry('error', 'Failed to import — file is not a valid save.');
+      appendEntry('error', t('exports.importFail'));
     }
   };
   reader.readAsText(file);
@@ -95,7 +96,7 @@ export function createJournal() {
   const pcClass = appState.party?.pc?.record?.classId ?? '';
 
   const entriesHtml = journalLog.map((entry, i) => {
-    const heading = i === 0 ? 'The Adventure Begins' : `Turn ${entry.turn}`;
+    const heading = i === 0 ? t('exports.adventureBegins') : t('exports.turnN', { n: entry.turn });
     const img = entry.imageSrc
       ? `<img src="${entry.imageSrc}" alt="Scene sketch" style="width:100%;display:block;margin-bottom:1.2rem;border-radius:2px;">`
       : '';
@@ -110,10 +111,10 @@ export function createJournal() {
   }).join('\n');
 
   const html = `<!DOCTYPE html>
-<html lang="en">
+<html lang="${locale()}">
 <head>
 <meta charset="UTF-8">
-<title>Journal of ${pcName.replace(/</g, '&lt;')}</title>
+<title>${t('exports.journalOf', { name: pcName }).replace(/</g, '&lt;')}</title>
 <style>
   body { background:#f5e6c8; color:#3a2a1a; font-family:Georgia,'Times New Roman',serif; max-width:700px; margin:0 auto; padding:2rem 1.5rem; line-height:1.8; }
   h1 { text-align:center; font-size:2rem; margin-bottom:0.3rem; color:#5c3d1a; letter-spacing:0.04em; }
@@ -126,8 +127,8 @@ export function createJournal() {
 </style>
 </head>
 <body>
-<h1>Journal of ${pcName.replace(/</g, '&lt;')}</h1>
-<div class="subtitle">A ${pcClass} — Dan's Dungeons</div>
+<h1>${t('exports.journalOf', { name: pcName }).replace(/</g, '&lt;')}</h1>
+<div class="subtitle">${t('exports.subtitle', { class: pcClass })}</div>
 ${entriesHtml}
 </body>
 </html>`;

@@ -8,6 +8,7 @@ import { startNewGame, resumeGame, ensureKey, applySketchView }                 
 import { initSpeakHover }                                                                   from './ui/transcript.js';
 import { initMicButton }                                                                    from './ui/input.js';
 import * as UI from './ui/console.js';
+import { locale, setLocale, t } from './i18n/i18n.js';
 
 async function boot() {
   document.getElementById('skeleton-loading')?.remove();
@@ -15,6 +16,20 @@ async function boot() {
 
   UI.initCollapsibles();
   UI.initCopyKeyButton(() => appState.ai?.key ?? '');
+
+  // Locale toggle — switches language and reloads to apply.
+  const localeBtn   = document.getElementById('locale-toggle');
+  const localeLabel = document.getElementById('locale-label');
+  function syncLocaleUI() {
+    if (localeBtn) localeBtn.textContent = locale().toUpperCase();
+    if (localeLabel) localeLabel.textContent = t('sidebar.language');
+    document.documentElement.lang = locale();
+  }
+  syncLocaleUI();
+  localeBtn?.addEventListener('click', () => {
+    setLocale(locale() === 'nl' ? 'en' : 'nl');
+    location.reload();
+  });
 
   document.getElementById('sketch-btn-min')?.addEventListener('click', () => applySketchView('minimized'));
   document.getElementById('sketch-btn-win')?.addEventListener('click', () => applySketchView('windowed'));

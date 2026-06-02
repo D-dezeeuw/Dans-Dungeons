@@ -1,6 +1,7 @@
 // src/ui/sidebar.js — sidebar, debug panel, copy-key button, collapsible logic.
 
 import { escHtml } from '../core/utils.js';
+import { t } from '../i18n/i18n.js';
 
 const MOBILE_BREAKPOINT = 768;
 
@@ -122,7 +123,7 @@ export function updateDebugPanel(debug) {
   }
 
   // ── Classifier ────────────────────────────────────────────────────────────
-  const cs = sec('intent');
+  const cs = sec(t('debug.intent'));
   cs.rows.push({ text: `${classified.intent}${classified.target_id ? ' → ' + classified.target_id : ''}` });
   if (classified.direction) cs.rows.push({ text: `dir: ${classified.direction}` });
   if (classified.skill)     cs.rows.push({ text: `skill: ${classified.skill}` });
@@ -131,7 +132,7 @@ export function updateDebugPanel(debug) {
 
   // ── PC action ─────────────────────────────────────────────────────────────
   if (resolved.intent === 'attack') {
-    const s = sec('pc attack');
+    const s = sec(t('debug.pcAttack'));
     s.rows.push({ text: resolved.weaponName });
     const bonus = resolved.totalHit - resolved.d20;
     s.rows.push({ html: `${d20Html(resolved.d20)}  +${escHtml(String(bonus))}  → ${escHtml(String(resolved.totalHit))}` });
@@ -142,12 +143,12 @@ export function updateDebugPanel(debug) {
       s.rows.push({ text: `${resolved.targetName}  ${resolved.targetPrevHp} → ${resolved.targetNewHp}${resolved.targetDead ? '  ✗' : ''}` });
     }
   } else if (resolved.intent === 'skill') {
-    const s = sec(`skill: ${resolved.skill} (${resolved.ability})`);
+    const s = sec(t('debug.skill', { name: resolved.skill, ab: resolved.ability }));
     const bonus = resolved.abilMod + resolved.profBonus;
     s.rows.push({ html: `${d20Html(resolved.d20)}  +${escHtml(String(bonus))}  → ${escHtml(String(resolved.total))}` });
     s.rows.push({ text: `DC   ${resolved.dc}  ${resolved.success ? 'PASS ✓' : 'FAIL ✗'}`, cls: resolved.success ? 'hit' : 'miss' });
   } else {
-    const s = sec('pc action');
+    const s = sec(t('debug.pcAction'));
     s.rows.push({ text: resolved.intent });
     if (resolved.reason) s.rows.push({ text: resolved.reason, cls: 'dim' });
   }

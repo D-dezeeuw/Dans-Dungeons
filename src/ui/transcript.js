@@ -3,6 +3,7 @@
 // and hosts the floating speak-on-hover button for GM entries.
 
 import { appState } from '../core/state.js';
+import { t } from '../i18n/i18n.js';
 
 const transcriptEl = () => document.getElementById('transcript');
 
@@ -40,7 +41,7 @@ export function setThinking(on) {
   const ID = 'thinking-indicator';
   if (on) {
     if (document.getElementById(ID)) return;
-    const el = appendEntry('thinking', '⏳ The Dungeon Master considers…');
+    const el = appendEntry('thinking', t('transcript.thinking'));
     el.id = ID;
   } else {
     document.getElementById(ID)?.remove();
@@ -59,7 +60,7 @@ export function showRoleplayOverlay(on) {
 export function initSpeakHover() {
   const btn = document.createElement('button');
   btn.id = 'speak-hover-btn';
-  btn.setAttribute('aria-label', 'Read aloud');
+  btn.setAttribute('aria-label', t('transcript.readAloud'));
   btn.textContent = '🔊';
   document.body.appendChild(btn);
 

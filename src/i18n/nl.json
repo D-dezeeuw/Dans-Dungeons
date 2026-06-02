@@ -1,0 +1,320 @@
+{
+  "chrome": {
+    "title": "DnD – Dan's Dungeons",
+    "turn": "Beurt {{n}}",
+    "costTitle": "Geschatte AI-kosten deze sessie",
+    "toggleSettings": "Instellingen",
+    "roleplayMode": "Rollenspelmodus",
+    "loading": "⚔ Dan's Dungeons wordt geladen…"
+  },
+  "sidebar": {
+    "title": "Instellingen",
+    "language": "Taal",
+    "copyKey": "Kopieer API-sleutel",
+    "close": "Instellingen sluiten",
+    "sceneSketch": "Scèneschets",
+    "sceneSketchTitle": "Genereer na elke beurt een AI-scèneschets",
+    "sketch": "Schets",
+    "sketchMin": "Schets minimaliseren",
+    "sketchWin": "Schets in venster",
+    "sketchMax": "Schets maximaliseren",
+    "actionBar": "Actiebalk",
+    "actionBarTitle": "Toon de actiebalk boven het invoerveld",
+    "exportImport": "Exporteren / Importeren",
+    "journal": "Dagboek",
+    "screenshot": "Schermafdruk",
+    "allSketches": "Alle Schetsen",
+    "import": "Importeren",
+    "journalTitle": "Download je avontuur als een HTML-dagboek",
+    "screenshotTitle": "Sla de huidige scèneschets op als PNG",
+    "allSketchesTitle": "Download alle sessieschetsen als HTML",
+    "importTitle": "Importeer een opgeslagen spelbestand"
+  },
+  "actionbar": {
+    "move": "Bewegen",
+    "class": "Klasse",
+    "skills": "Vaardigheden",
+    "goNorth": "Ga naar het noorden",
+    "goSouth": "Ga naar het zuiden",
+    "goEast": "Ga naar het oosten",
+    "goWest": "Ga naar het westen",
+    "locked": "op slot",
+    "passageOpen": "doorgang open",
+    "noExit": "geen uitgang",
+    "lockTip": "Probeer de deur te forceren of te openen.",
+    "moveTip": "Beweeg in deze richting.",
+    "attackTip": "Aanval",
+    "cooldown": "Afkoeling: nog {{n}} beurt{{s}}"
+  },
+  "input": {
+    "placeholder": "Wat doe je?",
+    "disabled": "…",
+    "pickDefault": "Voer een nummer of naam in, of druk op Enter voor standaard:",
+    "pickNoDefault": "Voer een nummer of naam in:",
+    "pickError": "Voer 1–{{n}} of de optienaam in.",
+    "micError": "Microfoonfout: {{msg}}",
+    "micLabel": "Spraakinvoer opnemen",
+    "micTitle": "Spreek je actie in (spatiebalk)",
+    "cmdLabel": "Opdracht invoer"
+  },
+  "transcript": {
+    "thinking": "⏳ De Dungeon Master overdenkt…",
+    "readAloud": "Voorlezen"
+  },
+  "debug": {
+    "lastTurn": "Vorige beurt",
+    "intent": "intentie",
+    "pcAttack": "speler aanval",
+    "pcAction": "speler actie",
+    "skill": "vaardigheid: {{name}} ({{ab}})"
+  },
+  "setup": {
+    "gameName": "Dan's Dungeons",
+    "needKey": "Om te spelen heb je een gratis OpenRouter API-sleutel nodig.",
+    "signUp": "Meld je aan op openrouter.ai → API Keys.",
+    "pasteKey": "Plak je OpenRouter API-sleutel:",
+    "defaultUrl": "Standaard basis-URL: {{url}}",
+    "customUrl": "Aangepaste basis-URL (druk op Enter voor standaard):",
+    "keySaved": "Sleutel opgeslagen. Je kunt deze later wijzigen met /settings.",
+    "keyRejected": "API-sleutel geweigerd — Authenticatieheader ontbreekt (401).",
+    "pasteValid": "Plak een geldige OpenRouter API-sleutel om door te gaan:",
+    "keyUpdated": "Sleutel bijgewerkt — opnieuw proberen…",
+    "reRunSetup": "Sleutelinstellingen opnieuw uitvoeren…",
+    "createCancelled": "Personage aanmaken geannuleerd. Ververs de pagina om opnieuw te proberen."
+  },
+  "meta": {
+    "saved": "Spel opgeslagen in localStorage.",
+    "status": "{{name}} — HP {{hp}}/{{max}}, AC {{ac}}",
+    "helpList": "/save · /status · /settings · /restart · /help",
+    "unknownCmd": "Onbekend commando: {{cmd}}  (probeer /help)"
+  },
+  "newgame": {
+    "sketchHint": "(zwarte inkt op sepia perkament — kost een paar extra credits per beurt)",
+    "sketchQuestion": "Na elke beurt een AI-scèneschets genereren?",
+    "sketchYes": "🖼 Ja, schets elke scène",
+    "sketchNo": "✗ Nee, bedankt",
+    "ttsQuestion": "Spraakvertelling inschakelen?",
+    "ttsYes": "🔊 Ja, lees het verhaal voor",
+    "ttsNo": "🔇 Nee, bedankt"
+  },
+  "adventure": {
+    "banner": "── HET AVONTUUR BEGINT ───────────────────────",
+    "exits": "Uitgangen: {{dirs}}",
+    "resumeBanner": "── AVONTUUR HERVATTEN ────────────────────────",
+    "resumeStats": "HP: {{hp}}/{{max}}  Beurt: {{turn}}"
+  },
+  "describe": {
+    "healthy": "gezond",
+    "bruised": "gekneusd",
+    "wounded": "gewond",
+    "barelyStanding": "nauwelijks overeind",
+    "amateur": "onervaren",
+    "fledgling": "beginnend",
+    "seasoned": "doorgewinterd",
+    "veteran": "veteraan",
+    "legendary": "legendarisch",
+    "armorImpenetrable": "bijna ondoordringbaar pantser",
+    "armorTough": "stevig pantser",
+    "armorDecent": "redelijke bescherming",
+    "armorLight": "lichte bescherming",
+    "armorNone": "weinig meer dan de kleren aan je lijf",
+    "template": "Je bent {{name}}, een {{health}} {{exp}} {{class}} met {{armor}}."
+  },
+  "loop": {
+    "retrying": "⏳ Opnieuw proberen… ({{n}}/{{total}})",
+    "authFail": "Nog steeds mislukt na herauthenticatie. Gebruik /settings om je API-sleutel bij te werken.",
+    "gmUnavailable": "De Game Master was niet beschikbaar. Probeer het opnieuw wanneer je klaar bent.",
+    "error": "Fout: {{msg}}",
+    "turnFail": "De beurt kon niet worden afgehandeld. Probeer opnieuw of typ /restart.",
+    "restart": "🔄 Herstarten"
+  },
+  "victory": {
+    "banner": "══ OVERWINNING ══════════════════════════════",
+    "text": "Je hebt {{treasure}} gevonden en bent levend ontsnapt. Het avontuur eindigt in triomf — voor nu.",
+    "hint": "Typ /restart om opnieuw te spelen."
+  },
+  "defeat": {
+    "banner": "══ NEDERLAAG ═════════════════════════════════",
+    "text": "De wereld vervaagt. Grizziks spottende lach echoot door de steen terwijl je ineenzakt op de koude vloer. Je avontuur eindigt hier — voor nu.",
+    "hint": "Typ /restart om het opnieuw te proberen."
+  },
+  "charCreate": {
+    "banner1": "═══════════════════════════",
+    "banner2": "    PERSONAGE AANMAKEN",
+    "namePrompt": "Hoe heet je avonturier? [Dan]:",
+    "classPrompt": "Kies je klasse:",
+    "speciesPrompt": "Kies je ras:",
+    "bgPrompt": "Kies je achtergrond:",
+    "forging": "Het lot van {{name}} wordt gesmeed…",
+    "default": "← standaard"
+  },
+  "world": {
+    "houseStyles": ["vervallen landhuis", "verlaten landgoed", "vergeten burcht", "bouwvallig herenhuis"],
+    "startRooms": [
+      {
+        "name": "Entreehal",
+        "desc": "Je staat in de entreehal van een {{style}}. Gescheurde wandtapijten hangen aan vochtige stenen muren en de geur van schimmel vult je longen. Een zware houten deur verderop wijst erop dat het huis dieper gaat."
+      },
+      {
+        "name": "Hal",
+        "desc": "De hal van dit {{style}} verwelkomt je met kromgetrokken vloerplanken en de geest van oude grandeur. Een gebarsten spiegel weerkaatst je waakzame gezicht. Vanuit de verre muur wenkt een doorgang naar binnen."
+      },
+      {
+        "name": "Bijkeuken",
+        "desc": "Een smalle bijkeuken aan de drempel van het {{style}}. Allang vergane laarzen staan langs de ene muur; verroeste kapstokhaken langs de andere. Een doorgezakte deur leidt verder naar binnen."
+      }
+    ],
+    "hubRooms": [
+      {
+        "name": "Grote Zaal",
+        "desc": "Een gewelfde grote zaal strekt zich voor je uit, de lange feesttafel omgegooid. Maanlicht sijpelt door een gebarsten dakraam erboven. Eén doorgang verdwijnt in de schaduw aan de zijkant, en een op slot zittende deur domineert de verre muur — het sleutelgat donker en wachtend."
+      },
+      {
+        "name": "Salon",
+        "desc": "De salon stinkt naar oude rook en iets ergers. Meubels zijn tegen de muren geschoven. Een zijdoorgang gaapt open aan je linkerhand, en aan de overkant hangt een deur verzegeld door een zwaar slot."
+      },
+      {
+        "name": "Gang",
+        "desc": "Een lange gang doorkruist het hart van het huis. Wandlamphouders bevatten niets meer dan kaarsenstompjes. Aan de ene kant staat een deuropening open; aan de andere draagt een op slot zittende deur een sleutelgat gevormd voor iets specifieks."
+      }
+    ],
+    "keyRooms": [
+      {
+        "name": "Keuken",
+        "desc": "De keuken draagt nog de geest van oude maaltijden. Potten hangen aan verroeste haken en een hakblok is diep getekend door jarenlang gebruik. Iets glanst op de plank boven de koude haard — het vangt het zwakke licht."
+      },
+      {
+        "name": "Voorraadkamer",
+        "desc": "Rijen lege planken bekleden de voorraadkamer, hun inhoud allang bedorven of gestolen. Een enkel voorwerp rust op de onderste plank alsof het met opzet is achtergelaten — het trekt meteen je aandacht."
+      },
+      {
+        "name": "Dienstbodekamer",
+        "desc": "Een krappe kamer ooit gedeeld door bedienden, nu ontdaan van elk comfort. Kale slaapmatten liggen tegen de muren. Op een klein nachtkastje glanst iets metaalachtig — achtergelaten, of hier met opzet verstopt?"
+      }
+    ],
+    "vaultRooms": [
+      {
+        "name": "Studeerkamer",
+        "desc": "De studeerkamer van de meester is in wanorde — boekenplanken geplunderd, papieren verspreid. Maar in het midden van de kamer zit {{treasure}} onaangeroerd, alsof beschermd door een oude bezwering. Een raam naar buiten staat op een kier — een uitweg."
+      },
+      {
+        "name": "Trofeekamer",
+        "desc": "Glazen vitrines staan langs de trofeekamer, de meeste gebroken en leeg. Maar één sokkel draagt nog zijn prijs: {{treasure}}. Stofdeeltjes dwarrelen als je binnenkomst de muffe lucht verstoort. Een achterdeur kraakt open naar buiten — je uitweg."
+      },
+      {
+        "name": "Kluis",
+        "desc": "Stenen muren en een met ijzer beslagen vloer markeren dit als de eigenlijke kluis. Iemand heeft hem lang geleden opengebroken, maar het meest waardevolle achtergelaten: {{treasure}}. Een afvoerpassage in de verre muur leidt omhoog — en naar buiten."
+      }
+    ],
+    "enemies": [
+      {
+        "name": "Grizzik de Goblin",
+        "intro": "Een goblin hurkt bovenop de omgeworpen meubels, gele ogen die openspringen als je binnenkomt. Hij grijpt een gebutst kromzwaard en ontbloot zijn tanden: \"Dit {{style}} is van Grizzik! Ga terug of bloed, grootvolk!\""
+      },
+      {
+        "name": "Wachtskelet",
+        "intro": "Botten rammelen terwijl het skelet dat dit {{style}} bewaakt overeind komt. Zijn holle oogkassen richten zich op jou; een verroest lang zwaard rijst met verschrikkelijk doelbewustheid in een gevechtshouding."
+      },
+      {
+        "name": "Verwilderde Cultist",
+        "intro": "Een figuur in een gewaad draait zich naar je toe, waanzin helder in zijn ogen. Hij heeft in dit {{style}} gewacht om een reden die je nog niet begrijpt — en richt een lange dolk op je keel."
+      },
+      {
+        "name": "Reusachtige Rat",
+        "intro": "Een rat zo groot als een terriër barst los onder het puin van het {{style}}, nekharen overeind en gele tanden ontbloot. Hij valt aan voordat je adem kunt halen."
+      }
+    ],
+    "keys": [
+      { "name": "koperen sleutel", "desc": "Een aangelopen koperen sleutel, de greep gegoten in de vorm van een halve maan." },
+      { "name": "ijzeren sleutel", "desc": "Een zware ijzeren sleutel, koud bij aanraking en gegraveerd met een enkel Romeins cijfer." },
+      { "name": "zilveren sleutel", "desc": "Een slanke zilveren sleutel die het licht vangt met een bijna warme gloed." },
+      { "name": "botten sleutel", "desc": "Een sleutel gesneden uit een enkel stuk bot — zijn herkomst kun je maar beter niet vragen." }
+    ],
+    "treasures": [
+      { "name": "kist met gouden munten", "desc": "Een met koper beslagen kist die overloopt van gouden munten, een klein fortuin waard." },
+      { "name": "saffieren amulet", "desc": "Een diepblauwe saffier gevat in gefiligraneerd zilver, pulserend met een zwak innerlijk licht." },
+      { "name": "verzegeld arcaan boek", "desc": "Een dik boek verzegeld met was en koord, zijn kaft warm ondanks de koude kamer." },
+      { "name": "juwelen ceremonieel zwaard", "desc": "Een zwaard meer kunst dan wapen — het gevest bezet met robijnen en gegraveerd zilver." }
+    ]
+  },
+  "chips": {
+    "goDir": "Ik ga naar het {{dir}}",
+    "takeItem": "Pak {{name}}",
+    "takeCmd": "Ik pak de {{name}}",
+    "unlock": "🔑 Ontgrendelen",
+    "unlockCmd": "Ik gebruik de sleutel om de deur te openen",
+    "attack": "⚔ Aanvallen",
+    "attackCmd": "Ik val aan",
+    "look": "👁 Rondkijken",
+    "lookCmd": "Ik kijk goed rond",
+    "talk": "💬 Praten",
+    "talkCmd": "Ik probeer te praten",
+    "wait": "⏳ Wachten",
+    "waitCmd": "Ik wacht en observeer",
+    "attackWith": "Ik val aan met mijn {{name}}",
+    "useSkill": "Ik gebruik {{name}}",
+    "spellInfo": "Spreuk DC {{dc}} · spreukaanval +{{bonus}}"
+  },
+  "skills": {
+    "athletics":       { "label": "Atletiek",           "desc": "Klimmen, springen, zwemmen of grijpen. Rauwe fysieke inspanning tegen weerstand." },
+    "acrobatics":      { "label": "Acrobatiek",         "desc": "Balanceren, tuimelen of ontsnappen aan een greep. Finesse en lichaamscontrole." },
+    "sleight-of-hand": { "label": "Vingervlugheid",     "desc": "Zakkenrollen, objecten plaatsen of handmatige trucs ongezien uitvoeren." },
+    "stealth":         { "label": "Sluipen",            "desc": "Stil bewegen en verborgen blijven. Tegengesteld door passieve Waarneming." },
+    "arcana":          { "label": "Arcana",             "desc": "Kennis over spreuken, magische voorwerpen en de vlakten herinneren." },
+    "history":         { "label": "Geschiedenis",       "desc": "Herinneringen aan gebeurtenissen, legendarische figuren en oude beschavingen." },
+    "investigation":   { "label": "Onderzoek",          "desc": "Zoeken naar aanwijzingen, verborgen deuren vinden of achterhalen wat er is gebeurd." },
+    "nature":          { "label": "Natuur",             "desc": "Planten, dieren, weerspatronen en natuurlijke gevaren identificeren." },
+    "religion":        { "label": "Religie",            "desc": "Kennis over goden, rituelen, sekten en heilige symbolen herinneren." },
+    "animal-handling": { "label": "Dieren Temmen",      "desc": "Dieren kalmeren, leiden of hun intenties lezen." },
+    "insight":         { "label": "Inzicht",            "desc": "Iemands ware gevoelens lezen of detecteren wanneer ze liegen." },
+    "medicine":        { "label": "Geneeskunde",        "desc": "Een stervend wezen stabiliseren, kwalen diagnosticeren of wonden verzorgen." },
+    "perception":      { "label": "Waarneming",         "desc": "Bedreigingen opmerken, verborgen wezens spotten of verre geluiden horen." },
+    "survival":        { "label": "Overleven",          "desc": "Prooi volgen, voedsel zoeken, terrein navigeren of de wildernis doorstaan." },
+    "deception":       { "label": "Misleiding",         "desc": "Overtuigend liegen, je intentie verhullen of een valse indruk wekken." },
+    "intimidation":    { "label": "Intimidatie",        "desc": "Dwingen door bedreigingen, dreiging of pure aanwezigheid." },
+    "performance":     { "label": "Optreden",           "desc": "Entertainen, nadoen of een publiek boeien." },
+    "persuasion":      { "label": "Overtuigen",         "desc": "Iemand voor je winnen door charme, beredeneerd argument of diplomatie." }
+  },
+  "classAbilities": {
+    "fighter": {
+      "secondWind":  { "label": "Tweede Adem",   "note": "Bonusactie: herstel 1d10+{{lvl}} HP.\nEenmaal per korte rust.",  "text": "Ik gebruik Tweede Adem om mezelf te genezen" },
+      "actionSurge": { "label": "Actiegolf",     "note": "Neem een extra actie deze beurt.\nEenmaal per korte rust.", "text": "Ik gebruik Actiegolf voor een extra actie" }
+    },
+    "rogue": {
+      "sneakAttack":   { "label": "Sluipaanval",     "note": "Doe {{dice}}d6 extra schade als je voordeel hebt\nof een bondgenoot je doelwit flankeert.", "text": "Ik doe een Sluipaanval" },
+      "cunningAction": { "label": "Listige Actie",   "note": "Bonusactie: Sprint, Terugtrekken of Verstoppen.\nHoudt je mobiel zonder je hoofdactie te gebruiken.", "text": "Ik gebruik Listige Actie om " }
+    },
+    "cleric": {
+      "turnUndead": { "label": "Verdrijf Ondoden", "note": "Kanaliseer Goddelijkheid: ondoden binnen 9 meter moeten vluchten.\nWIS red DC {{dc}} of 1 minuut verdreven.", "text": "Ik gebruik Kanaliseer Goddelijkheid: Verdrijf Ondoden" },
+      "castSpell":  { "label": "Spreuk Uitspreken", "note": "Spreek een voorbereide spreuk uit. Doelen weerstaan met DC {{dc}}.\nConcentratiespreuken duren tot verbroken of je een andere uitspreekt.", "text": "Ik spreek een spreuk uit op " }
+    },
+    "wizard": {
+      "arcaneRecovery": { "label": "Arcaan Herstel",    "note": "Korte rust: herstel spreuksloten tot niveau {{slotLvl}}.\nEenmaal per lange rust.", "text": "Ik gebruik Arcaan Herstel" },
+      "castSpell":      { "label": "Spreuk Uitspreken",  "note": "Spreek een voorbereide spreuk uit. +{{atk}} op spreukaanvalworpen.\nHogere spreuksloten doen meer schade of duren langer.", "text": "Ik spreek een spreuk uit op " }
+    }
+  },
+  "exports": {
+    "noSketch": "Nog geen scèneschets om te exporteren.",
+    "noSketches": "Nog geen schetsen gegenereerd deze sessie.",
+    "openingScene": "Openingsscène",
+    "turnN": "Beurt {{n}}",
+    "sketchesTitle": "Schetsen — {{name}}",
+    "sketchesOf": "Schetsen van {{name}}",
+    "imported": "Opgeslagen spel geïmporteerd: {{file}}",
+    "importFail": "Importeren mislukt — bestand is geen geldig opgeslagen spel.",
+    "adventureBegins": "Het Avontuur Begint",
+    "journalOf": "Dagboek van {{name}}",
+    "subtitle": "Een {{class}} — Dan's Dungeons"
+  },
+  "directions": {
+    "north": "noorden",
+    "south": "zuiden",
+    "east": "oosten",
+    "west": "westen"
+  },
+  "ai": {
+    "classifierPrompt": "You are a D&D action classifier. Classify the player's intent from their free-text input.\n\nIMPORTANT: The player writes in Dutch (Nederlands). Interpret Dutch input correctly.\nExamples: \"ga naar het noorden\" → move north, \"pak de sleutel\" → take, \"val aan\" → attack, \"sluip langs\" → skill stealth.\nCardinal directions in Dutch: noorden=north, zuiden=south, oosten=east, westen=west.\n\nCurrent scene (use this to identify valid targets):\n{{scene}}\n\nOutput a single JSON object. Be generous in interpretation.\n- movement → move (set direction to north/south/east/west in ENGLISH)\n- pick up items → take (set target_id to the item's id from scene loot)\n- open/unlock → unlock\n- direction: the cardinal direction for move (ENGLISH), null otherwise\n- target_id: NPC id for attack, item id for take, null otherwise\nFor skill checks suggest a dc between 10 and 20.",
+    "narratorPrompt": "You are the Game Master narrating a D&D 5e dungeon encounter.\n\nSetting: gritty low fantasy, second person (\"je slaat\", \"je ontwijkt\").\nNarrate ENTIRELY in Dutch (Nederlands). All output text must be in Dutch.\n\nRules:\n- Do NOT invent dice results — use only the resolved facts in the data\n- 2–4 sentences; vivid but concise\n- If a hit: describe the impact and the enemy's reaction\n- If a miss: describe the near-miss\n- If the enemy retaliated: weave it into the same narration\n- End on tension or consequence\n- If intent is 'move': describe entering the new room (use newRoom.description); introduce any enemies using their intro text; mention visible items\n- If intent is 'take': describe picking up the item\n- If intent is 'unlock': describe unlocking the door with a satisfying click\n- CRITICAL — if intent is 'impossible': the action simply cannot happen. Do NOT describe it succeeding or partially succeeding. Describe only the failure and its reason. No enemy dies, no item is taken, nothing changes.\n\nRecent transcript (last 3 turns, for continuity):\n{{transcript}}\n\nCurrent scene:\n{{scene}}\n\nResolved mechanics:\n{{resolved}}\n\nOutput ONLY a JSON object — no markdown, no extra text:\n{\"narration\":\"...\",\"combat_ended\":true/false,\"outcome\":\"continue\"|\"victory\"|\"defeat\"|\"flee\"}",
+    "narrateTurnPrompt": "Narrate the outcome of this turn. Respond in Dutch."
+  }
+}

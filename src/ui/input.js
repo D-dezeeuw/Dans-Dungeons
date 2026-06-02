@@ -3,6 +3,7 @@
 
 import { appendEntry } from './transcript.js';
 import { appState, setValue } from '../core/state.js';
+import { t } from '../i18n/i18n.js';
 
 // ─── Input history ────────────────────────────────────────────────────────────
 // Stores submitted strings for UP/DOWN recall. Newest at the end.
@@ -84,14 +85,14 @@ function _submit(val) {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-export function setInputEnabled(on, placeholder = 'What do you do?') {
+export function setInputEnabled(on, placeholder) {
   const el = cmdEl();
   el.disabled = !on;
   if (on) {
-    el.placeholder = placeholder;
+    el.placeholder = placeholder || t('input.placeholder');
     el.focus();
   } else {
-    el.placeholder = '…';
+    el.placeholder = t('input.disabled');
   }
 }
 
@@ -121,7 +122,7 @@ export function fireChip(val) {
 
 export function prompt(message) {
   if (message) appendEntry('system', message);
-  setInputEnabled(true, message || 'What do you do?');
+  setInputEnabled(true, message || t('input.placeholder'));
   return new Promise((resolve) => { _resolveInput = resolve; });
 }
 
@@ -131,13 +132,13 @@ export async function pickFrom(message, options, labelFn = (x) => x, defaultIdx 
     const isDefault = i === defaultIdx;
     appendEntry(
       isDefault ? 'option-default' : 'option',
-      `  ${i + 1}. ${labelFn(opt)}${isDefault ? '  ← default' : ''}`
+      `  ${i + 1}. ${labelFn(opt)}${isDefault ? '  ' + t('charCreate.default') : ''}`
     );
   });
   appendEntry('system', '');
 
   while (true) {
-    const input = await prompt(defaultIdx >= 0 ? 'Enter a number, name, or press Enter for default:' : 'Enter a number or name:');
+    const input = await prompt(defaultIdx >= 0 ? t('input.pickDefault') : t('input.pickNoDefault'));
     if (input.trim() === '' && defaultIdx >= 0) return options[defaultIdx];
     const num = parseInt(input, 10);
     if (!isNaN(num) && num >= 1 && num <= options.length) return options[num - 1];
@@ -146,7 +147,7 @@ export async function pickFrom(message, options, labelFn = (x) => x, defaultIdx 
              labelFn(o).toLowerCase() === input.toLowerCase()
     );
     if (match) return match;
-    appendEntry('error', `Please enter 1–${options.length} or the option name.`);
+    appendEntry('error', t('input.pickError', { n: options.length }));
   }
 }
 
@@ -175,7 +176,7 @@ export function initMicButton() {
       const transcript = await transcribeAudio(blob);
       if (transcript) fireChip(transcript);
     } catch (e) {
-      appendEntry('error', `Microphone error: ${e.message}`);
+      appendEntry('error', t('input.micError', { msg: e.message }));
     } finally {
       setValue('ui.recording', false);
     }

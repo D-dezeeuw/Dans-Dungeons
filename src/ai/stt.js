@@ -5,6 +5,7 @@
 
 import { appState } from '../core/state.js';
 import { modelFor } from './client.js';
+import { locale } from '../i18n/i18n.js';
 
 // ─── Recording state ──────────────────────────────────────────────────────────
 
@@ -85,6 +86,7 @@ export async function transcribeAudio(blob) {
     body: JSON.stringify({
       model:       modelFor('stt', ai),
       input_audio: { data: data64, format },
+      language:    locale(),
     }),
   });
 

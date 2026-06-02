@@ -1,0 +1,320 @@
+{
+  "chrome": {
+    "title": "DnD – Dan's Dungeons",
+    "turn": "Turn {{n}}",
+    "costTitle": "Estimated AI cost this session",
+    "toggleSettings": "Toggle settings",
+    "roleplayMode": "Roleplay mode",
+    "loading": "⚔ Dan's Dungeons is loading…"
+  },
+  "sidebar": {
+    "title": "Settings",
+    "language": "Language",
+    "copyKey": "Copy API key",
+    "close": "Close settings",
+    "sceneSketch": "Scene sketch",
+    "sceneSketchTitle": "Generate an AI scene sketch after each turn",
+    "sketch": "Sketch",
+    "sketchMin": "Minimize sketch",
+    "sketchWin": "Windowed sketch",
+    "sketchMax": "Maximize sketch",
+    "actionBar": "Action bar",
+    "actionBarTitle": "Show the action bar above the input",
+    "exportImport": "Export / Import",
+    "journal": "Journal",
+    "screenshot": "Screenshot",
+    "allSketches": "All Sketches",
+    "import": "Import",
+    "journalTitle": "Download adventure as a styled HTML journal",
+    "screenshotTitle": "Save current scene sketch as PNG",
+    "allSketchesTitle": "Download all session sketches as HTML",
+    "importTitle": "Import a saved game file"
+  },
+  "actionbar": {
+    "move": "Move",
+    "class": "Class",
+    "skills": "Skills",
+    "goNorth": "Go north",
+    "goSouth": "Go south",
+    "goEast": "Go east",
+    "goWest": "Go west",
+    "locked": "locked",
+    "passageOpen": "passage open",
+    "noExit": "no exit",
+    "lockTip": "Try to force or unlock the door.",
+    "moveTip": "Move in this direction.",
+    "attackTip": "Attack",
+    "cooldown": "Cooldown: {{n}} turn{{s}} remaining"
+  },
+  "input": {
+    "placeholder": "What do you do?",
+    "disabled": "…",
+    "pickDefault": "Enter a number, name, or press Enter for default:",
+    "pickNoDefault": "Enter a number or name:",
+    "pickError": "Please enter 1–{{n}} or the option name.",
+    "micError": "Microphone error: {{msg}}",
+    "micLabel": "Record voice input",
+    "micTitle": "Speak your action (Spacebar)",
+    "cmdLabel": "Command input"
+  },
+  "transcript": {
+    "thinking": "⏳ The Dungeon Master considers…",
+    "readAloud": "Read aloud"
+  },
+  "debug": {
+    "lastTurn": "Last turn",
+    "intent": "intent",
+    "pcAttack": "pc attack",
+    "pcAction": "pc action",
+    "skill": "skill: {{name}} ({{ab}})"
+  },
+  "setup": {
+    "gameName": "Dan's Dungeons",
+    "needKey": "To play, you need a free OpenRouter API key.",
+    "signUp": "Sign up at openrouter.ai → API Keys.",
+    "pasteKey": "Paste your OpenRouter API key:",
+    "defaultUrl": "Default base URL: {{url}}",
+    "customUrl": "Custom base URL (press Enter to use the default):",
+    "keySaved": "Key saved. You can change it later with /settings.",
+    "keyRejected": "API key rejected — Missing Authentication header (401).",
+    "pasteValid": "Paste a valid OpenRouter API key to continue:",
+    "keyUpdated": "Key updated — retrying…",
+    "reRunSetup": "Re-running key setup…",
+    "createCancelled": "Character creation cancelled. Refresh to try again."
+  },
+  "meta": {
+    "saved": "Game saved to localStorage.",
+    "status": "{{name}} — HP {{hp}}/{{max}}, AC {{ac}}",
+    "helpList": "/save · /status · /settings · /restart · /help",
+    "unknownCmd": "Unknown command: {{cmd}}  (try /help)"
+  },
+  "newgame": {
+    "sketchHint": "(black ink on sepia parchment — costs a few extra credits per turn)",
+    "sketchQuestion": "Generate an AI scene sketch after each turn?",
+    "sketchYes": "🖼 Yes, sketch each scene",
+    "sketchNo": "✗ No thanks",
+    "ttsQuestion": "Enable voice narration?",
+    "ttsYes": "🔊 Yes, read the story aloud",
+    "ttsNo": "🔇 No thanks"
+  },
+  "adventure": {
+    "banner": "── THE ADVENTURE BEGINS ──────────────────────",
+    "exits": "Exits: {{dirs}}",
+    "resumeBanner": "── RESUMING ADVENTURE ────────────────────────",
+    "resumeStats": "HP: {{hp}}/{{max}}  Turn: {{turn}}"
+  },
+  "describe": {
+    "healthy": "healthy",
+    "bruised": "bruised",
+    "wounded": "wounded",
+    "barelyStanding": "barely standing",
+    "amateur": "amateur",
+    "fledgling": "fledgling",
+    "seasoned": "seasoned",
+    "veteran": "veteran",
+    "legendary": "legendary",
+    "armorImpenetrable": "near-impenetrable armor",
+    "armorTough": "some tough armor",
+    "armorDecent": "decent protection",
+    "armorLight": "light protection",
+    "armorNone": "little more than the clothes on your back",
+    "template": "You are {{name}}, a {{health}} {{exp}} {{class}} with {{armor}}."
+  },
+  "loop": {
+    "retrying": "⏳ Retrying… ({{n}}/{{total}})",
+    "authFail": "Still failing after re-authentication. Use /settings to update your API key.",
+    "gmUnavailable": "The Game Master was not available. Try again when you are ready.",
+    "error": "Error: {{msg}}",
+    "turnFail": "The turn was not resolved. Try again or type /restart.",
+    "restart": "🔄 Restart"
+  },
+  "victory": {
+    "banner": "══ VICTORY ══════════════════════════════════",
+    "text": "You have found {{treasure}} and made it out alive. The adventure ends in triumph — for now.",
+    "hint": "Type /restart to play again."
+  },
+  "defeat": {
+    "banner": "══ DEFEAT ════════════════════════════════════",
+    "text": "The world dims. Grizzik's mocking cackle echoes through the stone as you collapse to the cold floor. Your adventure ends here — for now.",
+    "hint": "Type /restart to try again."
+  },
+  "charCreate": {
+    "banner1": "═══════════════════════════",
+    "banner2": "    CHARACTER CREATION",
+    "namePrompt": "What is your adventurer's name? [Dan]:",
+    "classPrompt": "Choose your class:",
+    "speciesPrompt": "Choose your species:",
+    "bgPrompt": "Choose your background:",
+    "forging": "Forging {{name}}'s fate…",
+    "default": "← default"
+  },
+  "world": {
+    "houseStyles": ["crumbling manor", "abandoned estate", "forsaken keep", "derelict townhouse"],
+    "startRooms": [
+      {
+        "name": "Entrance Hall",
+        "desc": "You stand in the entrance hall of a {{style}}. Tattered tapestries cling to damp stone walls, and the reek of mildew fills your lungs. A heavy timber door ahead suggests the house goes deeper."
+      },
+      {
+        "name": "Foyer",
+        "desc": "The foyer of this {{style}} greets you with warped floorboards and the ghost of old grandeur. A cracked mirror reflects your wary face. Passage inward beckons from the far wall."
+      },
+      {
+        "name": "Mudroom",
+        "desc": "A narrow mudroom at the threshold of the {{style}}. Boots long rotted away line one wall; rusted coat-hooks the other. A sagging door leads further inside."
+      }
+    ],
+    "hubRooms": [
+      {
+        "name": "Great Hall",
+        "desc": "A vaulted great hall stretches before you, its long feasting table overturned. Moonlight bleeds through a cracked skylight above. One passage disappears into shadow to the side, and a locked door dominates the far wall — its keyhole dark and waiting."
+      },
+      {
+        "name": "Drawing Room",
+        "desc": "The drawing room reeks of old smoke and something worse. Furniture has been shoved to the walls. A side passage gapes open to your left, and across the room a door hangs sealed by a heavy lock."
+      },
+      {
+        "name": "Corridor",
+        "desc": "A long corridor bisects the heart of the house. Sconces hold nothing but wax stumps. To one side a doorway stands open; to the other a locked door bears a keyhole shaped for something specific."
+      }
+    ],
+    "keyRooms": [
+      {
+        "name": "Kitchen",
+        "desc": "The kitchen still holds the ghost of old meals. Pots hang from rusted hooks, and a butcher's block is scarred deep by years of use. Something glints on the shelf above the cold hearth — catching the faint light."
+      },
+      {
+        "name": "Pantry",
+        "desc": "Rows of empty shelves line the pantry, their contents long since spoiled or stolen. A single item rests on the lowest shelf as if left deliberately — it catches your eye immediately."
+      },
+      {
+        "name": "Servants' Quarters",
+        "desc": "A cramped room once shared by servants, now empty of all comfort. Bare pallets are pushed against the walls. On a small bedside table something metallic glints — left behind, or hidden here on purpose?"
+      }
+    ],
+    "vaultRooms": [
+      {
+        "name": "Master Study",
+        "desc": "The master's study is in disarray — shelves ransacked, papers scattered. Yet in the centre of the room, {{treasure}} sits untouched, as though protected by some old ward. A window to the outside stands unlatched — a way out."
+      },
+      {
+        "name": "Trophy Room",
+        "desc": "Glass cases line the trophy room, most shattered and empty. But one pedestal still bears its prize: {{treasure}}. Dust motes swirl as your entrance disturbs the stale air. A back door creaks open to the outside — your way out."
+      },
+      {
+        "name": "Vault",
+        "desc": "Stone walls and an iron-banded floor mark this as the vault proper. Someone breached it long ago, but left the most valuable thing behind: {{treasure}}. A drainage passage in the far wall leads upward — and out."
+      }
+    ],
+    "enemies": [
+      {
+        "name": "Grizzik the Goblin",
+        "intro": "A goblin crouches atop the overturned furniture, yellow eyes snapping open as you enter. It snatches up a battered scimitar and bares its teeth: \"This {{style}} belongs to Grizzik! Turn back or bleed, big-folk!\""
+      },
+      {
+        "name": "Guard Skeleton",
+        "intro": "Bones rattle as the skeleton assigned to guard this {{style}} lurches upright. Its hollow eye sockets fix on you; a rusted longsword rises into a fighting stance with terrible purpose."
+      },
+      {
+        "name": "Feral Cultist",
+        "intro": "A robed figure spins to face you, madness bright in its eyes. It has been waiting in this {{style}} for a reason you don't yet understand — and it levels a long dagger at your throat."
+      },
+      {
+        "name": "Giant Rat",
+        "intro": "A rat the size of a terrier erupts from beneath the debris of the {{style}}, hackles raised and yellow teeth bared. It lunges before you can take a breath."
+      }
+    ],
+    "keys": [
+      { "name": "brass key", "desc": "A tarnished brass key, its bow cast in the shape of a crescent moon." },
+      { "name": "iron key", "desc": "A heavy iron key, cold to the touch and etched with a single Roman numeral." },
+      { "name": "silver key", "desc": "A slender silver key that catches the light with an almost warm glow." },
+      { "name": "bone key", "desc": "A key carved from a single piece of bone — its origin better left unasked." }
+    ],
+    "treasures": [
+      { "name": "chest of gold coins", "desc": "A brass-banded chest overflowing with gold coins, worth a small fortune." },
+      { "name": "sapphire amulet", "desc": "A deep-blue sapphire set in filigreed silver, pulsing with faint inner light." },
+      { "name": "sealed arcane tome", "desc": "A thick book sealed with wax and cord, its cover warm despite the cold room." },
+      { "name": "jewelled ceremonial sword", "desc": "A sword more art than weapon — its hilt crusted with rubies and engraved silver." }
+    ]
+  },
+  "chips": {
+    "goDir": "I go {{dir}}",
+    "takeItem": "Take {{name}}",
+    "takeCmd": "I take the {{name}}",
+    "unlock": "🔑 Unlock",
+    "unlockCmd": "I use the key to unlock the door",
+    "attack": "⚔ Attack",
+    "attackCmd": "I attack",
+    "look": "👁 Look around",
+    "lookCmd": "I look around carefully",
+    "talk": "💬 Talk",
+    "talkCmd": "I try to talk",
+    "wait": "⏳ Wait",
+    "waitCmd": "I wait and watch",
+    "attackWith": "I attack with my {{name}}",
+    "useSkill": "I use {{name}}",
+    "spellInfo": "Spell save DC {{dc}} · spell atk +{{bonus}}"
+  },
+  "skills": {
+    "athletics":       { "label": "Athletics",       "desc": "Climb, jump, swim, or grapple. Raw physical effort against resistance." },
+    "acrobatics":      { "label": "Acrobatics",      "desc": "Balance, tumble, or escape a grapple. Finesse and body control." },
+    "sleight-of-hand": { "label": "Sleight of Hand", "desc": "Pick pockets, plant objects, or perform manual trickery unseen." },
+    "stealth":         { "label": "Stealth",         "desc": "Move silently and stay hidden. Opposed by passive Perception." },
+    "arcana":          { "label": "Arcana",          "desc": "Recall lore about spells, magic items, and the planes." },
+    "history":         { "label": "History",         "desc": "Recall past events, legendary figures, and ancient civilisations." },
+    "investigation":   { "label": "Investigation",   "desc": "Search for clues, find hidden doors, or deduce what happened." },
+    "nature":          { "label": "Nature",          "desc": "Identify plants, animals, weather patterns, and natural hazards." },
+    "religion":        { "label": "Religion",        "desc": "Recall lore about deities, rites, cults, and holy symbols." },
+    "animal-handling": { "label": "Animal Handling", "desc": "Calm, guide, or read the intent of beasts and mounts." },
+    "insight":         { "label": "Insight",         "desc": "Read someone's true feelings or detect when they're lying." },
+    "medicine":        { "label": "Medicine",        "desc": "Stabilise a dying creature, diagnose ailments, or tend wounds." },
+    "perception":      { "label": "Perception",      "desc": "Notice threats, spot hidden creatures, or hear distant sounds." },
+    "survival":        { "label": "Survival",        "desc": "Track prey, forage food, navigate terrain, or endure the wild." },
+    "deception":       { "label": "Deception",       "desc": "Lie convincingly, disguise your intent, or create a false impression." },
+    "intimidation":    { "label": "Intimidation",    "desc": "Coerce through threats, menace, or sheer force of presence." },
+    "performance":     { "label": "Performance",     "desc": "Entertain, impersonate, or captivate an audience." },
+    "persuasion":      { "label": "Persuasion",      "desc": "Win someone over through charm, reasoned argument, or diplomacy." }
+  },
+  "classAbilities": {
+    "fighter": {
+      "secondWind":  { "label": "Second Wind",  "note": "Bonus action: regain 1d10+{{lvl}} HP.\nOnce per short rest.",  "text": "I use Second Wind to heal myself" },
+      "actionSurge": { "label": "Action Surge", "note": "Take one additional action this turn.\nOnce per short rest.", "text": "I use Action Surge for an extra action" }
+    },
+    "rogue": {
+      "sneakAttack":   { "label": "Sneak Attack",   "note": "Deal {{dice}}d6 extra damage when you have advantage\nor an ally flanks your target.", "text": "I make a Sneak Attack" },
+      "cunningAction": { "label": "Cunning Action", "note": "Bonus action: Dash, Disengage, or Hide.\nKeeps you mobile without spending your main action.", "text": "I use Cunning Action to " }
+    },
+    "cleric": {
+      "turnUndead": { "label": "Turn Undead", "note": "Channel Divinity: undead within 30 ft must flee.\nWIS save DC {{dc}} or be turned for 1 minute.",            "text": "I use Channel Divinity: Turn Undead" },
+      "castSpell":  { "label": "Cast Spell",  "note": "Cast a prepared spell. Targets resist with DC {{dc}}.\nConcentration spells last until broken or you cast another.", "text": "I cast a spell at " }
+    },
+    "wizard": {
+      "arcaneRecovery": { "label": "Arcane Recovery", "note": "Short rest: regain spell slots up to level {{slotLvl}}.\nOnce per long rest.",      "text": "I use Arcane Recovery" },
+      "castSpell":      { "label": "Cast Spell",      "note": "Cast a prepared spell. +{{atk}} to spell attack rolls.\nHigher spell slots deal more damage or last longer.", "text": "I cast a spell at " }
+    }
+  },
+  "exports": {
+    "noSketch": "No scene sketch to export yet.",
+    "noSketches": "No sketches generated this session yet.",
+    "openingScene": "Opening scene",
+    "turnN": "Turn {{n}}",
+    "sketchesTitle": "Sketches — {{name}}",
+    "sketchesOf": "Sketches of {{name}}",
+    "imported": "Imported save: {{file}}",
+    "importFail": "Failed to import — file is not a valid save.",
+    "adventureBegins": "The Adventure Begins",
+    "journalOf": "Journal of {{name}}",
+    "subtitle": "A {{class}} — Dan's Dungeons"
+  },
+  "directions": {
+    "north": "north",
+    "south": "south",
+    "east": "east",
+    "west": "west"
+  },
+  "ai": {
+    "classifierPrompt": "You are a D&D action classifier. Classify the player's intent from their free-text input.\n\nThe player writes in English.\n\nCurrent scene (use this to identify valid targets):\n{{scene}}\n\nOutput a single JSON object. Be generous in interpretation (\"hit the goblin\" → attack, \"sneak past\" → skill stealth).\n- \"go north\" / \"head through the doorway\" → move (set direction to north/south/east/west)\n- \"take the key\" / \"grab the brass key\"  → take (set target_id to the item's id from scene loot)\n- \"unlock the door\" / \"use the key\"       → unlock\n- direction: the cardinal direction for move, null otherwise\n- target_id: NPC id for attack, item id for take, null otherwise\nFor skill checks suggest a dc between 10 and 20.",
+    "narratorPrompt": "You are the Game Master narrating a D&D 5e dungeon encounter.\n\nSetting: gritty low fantasy, second person (\"you strike\", \"you dodge\").\nNarrate in English.\n\nRules:\n- Do NOT invent dice results — use only the resolved facts in the data\n- 2–4 sentences; vivid but concise\n- If a hit: describe the impact and the enemy's reaction\n- If a miss: describe the near-miss\n- If the enemy retaliated: weave it into the same narration\n- End on tension or consequence\n- If intent is 'move': describe entering the new room (use newRoom.description); introduce any enemies using their intro text; mention visible items\n- If intent is 'take': describe picking up the item\n- If intent is 'unlock': describe unlocking the door with a satisfying click\n- CRITICAL — if intent is 'impossible': the action simply cannot happen. Do NOT describe it succeeding or partially succeeding. Describe only the failure and its reason. No enemy dies, no item is taken, nothing changes.\n\nRecent transcript (last 3 turns, for continuity):\n{{transcript}}\n\nCurrent scene:\n{{scene}}\n\nResolved mechanics:\n{{resolved}}\n\nOutput ONLY a JSON object — no markdown, no extra text:\n{\"narration\":\"...\",\"combat_ended\":true/false,\"outcome\":\"continue\"|\"victory\"|\"defeat\"|\"flee\"}",
+    "narrateTurnPrompt": "Narrate the outcome of this turn."
+  }
+}
