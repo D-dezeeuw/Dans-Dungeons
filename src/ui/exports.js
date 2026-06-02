@@ -115,143 +115,34 @@ export async function createJournal() {
   }
 
   if (story?.chapters?.length) {
-    _downloadStoryJournal(story, pcName, pcClass, images);
+    await _downloadStoryJournal(story, pcName, pcClass, images);
   } else {
     appendEntry('system', t('exports.craftFail'));
     _downloadRawJournal(journalLog, pcName, pcClass);
   }
 }
 
-// ─── Story journal (LLM-enhanced, book layout) ──────────────────────────────
+// ─── Story journal (LLM-enhanced, EPUB export) ──────────────────────────────
 
-function _downloadStoryJournal(story, pcName, pcClass, images) {
-  const chapters = story.chapters;
+async function _downloadStoryJournal(story, pcName, pcClass, images) {
+  const { buildEpub } = await import('./epub.js');
 
-  const chaptersHtml = chapters.map((ch, i) => {
-    const img = images[i]
-      ? `<div class="spread-image"><img src="${images[i]}" alt="Scene illustration"></div>`
-      : '';
-    const text = esc(ch.text).replace(/\n/g, '</p><p>');
-    return `<section class="chapter">
-  <div class="spread">
-    ${img}
-    <div class="spread-text">
-      <h2>${esc(ch.heading)}</h2>
-      <p>${text}</p>
-    </div>
-  </div>
-</section>`;
-  }).join('\n');
+  // Pair images to chapters
+  const chapters = story.chapters.map((ch, i) => ({
+    heading:      ch.heading,
+    text:         ch.text,
+    imageDataUri: images[i] ?? null,
+  }));
 
-  // Any remaining images beyond the chapter count.
-  const extraImages = images.slice(chapters.length).map(src =>
-    `<figure class="extra-sketch"><img src="${src}" alt="Scene sketch"></figure>`
-  ).join('\n');
+  const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+  const blob = await buildEpub({
+    title:    story.title,
+    subtitle: `${pcName} — ${cap(pcClass)}`,
+    lang:     locale(),
+    chapters,
+  });
 
-  const html = `<!DOCTYPE html>
-<html lang="${locale()}">
-<head>
-<meta charset="UTF-8">
-<title>${esc(story.title)}</title>
-<style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    background: #f5e6c8;
-    color: #3a2a1a;
-    font-family: Georgia, 'Times New Roman', serif;
-    line-height: 1.9;
-    padding: 2rem 1.5rem;
-    max-width: 960px;
-    margin: 0 auto;
-  }
-  h1 {
-    text-align: center;
-    font-size: 2.2rem;
-    color: #5c3d1a;
-    letter-spacing: 0.04em;
-    margin-bottom: 0.3rem;
-  }
-  .subtitle {
-    text-align: center;
-    color: #8c6a3a;
-    font-style: italic;
-    font-size: 1rem;
-    margin-bottom: 3rem;
-  }
-  .chapter {
-    margin-bottom: 3rem;
-    page-break-inside: avoid;
-  }
-  .spread {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 2rem;
-    align-items: start;
-  }
-  .spread-image {
-    position: sticky;
-    top: 2rem;
-  }
-  .spread-image img {
-    width: 100%;
-    border: 1px solid #c8a878;
-    border-radius: 3px;
-  }
-  .spread-text h2 {
-    font-size: 1.1rem;
-    color: #5c3d1a;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    border-bottom: 1px solid #c8a878;
-    padding-bottom: 0.5rem;
-    margin-bottom: 1rem;
-  }
-  .spread-text p {
-    margin-bottom: 0.8rem;
-    text-align: justify;
-  }
-  /* Chapters without images: full-width text */
-  .spread:not(:has(.spread-image)) {
-    grid-template-columns: 1fr;
-  }
-  .extra-sketch {
-    margin: 2rem auto;
-    max-width: 480px;
-  }
-  .extra-sketch img {
-    width: 100%;
-    border: 1px solid #c8a878;
-    border-radius: 3px;
-  }
-  /* Ornamental divider between chapters */
-  .chapter + .chapter::before {
-    content: '⁂';
-    display: block;
-    text-align: center;
-    color: #c8a878;
-    font-size: 1.5rem;
-    margin-bottom: 2rem;
-  }
-  @media (max-width: 640px) {
-    .spread { grid-template-columns: 1fr; }
-    .spread-image { position: static; margin-bottom: 1rem; }
-  }
-  @media print {
-    .chapter { page-break-before: always; }
-    .chapter:first-child { page-break-before: auto; }
-  }
-</style>
-</head>
-<body>
-<h1>${esc(story.title)}</h1>
-<div class="subtitle">${t('exports.subtitle', { class: pcClass })}</div>
-${chaptersHtml}
-${extraImages}
-</body>
-</html>`;
-
-  triggerDownload(new Blob([html], { type: 'text/html' }),
-    `dans-dungeons-tale-${pcName.toLowerCase().replace(/\s+/g, '-')}.html`);
+  triggerDownload(blob, `dans-dungeons-${pcName.toLowerCase().replace(/\s+/g, '-')}.epub`);
 }
 
 // ─── Raw journal (fallback) ──────────────────────────────────────────────────
