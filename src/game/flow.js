@@ -197,6 +197,40 @@ export async function startNewGame() {
   await beginAdventure();
 }
 
+// ─── Character flavour description ───────────────────────────────────────────
+
+function describePC(pc) {
+  const name    = pc.record.name;
+  const classId = pc.record.classId;
+  const hp      = pc.record.hpCurrent ?? pc.sheet.hp.max;
+  const maxHp   = pc.sheet.hp.max;
+  const ac      = pc.sheet.ac.value;
+  const level   = pc.record.level ?? 1;
+
+  // health flavour
+  const ratio = hp / maxHp;
+  const health = ratio >= 0.9 ? 'healthy'
+    : ratio >= 0.5 ? 'bruised'
+    : ratio >= 0.25 ? 'wounded'
+    : 'barely standing';
+
+  // experience flavour
+  const exp = level <= 1 ? 'amateur'
+    : level <= 4 ? 'fledgling'
+    : level <= 8 ? 'seasoned'
+    : level <= 14 ? 'veteran'
+    : 'legendary';
+
+  // armour flavour
+  const armour = ac >= 20 ? 'near-impenetrable armor'
+    : ac >= 17 ? 'some tough armor'
+    : ac >= 14 ? 'decent protection'
+    : ac >= 11 ? 'light protection'
+    : 'little more than the clothes on your back';
+
+  return `You are ${name}, a ${health} ${exp} ${classId} with ${armour}.`;
+}
+
 // ─── Intro scene ─────────────────────────────────────────────────────────────
 
 export async function beginAdventure() {
@@ -211,10 +245,7 @@ export async function beginAdventure() {
   const exits = room.exits.map(e => e.dir).join(', ');
   UI.appendEntry('system', `Exits: ${exits}`);
   UI.appendEntry('system', '');
-  UI.appendEntry('system',
-    `You are ${pc.record.name}, a level 1 ${pc.record.classId}. ` +
-    `HP: ${pc.record.hpCurrent}/${pc.sheet.hp.max}  AC: ${pc.sheet.ac.value}`
-  );
+  UI.appendEntry('system', describePC(pc));
   UI.appendEntry('system', '');
 
   const openingEntry = { turn: 0, narration: room.description, imageSrc: null };
