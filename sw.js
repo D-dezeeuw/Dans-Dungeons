@@ -1,15 +1,14 @@
 // sw.js — Service Worker for Dan's Dungeons
 // Cache key is the git short hash baked in by build.js.
-// To bust the cache: run `npm run build` and commit/push.
+// Strategy: network-first — always fetch latest, cache as offline fallback.
 
-const VERSION  = 'app-accf01a';
+const VERSION  = 'app-40a0631';
 const BASE     = '/Dans-Dungeons';
 const PRECACHE = [
   `${BASE}/`,
   `${BASE}/index.html`,
   `${BASE}/favicon.svg`,
   `${BASE}/vendor/app.bundle.js`,
-  // CSS is inlined into index.html — no separate request needed
 ];
 
 self.addEventListener('install', (e) => {
@@ -29,22 +28,18 @@ self.addEventListener('activate', (e) => {
 });
 
 self.addEventListener('fetch', (e) => {
-  // Only handle GET requests for our own origin
   if (e.request.method !== 'GET') return;
   const url = new URL(e.request.url);
   if (url.origin !== location.origin) return;
 
+  // Network-first: try fresh fetch, update cache, fall back to cache offline.
   e.respondWith(
-    caches.match(e.request).then(cached => {
-      if (cached) return cached;
-      return fetch(e.request).then(response => {
-        // Cache successful responses for our assets
-        if (response.ok && url.pathname.startsWith(BASE)) {
-          const clone = response.clone();
-          caches.open(VERSION).then(cache => cache.put(e.request, clone));
-        }
-        return response;
-      });
-    })
+    fetch(e.request).then(response => {
+      if (response.ok && url.pathname.startsWith(BASE)) {
+        const clone = response.clone();
+        caches.open(VERSION).then(cache => cache.put(e.request, clone));
+      }
+      return response;
+    }).catch(() => caches.match(e.request))
   );
 });
