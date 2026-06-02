@@ -302,8 +302,15 @@
     }
   },
   "exports": {
-    "crafting": "Crafting your tale…",
+    "step1": "Gathering narrations…",
+    "step2": "Sending to the storyteller…",
+    "step3detail": "Weaving {{n}} chapters…",
+    "step4": "Building EPUB…",
+    "step5": "Done — download started.",
     "craftFail": "Could not generate story — exporting raw journal instead.",
+    "craftFallback": "Falling back to raw HTML journal.",
+    "craftError": "Story generation failed: {{msg}}",
+    "epubError": "EPUB build failed: {{msg}}",
     "noSketch": "No scene sketch to export yet.",
     "noSketches": "No sketches generated this session yet.",
     "openingScene": "Opening scene",

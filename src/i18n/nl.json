@@ -302,8 +302,15 @@
     }
   },
   "exports": {
-    "crafting": "Je verhaal wordt geschreven…",
+    "step1": "Vertellingen verzamelen…",
+    "step2": "Naar de verteller sturen…",
+    "step3detail": "{{n}} hoofdstukken weven…",
+    "step4": "EPUB samenstellen…",
+    "step5": "Klaar — download gestart.",
     "craftFail": "Kon geen verhaal genereren — ruwe versie wordt geëxporteerd.",
+    "craftFallback": "Terugvallen op ruw HTML-dagboek.",
+    "craftError": "Verhaalgeneratie mislukt: {{msg}}",
+    "epubError": "EPUB samenstellen mislukt: {{msg}}",
     "noSketch": "Nog geen scèneschets om te exporteren.",
     "noSketches": "Nog geen schetsen gegenereerd deze sessie.",
     "openingScene": "Openingsscène",

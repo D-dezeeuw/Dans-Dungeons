@@ -103,19 +103,36 @@ export async function createJournal() {
   const pcClass = appState.party?.pc?.record?.classId ?? '';
   const images  = journalLog.filter(e => e.imageSrc).map(e => e.imageSrc);
 
-  // Show progress in transcript.
-  appendEntry('system', t('exports.crafting'));
+  // Step-by-step progress in transcript.
+  const progress = (key) => appendEntry('system', t(`exports.${key}`));
+
+  progress('step1');  // "Gathering narrations…"
 
   let story = null;
   try {
+    progress('step2');  // "Sending to the storyteller…"
     const { generateJournalStory } = await import('../ai/journal.js');
     story = await generateJournalStory(journalLog, pcName, pcClass);
+    if (story?.chapters?.length) {
+      progress('step3');  // "Weaving chapters… (X chapters)"
+      appendEntry('system', t('exports.step3detail', { n: story.chapters.length }));
+    }
   } catch (e) {
     console.warn('Journal LLM failed:', e.message);
+    appendEntry('error', t('exports.craftError', { msg: e.message }));
   }
 
   if (story?.chapters?.length) {
-    await _downloadStoryJournal(story, pcName, pcClass, images);
+    progress('step4');  // "Building EPUB…"
+    try {
+      await _downloadStoryJournal(story, pcName, pcClass, images);
+      progress('step5');  // "Done — download started."
+    } catch (e) {
+      console.warn('EPUB build failed:', e.message);
+      appendEntry('error', t('exports.epubError', { msg: e.message }));
+      progress('craftFallback');
+      _downloadRawJournal(journalLog, pcName, pcClass);
+    }
   } else {
     appendEntry('system', t('exports.craftFail'));
     _downloadRawJournal(journalLog, pcName, pcClass);
