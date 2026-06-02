@@ -221,7 +221,11 @@ html.styles-loaded #brand-bar {
         </div>
         <div id="locale-toggle-row">
           <span class="ab-toggle-label" id="locale-label">Language</span>
-          <button id="locale-toggle" aria-label="Switch language">NL</button>
+          <span id="locale-switch">
+            <button id="locale-en" class="locale-opt" data-locale="en" title="English">EN</button>
+            <span class="locale-sep">–</span>
+            <button id="locale-nl" class="locale-opt" data-locale="nl" title="Dutch">NL</button>
+          </span>
         </div>
         <div id="sketch-toggle-row">
           <span class="ab-toggle-label">Scene sketch</span>

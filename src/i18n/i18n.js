@@ -12,7 +12,7 @@ import nl from './nl.json';
 
 const BUNDLES = { en, nl };
 const STORAGE_KEY = 'dg-locale';
-const DEFAULT_LOCALE = 'nl';   // default to Dutch for testing
+const DEFAULT_LOCALE = 'en';
 
 let _locale = localStorage.getItem(STORAGE_KEY) || DEFAULT_LOCALE;
 

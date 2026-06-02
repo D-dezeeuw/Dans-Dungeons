@@ -17,19 +17,21 @@ async function boot() {
   UI.initCollapsibles();
   UI.initCopyKeyButton(() => appState.ai?.key ?? '');
 
-  // Locale toggle — switches language and reloads to apply.
-  const localeBtn   = document.getElementById('locale-toggle');
+  // Locale switcher — two buttons, active class on the current one.
   const localeLabel = document.getElementById('locale-label');
-  function syncLocaleUI() {
-    if (localeBtn) localeBtn.textContent = locale().toUpperCase();
-    if (localeLabel) localeLabel.textContent = t('sidebar.language');
-    document.documentElement.lang = locale();
+  if (localeLabel) localeLabel.textContent = t('sidebar.language');
+  document.documentElement.lang = locale();
+
+  for (const btn of document.querySelectorAll('.locale-opt')) {
+    const code = btn.dataset.locale;
+    btn.classList.toggle('active', code === locale());
+    btn.title = code === 'en' ? 'English' : 'Nederlands';
+    btn.addEventListener('click', () => {
+      if (code === locale()) return;
+      setLocale(code);
+      location.reload();
+    });
   }
-  syncLocaleUI();
-  localeBtn?.addEventListener('click', () => {
-    setLocale(locale() === 'nl' ? 'en' : 'nl');
-    location.reload();
-  });
 
   document.getElementById('sketch-btn-min')?.addEventListener('click', () => applySketchView('minimized'));
   document.getElementById('sketch-btn-win')?.addEventListener('click', () => applySketchView('windowed'));
