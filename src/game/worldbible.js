@@ -74,36 +74,54 @@ export async function generateWorldBible(onProgress) {
     onProgress('detail', 'Red thread: skipped (generation failed).');
   }
 
-  // Step 4: Region (critical — retry once)
+  // Step 4: Region (retry once, continue without on failure)
   onProgress('worldgenStep4');
-  const region = await withRetry(() => generateRegion(seed.digest), 'Region');
-  if (!region) throw new Error('Region generation failed — no response from AI.');
-  ensureDigest(region, `${region.name ?? 'Region'} — ${region.climate ?? ''}. ${region.settlementName ?? ''}.`);
+  let region = null;
+  try {
+    region = await withRetry(() => generateRegion(seed.digest), 'Region');
+    if (region) {
+      ensureDigest(region, `${region.name ?? 'Region'} — ${region.climate ?? ''}. ${region.settlementName ?? ''}.`);
+      onProgress('detail', `Region: "${region.name}" (${region.climate}). Settlement: ${region.settlementName}. Dungeon: ${region.dungeonName}.`);
+    }
+  } catch (e) {
+    console.warn('Region generation failed, continuing without:', e.message);
+  }
+  if (!region) onProgress('detail', 'Region: skipped (generation failed).');
 
-  onProgress('detail', `Region: "${region.name}" (${region.climate}). Settlement: ${region.settlementName}. Dungeon: ${region.dungeonName}.`);
-
-  // Step 5: Settlement (critical — retry once)
+  // Step 5: Settlement (retry once, continue without on failure)
   onProgress('worldgenStep5');
-  const settlement = await withRetry(() => generateSettlement(region.digest, region.id), 'Settlement');
-  if (!settlement) throw new Error('Settlement generation failed — no response from AI.');
-  ensureDigest(settlement, `${settlement.name ?? 'Settlement'} — ${(settlement.npcs ?? []).map(n => n.name).join(', ')}.`);
+  let settlement = null;
+  if (region) {
+    try {
+      settlement = await withRetry(() => generateSettlement(region.digest, region.id), 'Settlement');
+      if (settlement) {
+        ensureDigest(settlement, `${settlement.name ?? 'Settlement'} — ${(settlement.npcs ?? []).map(n => n.name).join(', ')}.`);
+        const npcNames = (settlement.npcs ?? []).map(n => `${n.name} (${n.role})`).join(', ');
+        onProgress('detail', `Settlement: "${settlement.name}". NPCs: ${npcNames}. ${(settlement.exits ?? []).length} exits.`);
+      }
+    } catch (e) {
+      console.warn('Settlement generation failed, continuing without:', e.message);
+    }
+  }
+  if (!settlement) onProgress('detail', 'Settlement: skipped (generation failed).');
 
-  const npcNames = (settlement.npcs ?? []).map(n => `${n.name} (${n.role})`).join(', ');
-  const exitCount = (settlement.exits ?? []).length;
-  onProgress('detail', `Settlement: "${settlement.name}". NPCs: ${npcNames}. ${exitCount} exits.`);
-
-  // Step 6: Dungeon (procedural — instant, no retry needed)
+  // Step 6: Dungeon (procedural — instant)
   onProgress('worldgenStep6');
-  const dungeonExit = (settlement.exits ?? []).find(e => e.targetType === 'dungeon');
-  const dungeon = createDungeonEntry({
-    id:       dungeonExit?.targetId ?? `dungeon-${Date.now()}`,
-    name:     dungeonExit?.targetName ?? region.dungeonName ?? 'The Dungeon',
-    regionId: region.id,
-  });
-
-  const roomCount = Object.keys(dungeon.rooms ?? {}).length;
-  const enemyCount = Object.keys(dungeon.npcs ?? {}).length;
-  onProgress('detail', `Dungeon: "${dungeon.name}" (${dungeon.theme}). ${roomCount} rooms, ${enemyCount} enemies.`);
+  let dungeon = null;
+  try {
+    const dungeonExit = (settlement?.exits ?? []).find(e => e.targetType === 'dungeon');
+    dungeon = createDungeonEntry({
+      id:       dungeonExit?.targetId ?? `dungeon-${Date.now()}`,
+      name:     dungeonExit?.targetName ?? region?.dungeonName ?? 'The Dungeon',
+      regionId: region?.id ?? null,
+    });
+    const roomCount = Object.keys(dungeon.rooms ?? {}).length;
+    const enemyCount = Object.keys(dungeon.npcs ?? {}).length;
+    onProgress('detail', `Dungeon: "${dungeon.name}" (${dungeon.theme}). ${roomCount} rooms, ${enemyCount} enemies.`);
+  } catch (e) {
+    console.warn('Dungeon generation failed:', e.message);
+    onProgress('detail', 'Dungeon: skipped (generation failed).');
+  }
 
   const world = { seed, factions, beats, region, settlement, dungeon };
   const rawChapters = formatChapters(world);
@@ -133,9 +151,9 @@ export async function generateWorldBible(onProgress) {
       `  World seed — ${seed.name} (${(seed.gods ?? []).length} gods)`,
       `  Factions — ${factions.length} created`,
       `  Red thread — ${beats.length} story beats`,
-      `  Region — ${region.name} (${region.climate})`,
-      `  Settlement — ${settlement.name} (${(settlement.npcs ?? []).length} NPCs)`,
-      `  Dungeon — ${dungeon.name} (${roomCount} rooms, ${enemyCount} enemies)`,
+      region ? `  Region — ${region.name} (${region.climate})` : '  Region — skipped',
+      settlement ? `  Settlement — ${settlement.name} (${(settlement.npcs ?? []).length} NPCs)` : '  Settlement — skipped',
+      dungeon ? `  Dungeon — ${dungeon.name} (${Object.keys(dungeon.rooms ?? {}).length} rooms, ${Object.keys(dungeon.npcs ?? {}).length} enemies)` : '  Dungeon — skipped',
     ].join('\n'),
   });
 
@@ -218,25 +236,28 @@ function formatChapters({ seed, factions, beats, region, settlement, dungeon }) 
   }
 
   // Chapter 4: Region
-  ch.push({
-    heading: region.name ?? 'The Region',
-    text: [
-      `Climate: ${region.climate ?? 'unknown'}.`,
-      '',
-      region.description ?? '',
-      '',
-      region.settlementName ? `Settlement: ${region.settlementName}.` : '',
-      region.dungeonName ? `Dungeon: ${region.dungeonName}.` : '',
-      '',
-      region.rumor ? `Rumor: "${region.rumor}"` : '',
-      '',
-      region.adjacentHints?.length
-        ? `What lies beyond: ${region.adjacentHints.join('. ')}.`
-        : '',
-    ].filter(Boolean).join('\n'),
-  });
+  if (region) {
+    ch.push({
+      heading: region.name ?? 'The Region',
+      text: [
+        `Climate: ${region.climate ?? 'unknown'}.`,
+        '',
+        region.description ?? '',
+        '',
+        region.settlementName ? `Settlement: ${region.settlementName}.` : '',
+        region.dungeonName ? `Dungeon: ${region.dungeonName}.` : '',
+        '',
+        region.rumor ? `Rumor: "${region.rumor}"` : '',
+        '',
+        region.adjacentHints?.length
+          ? `What lies beyond: ${region.adjacentHints.join('. ')}.`
+          : '',
+      ].filter(Boolean).join('\n'),
+    });
+  }
 
   // Chapter 5: Settlement
+  if (settlement) {
   const npcText = (settlement.npcs ?? []).map(npc => {
     const lines = [
       `${npc.name} — ${npc.role} (${npc.attitude})`,
@@ -269,41 +290,44 @@ function formatChapters({ seed, factions, beats, region, settlement, dungeon }) 
       exitText,
     ].filter(Boolean).join('\n'),
   });
+  } // end settlement guard
 
   // Chapter 6: Dungeon
-  const rooms = Object.values(dungeon.rooms ?? {});
-  const enemies = Object.values(dungeon.npcs ?? {});
+  if (dungeon) {
+    const rooms = Object.values(dungeon.rooms ?? {});
+    const enemies = Object.values(dungeon.npcs ?? {});
 
-  const roomText = rooms.map(r => {
-    const exits = (r.exits ?? []).map(e => {
-      let desc = `${e.dir} → ${e.roomId}`;
-      if (e.locked) desc += ' [LOCKED]';
-      return desc;
-    }).join(', ');
-    const loot = (r.loot ?? []).filter(l => !l.taken).map(l => l.name).join(', ');
-    return [
-      `${r.name} (${r.id})`,
-      r.description,
-      `Exits: ${exits}.`,
-      loot ? `Loot: ${loot}.` : '',
-    ].filter(Boolean).join('\n');
-  }).join('\n\n');
+    const roomText = rooms.map(r => {
+      const exits = (r.exits ?? []).map(e => {
+        let desc = `${e.dir} → ${e.roomId}`;
+        if (e.locked) desc += ' [LOCKED]';
+        return desc;
+      }).join(', ');
+      const loot = (r.loot ?? []).filter(l => !l.taken).map(l => l.name).join(', ');
+      return [
+        `${r.name} (${r.id})`,
+        r.description,
+        `Exits: ${exits}.`,
+        loot ? `Loot: ${loot}.` : '',
+      ].filter(Boolean).join('\n');
+    }).join('\n\n');
 
-  const enemyText = enemies.map(e =>
-    `${e.name} — HP ${e.hp}/${e.maxHp}, AC ${e.ac}, +${e.toHit} to hit, ${e.damageDie}+${e.damageBonus} ${e.damageType} (in ${e.roomId})`
-  ).join('\n');
+    const enemyText = enemies.map(e =>
+      `${e.name} — HP ${e.hp}/${e.maxHp}, AC ${e.ac}, +${e.toHit} to hit, ${e.damageDie}+${e.damageBonus} ${e.damageType} (in ${e.roomId})`
+    ).join('\n');
 
-  ch.push({
-    heading: dungeon.name ?? 'The Dungeon',
-    text: [
-      `Theme: ${dungeon.theme ?? 'unknown'}. ${rooms.length} rooms.`,
-      `Start: ${dungeon.currentRoom}. Exit: ${dungeon.exitRoomId}.`,
-      '',
-      roomText,
-      '',
-      enemies.length ? `Enemies:\n${enemyText}` : 'No enemies.',
-    ].join('\n'),
-  });
+    ch.push({
+      heading: dungeon.name ?? 'The Dungeon',
+      text: [
+        `Theme: ${dungeon.theme ?? 'unknown'}. ${rooms.length} rooms.`,
+        `Start: ${dungeon.currentRoom}. Exit: ${dungeon.exitRoomId}.`,
+        '',
+        roomText,
+        '',
+        enemies.length ? `Enemies:\n${enemyText}` : 'No enemies.',
+      ].join('\n'),
+    });
+  }
 
   return ch;
 }
