@@ -598,8 +598,12 @@ const RETRY_DELAYS = [1000, 2000, 4000];
 
 export async function playLoop() {
   let pendingRetry = null;
+  const visitedRooms = new Set();
 
   while (true) {
+    // Track the current room as visited.
+    const currentRoomId = appState.world?.currentRoom;
+    if (currentRoomId) visitedRooms.add(currentRoomId);
     if (appState.session.phase !== 'play') break;
 
     const inExitRoom = appState.world?.currentRoom === appState.world?.exitRoomId;
@@ -649,7 +653,20 @@ export async function playLoop() {
         const { generateAutoAction } = await import('../ai/autoplay.js');
         const scene   = buildScene();
         const actions = _collectChipValues(room, appState.party?.pc);
-        raw = await generateAutoAction(scene, actions, appState.transcript ?? []);
+
+        // Build structured navigation hint for the AI.
+        const navLines = [`Current room: ${room?.name ?? currentRoomId} (${currentRoomId})`];
+        navLines.push(`Visited rooms: ${[...visitedRooms].join(', ')}`);
+        for (const exit of (room?.exits ?? [])) {
+          const targetRoom = appState.world?.rooms?.[exit.roomId];
+          const visited = visitedRooms.has(exit.roomId);
+          const status = visited ? 'VISITED' : 'UNVISITED';
+          const lock = exit.locked ? ' [LOCKED]' : '';
+          navLines.push(`  ${exit.dir} → ${targetRoom?.name ?? exit.roomId} (${status}${lock})`);
+        }
+        const navigationHint = 'NAVIGATION:\n' + navLines.join('\n');
+
+        raw = await generateAutoAction(scene, actions, appState.transcript ?? [], navigationHint);
       } catch (e) {
         console.warn('Autoplay error:', e.message);
         raw = null;

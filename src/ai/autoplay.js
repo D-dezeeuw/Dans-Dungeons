@@ -7,11 +7,12 @@ import { chatCompletion } from './client.js';
 import { AUTOPLAY_SCHEMA } from './schemas.js';
 import { t } from '../i18n/i18n.js';
 
-export async function generateAutoAction(scene, availableActions, transcript) {
+export async function generateAutoAction(scene, availableActions, transcript, navigationHint) {
   const system = t('ai.autoplayPrompt', {
     scene:      JSON.stringify(scene, null, 2),
     actions:    JSON.stringify(availableActions),
     transcript: JSON.stringify(transcript.slice(-6)),
+    navigation: navigationHint ?? '',
   });
 
   const result = await chatCompletion({
