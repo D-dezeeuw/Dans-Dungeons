@@ -10,6 +10,7 @@ import { processTurn, checkApiKey, generateTurnImage, buildScene } from './loop.
 import * as UI from '../ui/console.js';
 import { t } from '../i18n/i18n.js';
 import { getSkills } from '../ui/chips.js';
+import { modelsForTier } from '../ai/tiers.js';
 
 // TTS helpers — imported lazily so the audio module is a no-op when TTS is off.
 function _speak(text) {
@@ -58,8 +59,20 @@ function requestSceneImage(narration, journalEntry = null) {
     .catch(() => { UI.hideSceneImage(); return null; });
 }
 
-// ─── Key / settings setup ────────────────────────────────────────────────────
+// ─── Key / tier setup ────────────────────────────────────────────────────────
 const DEFAULT_BASE_URL = 'https://openrouter.ai/api/v1';
+
+function applyTier(tier) {
+  setValue('ai.tier', tier);
+  setValue('ai.models', modelsForTier(tier));
+  if (tier === 'free') {
+    setValue('settings.sceneImage', false);
+    setValue('settings.tts', false);
+    setValue('settings.stt', false);
+  }
+  tick();
+  saveToStorage();
+}
 
 export async function setupKey() {
   UI.clear();
@@ -67,16 +80,46 @@ export async function setupKey() {
   UI.appendEntry('system', '');
   UI.appendEntry('system', t('setup.needKey'));
   UI.appendEntry('system', t('setup.signUp'));
+  UI.appendEntry('system', t('tier.keyFreeHint'));
   UI.appendEntry('system', '');
+
   const key = await UI.prompt(t('setup.pasteKey'));
   setValue('ai.key', key.trim());
+
   UI.appendEntry('system', '');
   UI.appendEntry('system', t('setup.defaultUrl', { url: DEFAULT_BASE_URL }));
   const customUrl = await UI.prompt(t('setup.customUrl'));
   if (customUrl.trim()) setValue('ai.baseUrl', customUrl.trim());
   UI.appendEntry('system', '');
   UI.appendEntry('system', t('setup.keySaved'));
-  saveToStorage();
+
+  // Tier choice
+  UI.appendEntry('system', '');
+  const tierChoice = await UI.pickFrom(
+    t('tier.upgradeQuestion'),
+    ['deluxe', 'free'],
+    x => x === 'deluxe' ? t('tier.upgradeYes') : t('tier.upgradeNo'),
+    1,
+  );
+  applyTier(tierChoice);
+  UI.appendEntry('system', tierChoice === 'deluxe' ? t('tier.upgraded') : '');
+}
+
+// Upgrade to deluxe from settings — prompts for key if needed.
+export async function upgradeToDeluxe() {
+  if (!appState.ai?.key) {
+    const key = await UI.prompt(t('setup.pasteKey'));
+    if (!key.trim()) return;
+    setValue('ai.key', key.trim());
+  }
+  const valid = await checkApiKey();
+  if (valid) {
+    applyTier('deluxe');
+    UI.appendEntry('system', t('tier.upgraded'));
+  } else {
+    UI.appendEntry('error', t('tier.downgraded'));
+    applyTier('free');
+  }
 }
 
 async function reAuthKey() {
@@ -95,8 +138,22 @@ async function reAuthKey() {
 
 export async function ensureKey() {
   if (!appState.ai?.key) { await setupKey(); tick(); return; }
+  // Returning player — validate key, restore tier.
   const valid = await checkApiKey();
-  if (!valid) { setValue('ai.key', ''); tick(); saveToStorage(); await setupKey(); tick(); }
+  if (!valid) {
+    setValue('ai.key', '');
+    applyTier('free');
+    UI.appendEntry('error', t('tier.downgraded'));
+    await setupKey();
+    tick();
+  }
+}
+
+// Helper: check if current tier allows a feature, show gate message if not.
+export function requireDeluxe(featureKey) {
+  if ((appState.ai?.tier ?? 'free') === 'deluxe') return true;
+  UI.appendEntry('system', t('tier.featureGated', { feature: t(`tier.${featureKey}`) }));
+  return false;
 }
 
 // ─── Meta commands ────────────────────────────────────────────────────────────
@@ -117,13 +174,18 @@ async function handleMeta(raw) {
 // ─── Start a new adventure ────────────────────────────────────────────────────
 
 export async function startNewGame() {
-  // Game mode choice: Campaign (worldgen) or Quick Dungeon
-  const mode = await UI.pickFrom(
-    t('newgame.modeQuestion'),
-    ['campaign', 'quickdungeon'],
-    x => x === 'campaign' ? t('newgame.modeCampaign') : t('newgame.modeQuickDungeon'),
-    1,
-  );
+  const isDeluxe = (appState.ai?.tier ?? 'free') === 'deluxe';
+
+  // Game mode choice — only Deluxe gets campaign option.
+  let mode = 'quickdungeon';
+  if (isDeluxe) {
+    mode = await UI.pickFrom(
+      t('newgame.modeQuestion'),
+      ['campaign', 'quickdungeon'],
+      x => x === 'campaign' ? t('newgame.modeCampaign') : t('newgame.modeQuickDungeon'),
+      1,
+    );
+  }
 
   setValue('party',  { pc: null, inventory: [] });
   setValue('flags',       {});
@@ -135,13 +197,20 @@ export async function startNewGame() {
   if (!result) { UI.appendEntry('error', t('setup.createCancelled')); return; }
   setValue('party.pc', result);
 
-  UI.appendEntry('system', '');
-  UI.appendEntry('system', t('newgame.sketchHint'));
-  const sketchChoice = await UI.pickFrom(t('newgame.sketchQuestion'), ['yes', 'no'], x => x === 'yes' ? t('newgame.sketchYes') : t('newgame.sketchNo'), 1);
-  setValue('settings.sceneImage', sketchChoice === 'yes');
+  // Deluxe: ask about paid features. Free: skip.
+  if (isDeluxe) {
+    UI.appendEntry('system', '');
+    UI.appendEntry('system', t('newgame.sketchHint'));
+    const sketchChoice = await UI.pickFrom(t('newgame.sketchQuestion'), ['yes', 'no'], x => x === 'yes' ? t('newgame.sketchYes') : t('newgame.sketchNo'), 1);
+    setValue('settings.sceneImage', sketchChoice === 'yes');
 
-  const ttsChoice = await UI.pickFrom(t('newgame.ttsQuestion'), ['yes', 'no'], x => x === 'yes' ? t('newgame.ttsYes') : t('newgame.ttsNo'), 1);
-  setValue('settings.tts', ttsChoice === 'yes');
+    const ttsChoice = await UI.pickFrom(t('newgame.ttsQuestion'), ['yes', 'no'], x => x === 'yes' ? t('newgame.ttsYes') : t('newgame.ttsNo'), 1);
+    setValue('settings.tts', ttsChoice === 'yes');
+  } else {
+    setValue('settings.sceneImage', false);
+    setValue('settings.tts', false);
+    setValue('settings.stt', false);
+  }
 
   if (mode === 'campaign') {
     await startCampaign();

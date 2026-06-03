@@ -57,6 +57,11 @@ export function registerReactiveSidebar() {
     if (el) el.innerHTML = s.ui?.enemyStats ?? '';
   });
 
+  // Tier state — drives Deluxe section visibility.
+  computed('ui.isFree',    ['ai.tier'], s => (s.ai?.tier ?? 'free') === 'free');
+  computed('ui.isDeluxe',  ['ai.tier'], s => (s.ai?.tier ?? 'free') === 'deluxe');
+  computed('ui.tierLabel', ['ai.tier'], s => (s.ai?.tier ?? 'free') === 'deluxe' ? 'Deluxe' : 'Free');
+
   // Action bar visibility — requires both an API key and the toggle enabled.
   computed('ui.actionBarVisible', ['settings.actionBar', 'ai.key'], (s) => {
     return !!(s.settings?.actionBar && s.ai?.key);

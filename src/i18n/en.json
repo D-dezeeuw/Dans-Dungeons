@@ -84,6 +84,23 @@
     "reRunSetup": "Re-running key setup…",
     "createCancelled": "Character creation cancelled. Refresh to try again."
   },
+  "tier": {
+    "upgradeQuestion": "Do you want to upgrade to the Deluxe tier?",
+    "upgradeYes": "Yes, unlock all features",
+    "upgradeNo": "No, play for free",
+    "deluxeActive": "Deluxe",
+    "freeActive": "Free",
+    "featureGated": "{{feature}} is a Deluxe feature. Upgrade in settings to enable it.",
+    "upgradeButton": "Upgrade to Deluxe",
+    "keyFreeHint": "Creating a key is free at openrouter.ai",
+    "deluxeFeatures": "Deluxe features",
+    "sttLabel": "Speech to Text",
+    "ttsLabel": "Text to Speech",
+    "imageLabel": "Image generation",
+    "worldgenLabel": "World generation",
+    "upgraded": "Upgraded to Deluxe. All features unlocked.",
+    "downgraded": "Key invalid — falling back to Free tier."
+  },
   "meta": {
     "saved": "Game saved to localStorage.",
     "status": "{{name}} — HP {{hp}}/{{max}}, AC {{ac}}",

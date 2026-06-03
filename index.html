@@ -228,6 +228,16 @@ html.styles-loaded #brand-bar {
             <button id="locale-nl" class="locale-opt" data-locale="nl" title="Dutch">NL</button>
           </span>
         </div>
+        <div id="deluxe-section">
+          <div class="export-zone-label">{{ui.tierLabel}}</div>
+          <button id="deluxe-upgrade" class="export-tile" data-cloak data-if="ui.isFree" title="Unlock TTS, STT, images, and world generation">Upgrade to Deluxe</button>
+          <div data-cloak data-if="ui.isDeluxe" id="deluxe-feature-list">
+            <span class="deluxe-feature">STT</span>
+            <span class="deluxe-feature">TTS</span>
+            <span class="deluxe-feature">Images</span>
+            <span class="deluxe-feature">World gen</span>
+          </div>
+        </div>
         <div id="sketch-toggle-row">
           <span class="ab-toggle-label">Scene sketch</span>
           <button id="sketch-toggle" :ariaPressed="ui.sceneImageActive" aria-pressed="false" aria-label="Toggle scene sketch" title="Generate an AI scene sketch after each turn">{{ui.sceneImageLabel}}</button>

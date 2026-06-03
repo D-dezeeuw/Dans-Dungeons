@@ -27,7 +27,12 @@ export const DEFAULT_MODELS = {
   stt:    'openai/gpt-4o-mini-transcribe',
 };
 
-// Paid tier overrides when quality matters over cost.
+// Returns the model set for a given tier.
+export function modelsForTier(tier) {
+  return tier === 'deluxe' ? { ...PAID_MODELS } : { ...DEFAULT_MODELS };
+}
+
+// Paid tier — higher quality, costs money.
 export const PAID_MODELS = {
   tiny:   'google/gemini-2.5-flash-lite',            // your original — $0.10/$0.40 per M
   medium: 'deepseek/deepseek-v4-pro',                // your original — $0.44/$0.87 per M

@@ -84,6 +84,23 @@
     "reRunSetup": "Sleutelinstellingen opnieuw uitvoeren…",
     "createCancelled": "Personage aanmaken geannuleerd. Ververs de pagina om opnieuw te proberen."
   },
+  "tier": {
+    "upgradeQuestion": "Wil je upgraden naar de Deluxe versie?",
+    "upgradeYes": "Ja, ontgrendel alle functies",
+    "upgradeNo": "Nee, speel gratis",
+    "deluxeActive": "Deluxe",
+    "freeActive": "Gratis",
+    "featureGated": "{{feature}} is een Deluxe-functie. Upgrade in instellingen om het in te schakelen.",
+    "upgradeButton": "Upgrade naar Deluxe",
+    "keyFreeHint": "Een sleutel aanmaken is gratis op openrouter.ai",
+    "deluxeFeatures": "Deluxe functies",
+    "sttLabel": "Spraak naar Tekst",
+    "ttsLabel": "Tekst naar Spraak",
+    "imageLabel": "Beeldgeneratie",
+    "worldgenLabel": "Wereldgeneratie",
+    "upgraded": "Geüpgraded naar Deluxe. Alle functies ontgrendeld.",
+    "downgraded": "Sleutel ongeldig — terugvallen op Gratis versie."
+  },
   "meta": {
     "saved": "Spel opgeslagen in localStorage.",
     "status": "{{name}} — HP {{hp}}/{{max}}, AC {{ac}}",

@@ -803,6 +803,27 @@ body.roleplay-mode #brand-bar   { display: none !important; }
   font-weight: normal;
 }
 
+/* ─── Deluxe section ────────────────────────────────────── */
+#deluxe-section {
+  padding: 0.3rem 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+#deluxe-feature-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-top: 0.3rem;
+}
+.deluxe-feature {
+  font-family: var(--font);
+  font-size: 9px;
+  color: var(--gm);
+  border: 1px solid var(--gm);
+  border-radius: 2px;
+  padding: 0.05rem 0.3rem;
+  opacity: 0.7;
+}
+
 /* ─── Export zone ────────────────────────────────────────── */
 #export-zone {
   padding: 0.3rem 0.5rem 0.4rem;

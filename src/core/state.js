@@ -31,6 +31,7 @@ const DEFAULTS = {
     skillCooldowns: {},  // { skillId: turnsRemaining }
   },
   ai: {
+    tier:    'free',       // 'free' | 'deluxe'
     baseUrl: 'https://openrouter.ai/api/v1',
     key: '',
     models: { ...DEFAULT_MODELS },

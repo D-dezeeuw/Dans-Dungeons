@@ -4,7 +4,7 @@
 import { appState, setValue, bindDOM, initState, restoreState, loadFromStorage, saveToStorage, run, tick } from './core/state.js';
 import { registerReactiveSidebar }                                                           from './ui/reactive.js';
 import { createJournal, exportScreenshot, exportAllSketches, importSave, handleImportFile, exportWorldBible } from './ui/exports.js';
-import { startNewGame, resumeGame, ensureKey, applySketchView }                             from './game/flow.js';
+import { startNewGame, resumeGame, ensureKey, applySketchView, upgradeToDeluxe }            from './game/flow.js';
 import { initSpeakHover }                                                                   from './ui/transcript.js';
 import { initMicButton }                                                                    from './ui/input.js';
 import * as UI from './ui/console.js';
@@ -107,6 +107,11 @@ async function boot() {
     });
   });
   document.getElementById('import-file-input')?.addEventListener('change', handleImportFile);
+
+  // Deluxe upgrade button
+  document.getElementById('deluxe-upgrade')?.addEventListener('click', () => {
+    upgradeToDeluxe().catch(e => console.error('Upgrade failed:', e));
+  });
 
   run();
   registerReactiveSidebar();
