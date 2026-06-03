@@ -91,6 +91,9 @@
     "unknownCmd": "Onbekend commando: {{cmd}}  (probeer /help)"
   },
   "newgame": {
+    "modeQuestion": "Hoe wil je spelen?",
+    "modeCampaign": "Nieuwe Campagne (AI-wereld — ~60s)",
+    "modeQuickDungeon": "Snelle Kerker (direct)",
     "sketchHint": "(zwarte inkt op sepia perkament — kost een paar extra credits per beurt)",
     "sketchQuestion": "Na elke beurt een AI-scèneschets genereren?",
     "sketchYes": "Ja, schets elke scène",
@@ -98,6 +101,21 @@
     "ttsQuestion": "Spraakvertelling inschakelen?",
     "ttsYes": "Ja, lees het verhaal voor",
     "ttsNo": "Nee, bedankt"
+  },
+  "settlement": {
+    "banner": "── {{name}} ──────────────────────────────────",
+    "youAreIn": "Je staat in {{name}}.",
+    "npcList": "Mensen hier:",
+    "exitList": "Paden vanaf hier:",
+    "talkTo": "Praat met {{name}}",
+    "talkCmd": "Ik praat met {{name}}",
+    "travelTo": "Reis naar {{name}}",
+    "travelCmd": "Ik reis naar {{name}}",
+    "rest": "Rust in de herberg",
+    "restCmd": "Ik rust in de herberg",
+    "questReceived": "Opdracht: {{hook}}",
+    "travelDungeon": "Je vertrekt richting {{name}}…",
+    "returnSettlement": "Je keert terug naar {{name}}."
   },
   "adventure": {
     "banner": "── HET AVONTUUR BEGINT ───────────────────────",

@@ -91,6 +91,9 @@
     "unknownCmd": "Unknown command: {{cmd}}  (try /help)"
   },
   "newgame": {
+    "modeQuestion": "How would you like to play?",
+    "modeCampaign": "New Campaign (AI world — takes ~60s)",
+    "modeQuickDungeon": "Quick Dungeon (instant)",
     "sketchHint": "(black ink on sepia parchment — costs a few extra credits per turn)",
     "sketchQuestion": "Generate an AI scene sketch after each turn?",
     "sketchYes": "Yes, sketch each scene",
@@ -98,6 +101,21 @@
     "ttsQuestion": "Enable voice narration?",
     "ttsYes": "Yes, read the story aloud",
     "ttsNo": "No thanks"
+  },
+  "settlement": {
+    "banner": "── {{name}} ──────────────────────────────────",
+    "youAreIn": "You stand in {{name}}.",
+    "npcList": "People here:",
+    "exitList": "Paths from here:",
+    "talkTo": "Talk to {{name}}",
+    "talkCmd": "I talk to {{name}}",
+    "travelTo": "Travel to {{name}}",
+    "travelCmd": "I travel to {{name}}",
+    "rest": "Rest at the inn",
+    "restCmd": "I rest at the inn",
+    "questReceived": "Quest: {{hook}}",
+    "travelDungeon": "You set out toward {{name}}…",
+    "returnSettlement": "You return to {{name}}."
   },
   "adventure": {
     "banner": "── THE ADVENTURE BEGINS ──────────────────────",

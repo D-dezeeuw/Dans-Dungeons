@@ -22,7 +22,7 @@ export function buildScene() {
   const room   = appState.world?.rooms?.[roomId];
   const npcs   = Object.values(appState.world?.npcs ?? {}).filter(n => n.roomId === roomId);
 
-  return {
+  const scene = {
     room: room ? {
       name:        room.name,
       description: room.description,
@@ -47,6 +47,28 @@ export function buildScene() {
       alive:    n.alive,
     })),
   };
+
+  // Leaf-to-root digest path for world context (if campaign mode)
+  const loc = appState.world?.location;
+  if (loc && appState.world?.digest) {
+    const digestPath = [];
+    if (loc.dungeonId) {
+      const d = appState.world.dungeons?.[loc.dungeonId];
+      if (d?.digest) digestPath.push(d.digest);
+    }
+    if (loc.settlementId) {
+      const s = appState.world.settlements?.[loc.settlementId];
+      if (s?.digest) digestPath.push(s.digest);
+    }
+    if (loc.regionId) {
+      const r = appState.world.regions?.[loc.regionId];
+      if (r?.digest) digestPath.push(r.digest);
+    }
+    if (appState.world.digest) digestPath.push(appState.world.digest);
+    if (digestPath.length) scene.worldContext = digestPath.join(' | ');
+  }
+
+  return scene;
 }
 
 // ─── Lifecycle AI helpers (called by flow.js — never by UI) ──────────────────

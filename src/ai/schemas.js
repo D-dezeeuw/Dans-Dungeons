@@ -5,7 +5,7 @@ export const CLASSIFIER_SCHEMA = {
   properties: {
     intent: {
       type: 'string',
-      enum: ['attack', 'skill', 'talk', 'move', 'take', 'unlock', 'look', 'inventory', 'wait', 'impossible', 'meta'],
+      enum: ['attack', 'skill', 'talk', 'move', 'take', 'unlock', 'look', 'inventory', 'wait', 'travel', 'rest', 'buy', 'impossible', 'meta'],
     },
     target_id:  { type: ['string', 'null'] },
     direction:  { type: ['string', 'null'] },
