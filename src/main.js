@@ -80,9 +80,10 @@ async function boot() {
     saveToStorage();
   });
 
-  // Autoplay toggle
+  // Autoplay toggle (Deluxe only)
   const autoplayBtn = document.getElementById('autoplay-btn');
   autoplayBtn?.addEventListener('click', () => {
+    if (!requireDeluxe('autoplayLabel')) return;
     const next = !(appState.settings?.autoplay ?? false);
     setValue('settings.autoplay', next);
     autoplayBtn.classList.toggle('active', next);

@@ -98,6 +98,7 @@
     "ttsLabel": "Text to Speech",
     "imageLabel": "Image generation",
     "worldgenLabel": "World generation",
+    "autoplayLabel": "Autoplay",
     "upgraded": "Upgraded to Deluxe. All features unlocked.",
     "downgraded": "Key invalid — falling back to Free tier."
   },

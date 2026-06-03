@@ -160,6 +160,12 @@ export function initMicButton() {
   if (!btn) return;
 
   btn.addEventListener('click', async () => {
+    // Gate on Deluxe tier — STT is a paid feature.
+    if ((appState.ai?.tier ?? 'free') !== 'deluxe') {
+      appendEntry('system', t('tier.featureGated', { feature: t('tier.sttLabel') }));
+      return;
+    }
+
     const { isRecording, startRecording, stopRecording, transcribeAudio } =
       await import('../ai/stt.js');
 
@@ -186,7 +192,7 @@ export function initMicButton() {
   document.addEventListener('keydown', (e) => {
     if (e.key !== ' ') return;
     if (document.activeElement === cmdEl()) return;
-    if (!appState.settings?.stt || !appState.ai?.key) return;
+    if (!appState.ai?.key) return;
     e.preventDefault();
     btn.click();
   });
