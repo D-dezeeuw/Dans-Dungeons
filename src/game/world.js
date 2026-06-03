@@ -14,17 +14,23 @@
 //   7. Dress rooms with locale-driven descriptions
 
 import { t, tRaw } from '../i18n/i18n.js';
+import { Dice } from './rules.js';
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+// ─── Seeded RNG helpers ──────────────────────────────────────────────────────
+// All randomness flows through _rng so dungeons are reproducible from a seed.
+
+let _rng = Math.random;
+
+export function setDungeonRng(rng) { _rng = rng; }
 
 const OPPOSITE = { north: 'south', south: 'north', east: 'west', west: 'east' };
 
-function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
-function randInt(min, max) { return min + Math.floor(Math.random() * (max - min + 1)); }
+function pick(arr) { return arr[Math.floor(_rng() * arr.length)]; }
+function randInt(min, max) { return min + Math.floor(_rng() * (max - min + 1)); }
 function shuffle(arr) {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const j = Math.floor(_rng() * (i + 1));
     [a[i], a[j]] = [a[j], a[i]];
   }
   return a;
@@ -133,7 +139,8 @@ function assignRoomType(idx, spineLen, totalRooms, isSpine) {
 // ─── Dungeon generator (L04/L05) ──────────────────────────────────────────────
 // Returns { rooms, npcs, currentRoom, exitRoomId } for embedding in world.dungeons.
 
-export function generateDungeon() {
+export function generateDungeon(seed) {
+  if (seed != null) _rng = Dice.seededRng(seed);
   const style = pick(tRaw('world.houseStyles'));
 
   // 1. Spine: 4-6 rooms
