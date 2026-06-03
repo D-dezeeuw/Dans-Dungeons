@@ -4,7 +4,7 @@
 import { appState, setValue, bindDOM, initState, restoreState, loadFromStorage, saveToStorage, run, tick } from './core/state.js';
 import { registerReactiveSidebar }                                                           from './ui/reactive.js';
 import { createJournal, exportScreenshot, exportAllSketches, importSave, handleImportFile, exportWorldBible } from './ui/exports.js';
-import { startNewGame, resumeGame, ensureKey, applySketchView, upgradeToDeluxe }            from './game/flow.js';
+import { startNewGame, resumeGame, ensureKey, applySketchView, upgradeToDeluxe, requireDeluxe } from './game/flow.js';
 import { initSpeakHover }                                                                   from './ui/transcript.js';
 import { initMicButton }                                                                    from './ui/input.js';
 import * as UI from './ui/console.js';
@@ -51,6 +51,7 @@ async function boot() {
   });
 
   document.getElementById('sketch-toggle')?.addEventListener('click', () => {
+    if (!requireDeluxe('imageLabel')) return;
     setValue('settings.sceneImage', !(appState.settings?.sceneImage ?? false));
     saveToStorage();
   });
@@ -58,6 +59,7 @@ async function boot() {
   // TTS toggle — volume on/off button inside #transcript
   const ttsToggle = document.getElementById('tts-toggle');
   ttsToggle?.addEventListener('click', () => {
+    if (!requireDeluxe('ttsLabel')) return;
     setValue('settings.tts', !(appState.settings?.tts ?? false));
     saveToStorage();
   });
@@ -65,6 +67,7 @@ async function boot() {
   // Roleplay mode — immersive view with forced TTS; restores TTS state on exit.
   const roleplayBtn = document.getElementById('roleplay-btn');
   roleplayBtn?.addEventListener('click', () => {
+    if (!requireDeluxe('ttsLabel')) return;
     const next = !(appState.settings?.roleplayMode ?? false);
     if (next) {
       setValue('settings._preTts', appState.settings?.tts ?? false);
