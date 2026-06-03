@@ -217,3 +217,37 @@ ${entriesHtml}
   triggerDownload(new Blob([html], { type: 'text/html' }),
     `dans-dungeons-journal-${pcName.toLowerCase().replace(/\s+/g, '-')}.html`);
 }
+
+// ─── World Bible (standalone worldgen → EPUB) ────────────────────────────────
+
+export async function exportWorldBible() {
+  const progress = (key) => appendEntry('system', t(`ai.${key}`));
+
+  try {
+    const { generateWorldBible } = await import('../game/worldbible.js');
+    const { world, chapters } = await generateWorldBible(progress);
+
+    // Save raw world JSON to localStorage for potential import.
+    try {
+      localStorage.setItem('dg-world-bible', JSON.stringify(world));
+    } catch { /* quota */ }
+
+    appendEntry('system', t('exports.worldBibleBuilding'));
+
+    // Build EPUB.
+    const { buildEpub } = await import('./epub.js');
+    const slug = (world.seed?.name ?? 'world').toLowerCase().replace(/\s+/g, '-');
+    const blob = await buildEpub({
+      title:    world.seed?.name ?? 'Unknown World',
+      subtitle: `A ${world.seed?.tone ?? 'fantasy'} world — Dan's Dungeons`,
+      lang:     locale(),
+      chapters,
+    });
+
+    triggerDownload(blob, `dans-dungeons-worldbible-${slug}.epub`);
+    appendEntry('system', t('exports.worldBibleDone'));
+  } catch (e) {
+    console.error('World Bible export failed:', e);
+    appendEntry('error', t('exports.worldBibleFail', { msg: e.message }));
+  }
+}

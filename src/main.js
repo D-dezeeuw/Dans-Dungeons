@@ -3,7 +3,7 @@
 
 import { appState, setValue, bindDOM, initState, restoreState, loadFromStorage, saveToStorage, run, tick } from './core/state.js';
 import { registerReactiveSidebar }                                                           from './ui/reactive.js';
-import { createJournal, exportScreenshot, exportAllSketches, importSave, handleImportFile } from './ui/exports.js';
+import { createJournal, exportScreenshot, exportAllSketches, importSave, handleImportFile, exportWorldBible } from './ui/exports.js';
 import { startNewGame, resumeGame, ensureKey, applySketchView }                             from './game/flow.js';
 import { initSpeakHover }                                                                   from './ui/transcript.js';
 import { initMicButton }                                                                    from './ui/input.js';
@@ -90,6 +90,14 @@ async function boot() {
   document.getElementById('export-screenshot')?.addEventListener('click', exportScreenshot);
   document.getElementById('export-sketches')?.addEventListener('click', exportAllSketches);
   document.getElementById('export-import')?.addEventListener('click', importSave);
+  document.getElementById('export-world-bible')?.addEventListener('click', () => {
+    exportWorldBible().catch(e => {
+      console.error('World Bible error:', e);
+      import('./ui/transcript.js').then(({ appendEntry }) =>
+        appendEntry('error', `World Bible failed: ${e.message}`)
+      );
+    });
+  });
   document.getElementById('import-file-input')?.addEventListener('change', handleImportFile);
 
   run();

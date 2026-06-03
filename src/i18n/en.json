@@ -303,6 +303,9 @@
   },
   "exports": {
     "noJournal": "Nothing to export yet — play a few turns first.",
+    "worldBibleBuilding": "Building the World Bible EPUB…",
+    "worldBibleDone": "World Bible exported.",
+    "worldBibleFail": "World Bible export failed: {{msg}}",
     "step1": "Gathering narrations…",
     "step2": "Sending to the storyteller…",
     "step3detail": "Weaving {{n}} chapters…",
@@ -349,9 +352,11 @@
     "settlementPrompt": "You are fleshing out a settlement in a fantasy world. Given the region digest below, create a village or town.\n\nRegion digest:\n{{parentDigest}}\n\nGenerate:\n- Settlement id (slug: settlement-name) and regionId: \"{{regionId}}\"\n- Name and a vivid 2-3 sentence description\n- 3-4 NPCs, each with:\n  - id (slug: npc-name), name, role (innkeeper/questgiver/merchant/guard/elder/blacksmith/healer/hermit)\n  - attitude (friendly/neutral/suspicious/hostile)\n  - greeting (their opening line when the player talks to them)\n  - questHook (string or null — the questgiver MUST have one pointing to the dungeon)\n  - personality (a vivid 2-3 word description: \"gruff but kind\", \"paranoid whisperer\", \"cheerful drunk\")\n  - secret (something they know or hide — null if none. e.g. \"saw the cult enter the crypt at midnight\")\n  - factionId (null for v1, will be wired to factions later)\n  - relationships: array of {targetId, type} where type is spouse/parent/child/rival/ally/employer/mentor. At least 1 NPC should have a relationship to another NPC in this settlement.\n  - inventory: array of {name, price, description} for merchants, null for others. Merchants should have 3-5 items.\n- 2-3 exits: direction, target name, target type (dungeon/road/wilderness), targetId (slug for dungeons, null for roads)\n- A digest: ~30-word summary for child generators\n\nMake NPCs feel real: give them personality, secrets, and connections to each other.\n\nOutput ONLY a JSON object matching the schema.",
     "settlementUserMsg": "Create the settlement.",
     "worldgenStep1": "Forging the world…",
-    "worldgenStep2": "Shaping the region…",
-    "worldgenStep3": "Building the settlement…",
-    "worldgenStep4": "Generating the dungeon…",
+    "worldgenStep2": "Shaping factions…",
+    "worldgenStep3": "Plotting the red thread…",
+    "worldgenStep4": "Shaping the region…",
+    "worldgenStep5": "Building the settlement…",
+    "worldgenStep6": "Generating the dungeon…",
     "worldgenDone": "The world is ready."
   }
 }

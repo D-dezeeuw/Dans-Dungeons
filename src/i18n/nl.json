@@ -303,6 +303,9 @@
   },
   "exports": {
     "noJournal": "Nog niets te exporteren — speel eerst een paar beurten.",
+    "worldBibleBuilding": "Wereldbijbel EPUB wordt samengesteld…",
+    "worldBibleDone": "Wereldbijbel geëxporteerd.",
+    "worldBibleFail": "Wereldbijbel export mislukt: {{msg}}",
     "step1": "Vertellingen verzamelen…",
     "step2": "Naar de verteller sturen…",
     "step3detail": "{{n}} hoofdstukken weven…",
@@ -349,9 +352,11 @@
     "settlementPrompt": "Je werkt een nederzetting uit in een fantasywereld. Gegeven de regiodigest hieronder, creëer een dorp of stad.\n\nRegiodigest:\n{{parentDigest}}\n\nGenereer:\n- Nederzetting-id (slug: settlement-naam) en regionId: \"{{regionId}}\"\n- Naam en een levendige beschrijving van 2-3 zinnen\n- 3-4 NPC's, elk met:\n  - id (slug: npc-naam), naam, rol (innkeeper/questgiver/merchant/guard/elder/blacksmith/healer/hermit)\n  - houding (friendly/neutral/suspicious/hostile)\n  - begroeting (hun openingszin bij een gesprek)\n  - questHook (string of null — de questgiver MOET er een hebben die naar de kerker wijst)\n  - personality (levendige 2-3 woorden: \"nors maar vriendelijk\", \"paranoïde fluisteraar\")\n  - secret (iets wat ze weten of verbergen — null als niets. bijv. \"zag de cultisten 's nachts de crypte ingaan\")\n  - factionId (null voor v1)\n  - relationships: array van {targetId, type} met type: spouse/parent/child/rival/ally/employer/mentor. Minstens 1 NPC moet een relatie met een andere NPC hebben.\n  - inventory: array van {name, price, description} voor handelaren, null voor anderen. Handelaren: 3-5 items.\n- 2-3 uitgangen: richting, doelnaam, doeltype (dungeon/road/wilderness), targetId (slug voor kerkers, null voor wegen)\n- Een digest: ~30 woorden samenvatting voor kindgeneratoren\n\nMaak NPC's echt: geef ze persoonlijkheid, geheimen en onderlinge banden.\n\nGeef ALLEEN een JSON-object dat het schema volgt.",
     "settlementUserMsg": "Creëer de nederzetting.",
     "worldgenStep1": "De wereld wordt gesmeed…",
-    "worldgenStep2": "De regio krijgt vorm…",
-    "worldgenStep3": "De nederzetting wordt gebouwd…",
-    "worldgenStep4": "De kerker wordt gegenereerd…",
+    "worldgenStep2": "Facties worden gevormd…",
+    "worldgenStep3": "De rode draad wordt gesponnen…",
+    "worldgenStep4": "De regio krijgt vorm…",
+    "worldgenStep5": "De nederzetting wordt gebouwd…",
+    "worldgenStep6": "De kerker wordt gegenereerd…",
     "worldgenDone": "De wereld is gereed."
   }
 }
