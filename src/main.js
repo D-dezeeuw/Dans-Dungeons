@@ -46,6 +46,11 @@ async function boot() {
     saveToStorage();
   });
 
+  document.getElementById('debug-bar-toggle')?.addEventListener('click', () => {
+    setValue('settings.debugBar', !(appState.settings?.debugBar ?? false));
+    saveToStorage();
+  });
+
   document.getElementById('sketch-toggle')?.addEventListener('click', () => {
     setValue('settings.sceneImage', !(appState.settings?.sceneImage ?? false));
     saveToStorage();

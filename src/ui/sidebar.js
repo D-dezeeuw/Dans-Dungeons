@@ -24,8 +24,7 @@ function makePanel(panel, storageKey, extraUpdate) {
   return { set, storedOrDefault };
 }
 
-// Module-level refs so updateDebugPanel can call _setDebug without globals.
-let _setDebug   = null;
+// Module-level refs for updateDebugPanel.
 let _debugBar   = null;
 let _debugPanel = null;
 
@@ -79,25 +78,10 @@ export function initCollapsibles() {
   }
 
   // ── Debug panel ───────────────────────────────────────────────────────────
+  // Visibility is now driven by settings.debugBar via data-if in the HTML.
+  // No collapsible logic needed — the toggle in the sidebar controls it.
   _debugPanel = document.getElementById('debug-panel');
   _debugBar   = document.getElementById('debug-bar');
-  const chevron = _debugBar?.querySelector('.toggle-chevron');
-
-  if (_debugPanel && _debugBar) {
-    const { set, storedOrDefault } = makePanel(_debugBar, 'dg-debug', (open) => {
-      _debugPanel.classList.toggle('collapsed', !open);
-      if (chevron) chevron.innerHTML = open ? icon.chevronUp(12) : icon.chevronDown(12);
-    });
-    _setDebug = set;
-    _setDebug._initial = storedOrDefault();
-
-    _debugBar.addEventListener('click', () =>
-      _setDebug(_debugPanel.classList.contains('collapsed'))
-    );
-    _debugBar.addEventListener('keydown', e => {
-      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); _debugBar.click(); }
-    });
-  }
 }
 
 // ─── Debug panel renderer ─────────────────────────────────────────────────────
@@ -106,12 +90,6 @@ export function updateDebugPanel(debug) {
   const el = _debugPanel;
   if (!el) return;
   if (!debug) { el.innerHTML = ''; return; }
-
-  // Reveal the debug bar on first real data; apply stored open/closed preference.
-  if (_debugBar && !_debugBar.classList.contains('visible')) {
-    _debugBar.classList.add('visible');
-    _setDebug?.(_setDebug._initial ?? true);
-  }
 
   const { classified, resolved, goblinResult } = debug;
   const sections = [];

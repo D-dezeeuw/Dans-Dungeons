@@ -448,7 +448,8 @@
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
-#action-bar-toggle {
+#action-bar-toggle,
+#debug-bar-toggle {
   background: transparent;
   border: 1px solid var(--border);
   color: var(--system);
@@ -460,8 +461,10 @@
   line-height: 1.4;
   transition: color 0.15s, border-color 0.15s;
 }
-#action-bar-toggle:hover { color: var(--text); border-color: var(--system); }
+#action-bar-toggle:hover,
+#debug-bar-toggle:hover { color: var(--text); border-color: var(--system); }
 #action-bar-toggle[aria-pressed="true"],
+#debug-bar-toggle[aria-pressed="true"],
 #sketch-toggle[aria-pressed="true"] {
   color: var(--gm);
   border-color: var(--gm);

@@ -242,6 +242,10 @@ html.styles-loaded #brand-bar {
           <span class="ab-toggle-label">Action bar</span>
           <button id="action-bar-toggle" :ariaPressed="ui.actionBarActive" aria-pressed="true" aria-label="Toggle action bar" title="Show the action bar above the input">{{ui.actionBarLabel}}</button>
         </div>
+        <div id="db-toggle-row">
+          <span class="ab-toggle-label">Last turn</span>
+          <button id="debug-bar-toggle" :ariaPressed="ui.debugBarActive" aria-pressed="false" aria-label="Toggle last turn panel" title="Show last turn debug info below the action bar">{{ui.debugBarLabel}}</button>
+        </div>
         <div id="export-zone">
           <div class="export-zone-label">Export / Import</div>
           <div id="export-tiles">
@@ -278,10 +282,10 @@ html.styles-loaded #brand-bar {
           <div id="ab-skills-list"></div>
         </div>
       </div>
-      <div id="debug-bar" role="button" tabindex="0" aria-label="Toggle last turn debug info" aria-expanded="false" aria-controls="debug-panel">
-        <span>Last turn</span><span class="toggle-chevron"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span>
+      <div id="debug-bar" data-cloak data-if="ui.debugBarVisible" aria-label="Last turn debug info">
+        <span>Last turn</span>
       </div>
-      <div id="debug-panel"></div>
+      <div id="debug-panel" data-cloak data-if="ui.debugBarVisible"></div>
       <div id="input-row">
         <span id="prompt-indicator">&gt;</span>
         <input

@@ -63,6 +63,11 @@ export function registerReactiveSidebar() {
   });
 
   computed('ui.actionBarLabel',    ['settings.actionBar'],  (s) => (s.settings?.actionBar ?? true) ? 'ON' : 'OFF');
+
+  // Debug bar (last turn) visibility — driven by settings toggle.
+  computed('ui.debugBarVisible', ['settings.debugBar'], (s) => !!(s.settings?.debugBar ?? false));
+  computed('ui.debugBarActive',  ['settings.debugBar'], (s) => !!(s.settings?.debugBar ?? false));
+  computed('ui.debugBarLabel',   ['settings.debugBar'], (s) => (s.settings?.debugBar ?? false) ? 'ON' : 'OFF');
   computed('ui.sceneImageActive',  ['settings.sceneImage'], (s) => !!(s.settings?.sceneImage));
   computed('ui.sceneImageLabel',   ['settings.sceneImage'], (s) => (s.settings?.sceneImage) ? 'ON' : 'OFF');
 
