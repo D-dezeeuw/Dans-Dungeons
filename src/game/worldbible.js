@@ -7,23 +7,49 @@
 import { generateWorldSeed, generateFactions, generateBeats, generateRegion, generateSettlement } from './worldgen.js';
 import { createDungeonEntry } from './world.js';
 
+// ─── Fallback digest ─────────────────────────────────────────────────────────
+// If the AI omits a digest field, derive one from available data.
+
+function ensureDigest(obj, fallback) {
+  if (obj && !obj.digest) obj.digest = fallback;
+  return obj;
+}
+
 // ─── Pipeline ────────────────────────────────────────────────────────────────
 
 export async function generateWorldBible(onProgress) {
   onProgress('worldgenStep1');
   const seed = await generateWorldSeed();
+  if (!seed) throw new Error('World seed generation failed — no response from AI.');
+  ensureDigest(seed, `${seed.name ?? 'World'} — ${seed.tone ?? 'fantasy'}. ${seed.redThread?.premise ?? ''}`);
 
   onProgress('worldgenStep2');
-  const { factions } = await generateFactions(seed.digest);
+  let factions = [];
+  try {
+    const result = await generateFactions(seed.digest);
+    factions = result?.factions ?? [];
+  } catch (e) {
+    console.warn('Faction generation failed, continuing without:', e.message);
+  }
 
   onProgress('worldgenStep3');
-  const { beats } = await generateBeats(seed.digest);
+  let beats = [];
+  try {
+    const result = await generateBeats(seed.digest);
+    beats = result?.beats ?? [];
+  } catch (e) {
+    console.warn('Beat generation failed, continuing without:', e.message);
+  }
 
   onProgress('worldgenStep4');
   const region = await generateRegion(seed.digest);
+  if (!region) throw new Error('Region generation failed — no response from AI.');
+  ensureDigest(region, `${region.name ?? 'Region'} — ${region.climate ?? ''}. ${region.settlementName ?? ''}.`);
 
   onProgress('worldgenStep5');
   const settlement = await generateSettlement(region.digest, region.id);
+  if (!settlement) throw new Error('Settlement generation failed — no response from AI.');
+  ensureDigest(settlement, `${settlement.name ?? 'Settlement'} — ${(settlement.npcs ?? []).map(n => n.name).join(', ')}.`);
 
   onProgress('worldgenStep6');
   const dungeonExit = (settlement.exits ?? []).find(e => e.targetType === 'dungeon');
@@ -54,11 +80,11 @@ function formatChapters({ seed, factions, beats, region, settlement, dungeon }) 
       '',
       seed.creation,
       '',
-      `The gods: ${gods}.`,
+      gods ? `The gods: ${gods}.` : '',
       '',
-      `The central conflict: ${seed.redThread.premise}`,
-      `The starting hook: ${seed.redThread.hook}`,
-    ].join('\n'),
+      `The central conflict: ${seed.redThread?.premise ?? 'Unknown.'}`,
+      `The starting hook: ${seed.redThread?.hook ?? 'Unknown.'}`,
+    ].filter(Boolean).join('\n'),
   });
 
   // Chapter 2: Factions
@@ -67,8 +93,8 @@ function formatChapters({ seed, factions, beats, region, settlement, dungeon }) 
       `${f.name}`,
       f.description,
       `Values: ${f.values}.`,
-      f.allies.length ? `Allies: ${f.allies.join(', ')}.` : '',
-      f.enemies.length ? `Enemies: ${f.enemies.join(', ')}.` : '',
+      f.allies?.length ? `Allies: ${f.allies.join(', ')}.` : '',
+      f.enemies?.length ? `Enemies: ${f.enemies.join(', ')}.` : '',
     ].filter(Boolean).join('\n')).join('\n\n');
 
     ch.push({ heading: 'Factions', text: factionText });
@@ -80,9 +106,9 @@ function formatChapters({ seed, factions, beats, region, settlement, dungeon }) 
       `Beat ${i + 1}: ${b.id}`,
       b.dramaticPurpose,
       `Estimated playtime: ${b.targetPlaytimeMinutes} minutes.`,
-      b.prerequisites.length ? `Requires: ${b.prerequisites.join(', ')}.` : 'No prerequisites.',
-      `Sets flags: ${b.setRequiredFlags.join(', ')}.`,
-      b.requiredArchetypes.length
+      b.prerequisites?.length ? `Requires: ${b.prerequisites.join(', ')}.` : 'No prerequisites.',
+      `Sets flags: ${(b.setRequiredFlags ?? []).join(', ')}.`,
+      b.requiredArchetypes?.length
         ? `NPCs needed: ${b.requiredArchetypes.map(a => `${a.role} (${a.notes})`).join(', ')}.`
         : '',
     ].filter(Boolean).join('\n')).join('\n\n');
@@ -92,18 +118,18 @@ function formatChapters({ seed, factions, beats, region, settlement, dungeon }) 
 
   // Chapter 4: Region
   ch.push({
-    heading: region.name,
+    heading: region.name ?? 'The Region',
     text: [
-      `Climate: ${region.climate}.`,
+      `Climate: ${region.climate ?? 'unknown'}.`,
       '',
-      region.description,
+      region.description ?? '',
       '',
-      `Settlement: ${region.settlementName}.`,
-      `Dungeon: ${region.dungeonName}.`,
+      region.settlementName ? `Settlement: ${region.settlementName}.` : '',
+      region.dungeonName ? `Dungeon: ${region.dungeonName}.` : '',
       '',
-      `Rumor: "${region.rumor}"`,
+      region.rumor ? `Rumor: "${region.rumor}"` : '',
       '',
-      region.adjacentHints.length
+      region.adjacentHints?.length
         ? `What lies beyond: ${region.adjacentHints.join('. ')}.`
         : '',
     ].filter(Boolean).join('\n'),
@@ -132,15 +158,15 @@ function formatChapters({ seed, factions, beats, region, settlement, dungeon }) 
   ).join('\n');
 
   ch.push({
-    heading: settlement.name,
+    heading: settlement.name ?? 'The Settlement',
     text: [
-      settlement.description,
+      settlement.description ?? '',
       '',
       npcText,
       '',
       'Exits:',
       exitText,
-    ].join('\n'),
+    ].filter(Boolean).join('\n'),
   });
 
   // Chapter 6: Dungeon
@@ -167,9 +193,9 @@ function formatChapters({ seed, factions, beats, region, settlement, dungeon }) 
   ).join('\n');
 
   ch.push({
-    heading: dungeon.name,
+    heading: dungeon.name ?? 'The Dungeon',
     text: [
-      `Theme: ${dungeon.theme}. ${rooms.length} rooms.`,
+      `Theme: ${dungeon.theme ?? 'unknown'}. ${rooms.length} rooms.`,
       `Start: ${dungeon.currentRoom}. Exit: ${dungeon.exitRoomId}.`,
       '',
       roomText,
@@ -179,7 +205,11 @@ function formatChapters({ seed, factions, beats, region, settlement, dungeon }) 
   });
 
   // Appendix: Raw JSON
-  const worldJson = JSON.stringify({ seed, factions, beats, region, settlement, dungeon: { id: dungeon.id, name: dungeon.name, theme: dungeon.theme, seed: dungeon.seed, roomCount: rooms.length, enemyCount: enemies.length } }, null, 2);
+  const worldJson = JSON.stringify({
+    seed, factions, beats, region,
+    settlement: { ...settlement, npcs: (settlement.npcs ?? []).map(({ inventory, ...npc }) => ({ ...npc, hasInventory: !!inventory?.length })) },
+    dungeon: { id: dungeon.id, name: dungeon.name, theme: dungeon.theme, seed: dungeon.seed, roomCount: rooms.length, enemyCount: enemies.length },
+  }, null, 2);
   ch.push({
     heading: 'Appendix: World Data',
     text: worldJson,
