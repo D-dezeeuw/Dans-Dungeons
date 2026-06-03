@@ -42,6 +42,31 @@ const DEFAULTS = {
     inventory: [],
   },
   world: {
+    // L00 — World lore
+    seed:   null,
+    name:   null,
+    tone:   null,
+    lore:   null,
+    digest: null,
+
+    // L02 — Regions
+    regions: {},
+
+    // L03 — Settlements
+    settlements: {},
+
+    // L04/L05 — Dungeons (each contains rooms + npcs)
+    dungeons: {},
+
+    // Player location pointer
+    location: {
+      type:         null,   // 'dungeon' | 'settlement' | 'road'
+      regionId:     null,
+      settlementId: null,
+      dungeonId:    null,
+    },
+
+    // Legacy compat — flat room/npc refs for active dungeon (resolver reads these)
     currentRoom: null,
     exitRoomId:  null,
     rooms: {},
