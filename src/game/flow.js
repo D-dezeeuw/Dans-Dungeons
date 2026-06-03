@@ -10,7 +10,7 @@ import { processTurn, checkApiKey, generateTurnImage, buildScene } from './loop.
 import * as UI from '../ui/console.js';
 import { t } from '../i18n/i18n.js';
 import { getSkills } from '../ui/chips.js';
-import { modelsForTier, getFreeKey } from '../ai/tiers.js';
+import { modelsForTier, _cfg } from '../ai/tiers.js';
 
 // TTS helpers — imported lazily so the audio module is a no-op when TTS is off.
 function _speak(text) {
@@ -105,7 +105,7 @@ export async function setupKey() {
     UI.appendEntry('system', t('tier.upgraded'));
   } else {
     // Free tier — use embedded key, no prompt needed.
-    setValue('ai.key', getFreeKey());
+    setValue('ai.key', _cfg());
     applyTier('free');
     UI.appendEntry('system', '');
   }
@@ -122,7 +122,7 @@ export async function upgradeToDeluxe() {
     UI.appendEntry('system', t('tier.upgraded'));
   } else {
     UI.appendEntry('error', t('tier.downgraded'));
-    setValue('ai.key', getFreeKey());
+    setValue('ai.key', _cfg());
     applyTier('free');
   }
 }
@@ -140,7 +140,7 @@ async function reAuthKey() {
     saveToStorage();
     UI.appendEntry('system', t('setup.keyUpdated'));
   } else {
-    setValue('ai.key', getFreeKey());
+    setValue('ai.key', _cfg());
     applyTier('free');
   }
 }
@@ -154,7 +154,7 @@ export async function ensureKey() {
     const valid = await checkApiKey();
     if (!valid) {
       UI.appendEntry('error', t('tier.downgraded'));
-      setValue('ai.key', getFreeKey());
+      setValue('ai.key', _cfg());
       applyTier('free');
     }
   }

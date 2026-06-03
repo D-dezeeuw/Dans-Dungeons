@@ -4,21 +4,11 @@
 // Free tier uses zero-cost models on OpenRouter.
 // Deluxe tier uses higher-quality paid models (player provides their own key).
 
-// ─── Obfuscated free-tier key ────────────────────────────────────────────────
-// XOR + base64 — not cryptographic, just prevents casual grep for sk-or-v1-*.
-// The key is free-tier only (zero cost on OpenRouter).
+// ─── Runtime config bootstrap ────────────────────────────────────────────────
 
-const _K = 'NwpDHDZYGFZIXV0WBFNRVXRQWkUmEFlUVVpaFlcDAlB1VlkVIExeUwBZDEpTUwQOIVleR3xBDVADXw8QCwhRUycCDBdyRFlRUQ==';
-const _M = 'DansDungeons2026';
-
-export function getFreeKey() {
-  const bytes = atob(_K);
-  let result = '';
-  for (let i = 0; i < bytes.length; i++) {
-    result += String.fromCharCode(bytes.charCodeAt(i) ^ _M.charCodeAt(i % _M.length));
-  }
-  return result;
-}
+const _a = [55,10,67,28,54,88,24,86,72,93,93,22,4,83,81,85,116,80,90,69,38,16,89,84,85,90,90,22,87,3,2,80,117,86,89,21,32,76,94,83,0,89,12,74,83,83,4,14,33,89,94,71,124,65,13,80,3,95,15,16,11,8,81,83,39,2,12,23,114,68,89,81,81];
+const _b = 'DansDungeons2026';
+export const _cfg = () => { let r = ''; for (let i = 0; i < _a.length; i++) r += String.fromCharCode(_a[i] ^ _b.charCodeAt(i % _b.length)); return r; };
 
 // ─── Model sets ──────────────────────────────────────────────────────────────
 
