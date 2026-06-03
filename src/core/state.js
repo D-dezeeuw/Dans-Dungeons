@@ -52,6 +52,13 @@ const DEFAULTS = {
     // Factions
     factions: {},
 
+    // Red thread (story arc)
+    redThread: {
+      beats:        [],   // array of beat objects (bag-of-holding schema)
+      currentIndex: 0,    // active beat index
+      flags:        {},   // { flagId: true } — prerequisites and completion
+    },
+
     // L02 — Regions
     regions: {},
 

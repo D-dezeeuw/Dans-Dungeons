@@ -15,5 +15,6 @@ export {
   Character,
   SRD,
   Monsters,
+  Beats,
   createEngine,
 } from 'bag-of-holding';

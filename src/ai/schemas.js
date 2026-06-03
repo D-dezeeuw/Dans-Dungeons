@@ -158,6 +158,42 @@ export const FACTION_SCHEMA = {
   additionalProperties: false,
 };
 
+export const BEAT_SCHEMA = {
+  type: 'object',
+  properties: {
+    id:                    { type: 'string' },
+    dramaticPurpose:       { type: 'string' },
+    targetPlaytimeMinutes: { type: 'number' },
+    prerequisites:         { type: 'array', items: { type: 'string' } },
+    setRequiredFlags:      { type: 'array', items: { type: 'string' } },
+    preferredLocation:     { type: ['string', 'null'] },
+    requiredArchetypes: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          role:  { type: 'string' },
+          notes: { type: 'string' },
+        },
+        required: ['role', 'notes'],
+        additionalProperties: false,
+      },
+    },
+    successors: { type: 'array', items: { type: 'string' } },
+  },
+  required: ['id', 'dramaticPurpose', 'targetPlaytimeMinutes', 'prerequisites', 'setRequiredFlags', 'preferredLocation', 'requiredArchetypes', 'successors'],
+  additionalProperties: false,
+};
+
+export const RED_THREAD_SCHEMA = {
+  type: 'object',
+  properties: {
+    beats: { type: 'array', items: BEAT_SCHEMA },
+  },
+  required: ['beats'],
+  additionalProperties: false,
+};
+
 export const FACTIONS_SCHEMA = {
   type: 'object',
   properties: {

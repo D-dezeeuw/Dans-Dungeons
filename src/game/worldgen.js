@@ -6,7 +6,7 @@
 // Returns structured data matching the schemas in ai/schemas.js.
 
 import { chatCompletion } from '../ai/client.js';
-import { WORLD_SEED_SCHEMA, REGION_SCHEMA, SETTLEMENT_SCHEMA, FACTIONS_SCHEMA } from '../ai/schemas.js';
+import { WORLD_SEED_SCHEMA, REGION_SCHEMA, SETTLEMENT_SCHEMA, FACTIONS_SCHEMA, RED_THREAD_SCHEMA } from '../ai/schemas.js';
 import { t } from '../i18n/i18n.js';
 
 // ─── World seed (L00) ────────────────────────────────────────────────────────
@@ -21,6 +21,21 @@ export async function generateWorldSeed() {
       { role: 'user',   content: t('ai.worldSeedUserMsg') },
     ],
     schema: WORLD_SEED_SCHEMA,
+  });
+}
+
+// ─── Red thread / beats ──────────────────────────────────────────────────────
+// Receives world.digest. Generates 3-5 story beats that drive the campaign.
+
+export async function generateBeats(worldDigest) {
+  return chatCompletion({
+    tier: 'medium',
+    max_tokens: 2000,
+    messages: [
+      { role: 'system', content: t('ai.beatsPrompt', { parentDigest: worldDigest }) },
+      { role: 'user',   content: t('ai.beatsUserMsg') },
+    ],
+    schema: RED_THREAD_SCHEMA,
   });
 }
 
