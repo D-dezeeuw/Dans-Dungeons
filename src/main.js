@@ -18,7 +18,6 @@ async function boot() {
   document.documentElement.classList.add('styles-loaded');
 
   UI.initCollapsibles();
-  UI.initCopyKeyButton(() => appState.ai?.key ?? '');
 
   // Locale switcher — two buttons, active class on the current one.
   const localeLabel = document.getElementById('locale-label');

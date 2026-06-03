@@ -189,19 +189,6 @@
   flex: 1;
 }
 
-#copy-key-btn {
-  background: transparent;
-  border: none;
-  color: var(--system);
-  font-family: var(--font);
-  font-size: 13px;
-  cursor: pointer;
-  padding: 0.15rem 0.4rem;
-  border-radius: 2px;
-  line-height: 1;
-}
-#copy-key-btn:hover { color: var(--text); }
-
 #sidebar-toggle {
   margin-left: auto;
   background: transparent;

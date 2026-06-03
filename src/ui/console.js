@@ -7,5 +7,5 @@ export { showActionChips, showCharacterChips, showSkillChips,
          insertActionChip, clearChips, showRoomChips }                         from './chips.js';
 export { showSceneImageLoading, setSceneImage, restoreSceneImage,
          hideSceneImage, setSketchOpacity }                                    from './sketch.js';
-export { initCollapsibles, initCopyKeyButton, updateDebugPanel }               from './sidebar.js';
+export { initCollapsibles, updateDebugPanel }                                  from './sidebar.js';
 export { updateActionBar }                                                     from './actionbar.js';

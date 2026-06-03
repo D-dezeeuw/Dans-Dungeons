@@ -28,18 +28,6 @@ function makePanel(panel, storageKey, extraUpdate) {
 let _debugBar   = null;
 let _debugPanel = null;
 
-// ─── Copy-key button ──────────────────────────────────────────────────────────
-
-export function initCopyKeyButton(getKey) {
-  const btn = document.getElementById('copy-key-btn');
-  if (!btn) return;
-  btn.addEventListener('click', async () => {
-    await navigator.clipboard.writeText(getKey());
-    btn.innerHTML = icon.check(14);
-    setTimeout(() => { btn.innerHTML = icon.key(14); }, 1200);
-  });
-}
-
 // ─── Collapsibles init ────────────────────────────────────────────────────────
 
 export function initCollapsibles() {
