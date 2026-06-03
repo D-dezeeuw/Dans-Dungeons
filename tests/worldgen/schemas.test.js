@@ -98,7 +98,7 @@ const NPC_SCHEMA = {
     relationships: { type: 'array', items: { type: 'object', properties: { targetId: { type: 'string' }, type: { type: 'string', enum: ['spouse', 'parent', 'child', 'rival', 'ally', 'employer', 'mentor'] } }, required: ['targetId', 'type'], additionalProperties: false } },
     inventory:     { type: ['array', 'null'], items: { type: 'object', properties: { name: { type: 'string' }, price: { type: 'number' }, description: { type: 'string' } }, required: ['name', 'price', 'description'], additionalProperties: false } },
   },
-  required: ['id', 'name', 'role', 'attitude', 'greeting', 'questHook', 'personality', 'secret', 'factionId', 'relationships', 'inventory'],
+  required: ['id', 'name', 'role', 'attitude', 'greeting'],
   additionalProperties: false,
 };
 
@@ -113,7 +113,7 @@ const SETTLEMENT_SCHEMA = {
     exits:       { type: 'array', items: { type: 'object', properties: { direction: { type: 'string' }, targetName: { type: 'string' }, targetType: { type: 'string', enum: ['dungeon', 'road', 'wilderness'] }, targetId: { type: ['string', 'null'] } }, required: ['direction', 'targetName', 'targetType', 'targetId'], additionalProperties: false } },
     digest:      { type: 'string' },
   },
-  required: ['id', 'name', 'description', 'regionId', 'npcs', 'exits', 'digest'],
+  required: ['id', 'name', 'description', 'npcs', 'exits'],
   additionalProperties: false,
 };
 
@@ -292,11 +292,10 @@ describe('NPC_SCHEMA', () => {
     }
   });
 
-  it('rejects missing personality field', () => {
-    const { personality, ...noPersonality } = validNpc;
-    const r = validateAgainstSchema(noPersonality, NPC_SCHEMA);
-    assert.equal(r.valid, false);
-    assert.ok(r.errors.some(e => e.includes('personality')));
+  it('accepts NPC without optional fields (normalizer fills them)', () => {
+    const minimal = { id: 'npc-x', name: 'Test', role: 'guard', attitude: 'neutral', greeting: 'Halt.' };
+    const r = validateAgainstSchema(minimal, NPC_SCHEMA);
+    assert.equal(r.valid, true);
   });
 });
 
@@ -328,11 +327,10 @@ describe('SETTLEMENT_SCHEMA', () => {
     assert.deepEqual(r.errors, []);
   });
 
-  it('requires regionId', () => {
+  it('accepts settlement without regionId (filled by normalizer)', () => {
     const { regionId, ...noRegion } = valid;
     const r = validateAgainstSchema(noRegion, SETTLEMENT_SCHEMA);
-    assert.equal(r.valid, false);
-    assert.ok(r.errors.some(e => e.includes('regionId')));
+    assert.equal(r.valid, true);
   });
 
   it('rejects invalid NPC role', () => {

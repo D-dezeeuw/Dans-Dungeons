@@ -138,7 +138,7 @@ export const NPC_SCHEMA = {
     relationships: { type: 'array', items: NPC_RELATIONSHIP_SCHEMA },
     inventory:     { type: ['array', 'null'], items: NPC_INVENTORY_ITEM_SCHEMA },
   },
-  required: ['id', 'name', 'role', 'attitude', 'greeting', 'questHook', 'personality', 'secret', 'factionId', 'relationships', 'inventory'],
+  required: ['id', 'name', 'role', 'attitude', 'greeting'],
   additionalProperties: false,
 };
 
@@ -227,7 +227,7 @@ export const SETTLEMENT_SCHEMA = {
     },
     digest: { type: 'string' },
   },
-  required: ['id', 'name', 'description', 'regionId', 'npcs', 'exits', 'digest'],
+  required: ['id', 'name', 'description', 'npcs', 'exits'],
   additionalProperties: false,
 };
 

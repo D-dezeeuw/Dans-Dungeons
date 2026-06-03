@@ -73,13 +73,27 @@ export async function generateRegion(parentDigest) {
 // Receives region.digest only (~200 tok).
 
 export async function generateSettlement(parentDigest, regionId) {
-  return chatCompletion({
+  const raw = await chatCompletion({
     tier: 'medium',
-    max_tokens: 2000,
+    max_tokens: 3000,
     messages: [
       { role: 'system', content: t('ai.settlementPrompt', { parentDigest, regionId }) },
       { role: 'user',   content: t('ai.settlementUserMsg') },
     ],
     schema: SETTLEMENT_SCHEMA,
   });
+  if (!raw) return null;
+  // Normalize NPCs — fill missing optional fields so downstream code doesn't crash.
+  if (Array.isArray(raw.npcs)) {
+    for (const npc of raw.npcs) {
+      npc.personality   ??= '';
+      npc.secret        ??= null;
+      npc.factionId     ??= null;
+      npc.relationships ??= [];
+      npc.inventory     ??= null;
+      npc.questHook     ??= null;
+    }
+  }
+  raw.regionId ??= regionId;
+  return raw;
 }
