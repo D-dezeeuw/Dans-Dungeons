@@ -11,6 +11,9 @@ import * as UI from './ui/console.js';
 import { locale, setLocale, t } from './i18n/i18n.js';
 
 async function boot() {
+  // Expose game state for console debugging: game.world, game.party, etc.
+  window.game = appState;
+
   document.getElementById('skeleton-loading')?.remove();
   document.documentElement.classList.add('styles-loaded');
 
