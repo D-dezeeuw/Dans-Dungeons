@@ -654,16 +654,31 @@ export async function playLoop() {
         const scene   = buildScene();
         const actions = _collectChipValues(room, appState.party?.pc);
 
-        // Build structured navigation hint for the AI.
-        const navLines = [`Current room: ${room?.name ?? currentRoomId} (${currentRoomId})`];
-        navLines.push(`Visited rooms: ${[...visitedRooms].join(', ')}`);
+        // Build structured navigation hint with one-hop lookahead.
+        const allRooms = appState.world?.rooms ?? {};
+        const navLines = [`Current room: ${room?.name ?? currentRoomId}`];
+
+        let hasUnvisited = false;
         for (const exit of (room?.exits ?? [])) {
-          const targetRoom = appState.world?.rooms?.[exit.roomId];
+          const targetRoom = allRooms[exit.roomId];
           const visited = visitedRooms.has(exit.roomId);
-          const status = visited ? 'VISITED' : 'UNVISITED';
           const lock = exit.locked ? ' [LOCKED]' : '';
-          navLines.push(`  ${exit.dir} → ${targetRoom?.name ?? exit.roomId} (${status}${lock})`);
+
+          if (!visited) {
+            navLines.push(`  ${exit.dir} → ${targetRoom?.name ?? exit.roomId} — UNVISITED${lock} ← GO HERE`);
+            hasUnvisited = true;
+          } else {
+            // Check if this visited room connects to any unvisited rooms (lookahead).
+            const leadsToNew = (targetRoom?.exits ?? []).some(e => !visitedRooms.has(e.roomId) && e.roomId !== currentRoomId);
+            if (leadsToNew) {
+              navLines.push(`  ${exit.dir} → ${targetRoom?.name ?? exit.roomId} — visited, but LEADS TO UNVISITED ROOMS ← backtrack through here`);
+            } else {
+              navLines.push(`  ${exit.dir} → ${targetRoom?.name ?? exit.roomId} — visited, dead end`);
+            }
+          }
         }
+
+        if (!hasUnvisited) navLines.push('All adjacent rooms visited — backtrack to reach new areas.');
         const navigationHint = 'NAVIGATION:\n' + navLines.join('\n');
 
         raw = await generateAutoAction(scene, actions, appState.transcript ?? [], navigationHint);
