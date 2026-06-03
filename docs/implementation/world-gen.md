@@ -6,111 +6,190 @@ The world generation system builds an infinite, layered world around the
 existing procedural dungeon generator. Each layer is AI-generated with a
 strict JSON schema and receives only its parent's digest for token efficiency.
 
-## What's implemented (Phase A, tasks 1-4)
+---
 
-### Schemas (`src/ai/schemas.js`)
+## Phase A — Foundation
 
-Three new schemas added:
+### Completed (A1-A4)
 
-- **WORLD_SEED_SCHEMA** — name, tone (grimdark/heroic/mysterious), creation
-  myth, 2-3 gods with domains, red thread (premise + hook), digest
-- **REGION_SCHEMA** — id, name, climate, description, settlement name,
-  dungeon name, rumor, adjacent hints, digest
-- **SETTLEMENT_SCHEMA** — id, name, description, NPCs (id, name, role,
-  attitude, greeting, questHook), exits (direction, target, type, targetId),
-  digest
+| Task | Status | Files |
+|------|--------|-------|
+| A1: Schemas + data model | Done | `src/ai/schemas.js`, `src/core/state.js` |
+| A2: AI generators | Done | `src/game/worldgen.js` |
+| A3: Dungeon refactor | Done | `src/game/world.js` |
+| A4: Seeded RNG + location tests | Done | `src/game/world.js`, `tests/worldgen/*` |
 
-NPC roles: `innkeeper`, `questgiver`, `merchant`, `guard`, `elder`.
-Exit types: `dungeon`, `road`, `wilderness`.
+### Gap fixes needed before integration (A4.5)
 
-### Data model (`src/core/state.js`)
+The audit revealed 5 structural gaps that must be fixed before A5-A8
+integration, or we'd be building on an incomplete foundation.
 
-`appState.world` expanded with layered structure:
+#### G1: Deepen NPC schema
+
+The current NPC model is: id, name, role, attitude, greeting, questHook.
+That's a vending machine, not a person.
+
+**Add to SETTLEMENT_SCHEMA NPC items:**
 
 ```js
-world: {
-  seed, name, tone, lore, digest,  // L00 World
-  regions: {},                      // L02 keyed by slug id
-  settlements: {},                  // L03 keyed by slug id
-  dungeons: {},                     // L04 keyed by slug id
-  location: {                       // Player position
-    type, regionId, settlementId, dungeonId
-  },
-  // Legacy flat fields for backward compat
-  currentRoom, exitRoomId, rooms: {}, npcs: {},
+{
+  id, name, role, attitude, greeting, questHook,
+  // New fields:
+  personality: string,          // "gruff but kind", "paranoid and whispering"
+  secret: string | null,        // what they know/hide — narrator uses this
+  relationships: [{             // bonds to other NPCs
+    targetId: string,
+    type: 'spouse' | 'parent' | 'child' | 'rival' | 'ally' | 'employer',
+  }],
+  inventory: [{                 // for merchants — what they sell
+    name: string,
+    price: number,
+    description: string,
+  }] | null,
 }
 ```
 
-### AI generators (`src/game/worldgen.js`)
+**Files:** `src/ai/schemas.js`, `src/i18n/en.json`, `src/i18n/nl.json`,
+`tests/worldgen/schemas.test.js`
 
-Three async functions, each receiving only the parent digest:
+#### G2: Add faction schema + state
 
-- `generateWorldSeed()` — no parent, creates the root
-- `generateRegion(worldDigest)` — creates a region
-- `generateSettlement(regionDigest)` — creates a settlement
+Factions drive politics, NPC loyalties, and quest motivation.
 
-All use the `medium` tier with custom `max_tokens`.
+**New FACTION_SCHEMA:**
 
-### Dungeon generator (`src/game/world.js`)
+```js
+{
+  id: string,                   // "faction-silver-court"
+  name: string,                 // "The Silver Court"
+  description: string,          // what they stand for
+  values: string,               // "order, tradition, secrecy"
+  allies: [string],             // faction ids
+  enemies: [string],            // faction ids
+  territory: [string],          // region ids
+  digest: string,               // ~80 tok
+}
+```
 
-Refactored:
+**State:** Add `world.factions: {}` to DEFAULTS.
+**Generator:** Add `generateFactions(worldDigest)` to worldgen.js — called
+during world seed phase, returns 2-3 factions.
+**Files:** `src/ai/schemas.js`, `src/core/state.js`, `src/game/worldgen.js`,
+`src/i18n/*.json`, `tests/worldgen/schemas.test.js`
 
-- `generateDungeon(seed?)` — the core procedural generator, accepts optional
-  seed for deterministic output via Mulberry32 RNG
-- `generateWorld()` — legacy wrapper, calls `generateDungeon()` without a seed
-- `setDungeonRng(rng)` — inject a custom RNG function
-- All internal randomness (`pick`, `randInt`, `shuffle`) flows through `_rng`
+#### G3: Wire beat system for red thread
 
-### i18n (`src/i18n/en.json`, `src/i18n/nl.json`)
+The red thread is currently two strings (premise + hook). It needs to become
+a trackable story arc using bag-of-holding's beat schema.
 
-Worldgen AI prompts added to the `ai` section:
-- `worldSeedPrompt`, `worldSeedUserMsg`
-- `regionPrompt`, `regionUserMsg`
-- `settlementPrompt`, `settlementUserMsg`
-- `worldgenStep1` through `worldgenStep4`, `worldgenDone`
+**Add to world state:**
 
-### Tests (50 passing)
+```js
+world.redThread: {
+  beats: [],           // array of beat objects (from bag-of-holding schema)
+  currentIndex: 0,     // which beat is active
+  flags: {},           // { flagId: true } — prerequisites and completion markers
+}
+```
 
-| File | Tests | Coverage |
-|------|-------|----------|
-| `tests/worldgen/schemas.test.js` | 13 | All 3 schemas: valid, missing fields, invalid enums, extra fields, nullable |
-| `tests/worldgen/digest.test.js` | 5 | Cascade isolation: child sees only parent, S-cards compact, bounded growth |
-| `tests/worldgen/dungeon.test.js` | 10 | Shape contract: fields, exits bidirectional, key/treasure/lock, NPC stats, nesting |
-| `tests/worldgen/location.test.js` | 11 | Location transitions, world export/import, seeded RNG determinism |
-| `tests/worldgen/resolver-settlement.test.js` | 11 | Talk (by id/role/default, questHook), travel (by dir/name/id, impossible) |
+**Export beats from rules.js:** Add `Beats` to the re-export shim.
+**Generator:** Extend `generateWorldSeed()` to output 3-5 beats alongside
+the world seed (or as a separate `generateBeats(worldDigest)` call).
+**Files:** `src/game/rules.js`, `src/core/state.js`, `src/ai/schemas.js`,
+`src/game/worldgen.js`, `tests/worldgen/beats.test.js`
+
+#### G4: Add dungeon metadata + digest
+
+Dungeons generated by `generateDungeon()` lack identity — no id, name,
+description, theme, or digest. The narrator has zero world context when
+rendering dungeon scenes.
+
+**Wrap dungeon output with metadata:**
+
+```js
+// generateDungeon returns:
+{ currentRoom, exitRoomId, rooms, npcs }
+
+// Stored in world.dungeons as:
+{
+  id: 'dungeon-crypt',
+  name: 'The Sunken Crypt',        // from settlement exit targetName
+  description: '...',               // AI-generated or from settlement context
+  theme: 'undead' | 'goblin' | 'cult' | 'beast' | 'arcane',
+  regionId: 'region-ashvale',
+  digest: '...',                    // ~100 tok summary
+  completed: false,
+  seed: 12345,                      // for replay
+  ...dungeonOutput,                 // rooms, npcs, currentRoom, exitRoomId
+}
+```
+
+**Digest generation:** After procedural dungeon is created, generate a
+~100 tok digest from its rooms/enemies/loot for the narrator.
+**Files:** `src/game/world.js`, `src/game/worldgen.js`,
+`tests/worldgen/dungeon.test.js`
+
+#### G5: Complete digest cascade
+
+Every entity at every level must have a digest. Currently missing from:
+- Rooms (L05) — no digest, narrator re-enters blind
+- NPCs — no individual digest
+- Dungeons (L04) — no digest (fixed by G4)
+
+**Room digest:** Not AI-generated — derive from room name + description
+(first 50 chars). Pure function, no AI cost.
+
+**NPC digest:** Derive from name + role + personality (first 50 chars).
+
+**Narrator context:** `buildScene()` in loop.js must assemble the
+leaf-to-root S-card chain:
+```
+room S-card (~30 tok)
++ dungeon digest (~50 tok)
++ settlement digest (~50 tok)
++ region digest (~50 tok)
++ world digest (~50 tok)
+= ~230 tok total
+```
+
+**Files:** `src/game/loop.js`, `tests/worldgen/digest.test.js`
 
 ---
 
-## What's remaining (Phase A, tasks 5-8)
+### Implementation order for gap fixes
 
-### A5: Game flow rewrite (`src/game/flow.js`)
-- Start menu: "Quick Dungeon" vs "New Campaign"
-- Campaign flow: worldgen progress → settlement scene → dungeon entry
-- Settlement play loop (talk, travel, rest)
-- Victory returns to settlement instead of game over
+```
+G1 (NPC schema)     — schema + prompt + tests
+G2 (Factions)       — schema + state + generator + tests
+G3 (Beat system)    — rules.js export + state + schema + tests
+G4 (Dungeon meta)   — wrapper + digest + tests
+G5 (Digest cascade) — room/NPC digests + buildScene update + tests
+```
 
-### A6: AI context expansion
-- `buildScene()` in `loop.js` includes leaf-to-root digest path
-- Narrator prompt gets world/region/settlement S-cards
-- Classifier handles settlement intents (talk, travel, buy)
+Each gap fix is independently testable. Run `npm test` after each.
 
-### A7: Settlement UI
-- Settlement chips (talk to NPCs, travel to exits)
-- Action bar adaptation for settlement context
-- World export/import buttons in sidebar
+---
 
-### A8: Build and verify end-to-end
+### Remaining integration (A5-A8)
+
+After gap fixes:
+
+| Task | What |
+|------|------|
+| A5 | Game flow: start menu (Quick Dungeon / Campaign), worldgen progress, settlement scene, dungeon entry, victory → return |
+| A6 | AI context: buildScene with digest path, narrator world lore, classifier settlement intents |
+| A7 | Settlement UI: chips (talk/travel/buy), action bar, world export/import |
+| A8 | Build, verify end-to-end, merge to main |
 
 ---
 
 ## Phase B: Lazy expansion (planned)
 
 On-the-fly generation when the player moves beyond generated content.
-Each lazy generator receives only its parent's digest.
 
-## Phase C: Red thread + beats (planned)
+## Phase C: Red thread + beats (planned, foundation in G3)
 
-5-10 beat story arc using `bag-of-holding`'s beat schema and thread runtime.
+5-10 beat story arc using bag-of-holding's beat schema and thread runtime.
 
 ## Phase D: Advanced settlements (planned)
 
@@ -123,6 +202,22 @@ Buy/sell, inn rest, side quests, faction reputation.
 1. **Cascading digests** — child sees only parent, never grandparent
 2. **Seeded RNG** — all procedural output deterministic from seed
 3. **Schema-first** — every AI call has a strict JSON schema
-4. **Backward compat** — legacy flat world fields preserved until flow.js migrates
-5. **Test-driven** — every contract tested before integration
-6. **Quick start** — always offer instant dungeon alongside slow worldgen
+4. **Rich NPCs** — personality, secrets, relationships, not just role/greeting
+5. **Faction-driven** — politics and loyalties shape NPC behaviour and quests
+6. **Beat-tracked** — red thread story arc is machine-readable, not just prose
+7. **Test-driven** — every contract tested before integration
+8. **Debuggable** — all state serializes to readable JSON, exportable standalone
+
+## Test coverage
+
+| File | Tests | Coverage |
+|------|-------|----------|
+| schemas.test.js | 13 | All schemas: valid, missing, invalid enum, extra, nullable |
+| digest.test.js | 5 | Cascade isolation, S-cards compact, bounded growth |
+| dungeon.test.js | 10 | Shape, exits, key/treasure/lock, NPC stats, nesting |
+| location.test.js | 11 | Transitions, export/import, seeded RNG determinism |
+| resolver-settlement.test.js | 11 | Talk (id/role/default), travel (dir/name/id) |
+| **Total** | **50** | |
+
+Gap fixes will add: NPC relationship tests, faction schema tests, beat
+system tests, dungeon metadata tests, complete digest chain tests.
