@@ -10,7 +10,7 @@ import { processTurn, checkApiKey, generateTurnImage, buildScene } from './loop.
 import * as UI from '../ui/console.js';
 import { t } from '../i18n/i18n.js';
 import { getSkills } from '../ui/chips.js';
-import { modelsForTier } from '../ai/tiers.js';
+import { modelsForTier, getFreeKey } from '../ai/tiers.js';
 
 // TTS helpers — imported lazily so the audio module is a no-op when TTS is off.
 function _speak(text) {
@@ -78,51 +78,57 @@ export async function setupKey() {
   UI.clear();
   UI.appendEntry('gm',     t('setup.gameName'));
   UI.appendEntry('system', '');
-  UI.appendEntry('system', t('setup.needKey'));
-  UI.appendEntry('system', t('setup.signUp'));
-  UI.appendEntry('system', t('tier.keyFreeHint'));
-  UI.appendEntry('system', '');
 
-  const key = await UI.prompt(t('setup.pasteKey'));
-  setValue('ai.key', key.trim());
-
-  UI.appendEntry('system', '');
-  UI.appendEntry('system', t('setup.defaultUrl', { url: DEFAULT_BASE_URL }));
-  const customUrl = await UI.prompt(t('setup.customUrl'));
-  if (customUrl.trim()) setValue('ai.baseUrl', customUrl.trim());
-  UI.appendEntry('system', '');
-  UI.appendEntry('system', t('setup.keySaved'));
-
-  // Tier choice
-  UI.appendEntry('system', '');
+  // Tier choice — free plays immediately, deluxe requires a key.
   const tierChoice = await UI.pickFrom(
     t('tier.upgradeQuestion'),
-    ['deluxe', 'free'],
+    ['free', 'deluxe'],
     x => x === 'deluxe' ? t('tier.upgradeYes') : t('tier.upgradeNo'),
-    1,
+    0,
   );
-  applyTier(tierChoice);
-  UI.appendEntry('system', tierChoice === 'deluxe' ? t('tier.upgraded') : '');
+
+  if (tierChoice === 'deluxe') {
+    UI.appendEntry('system', '');
+    UI.appendEntry('system', t('setup.needKey'));
+    UI.appendEntry('system', t('setup.signUp'));
+    UI.appendEntry('system', '');
+    const key = await UI.prompt(t('setup.pasteKey'));
+    setValue('ai.key', key.trim());
+
+    UI.appendEntry('system', '');
+    UI.appendEntry('system', t('setup.defaultUrl', { url: DEFAULT_BASE_URL }));
+    const customUrl = await UI.prompt(t('setup.customUrl'));
+    if (customUrl.trim()) setValue('ai.baseUrl', customUrl.trim());
+    UI.appendEntry('system', '');
+    UI.appendEntry('system', t('setup.keySaved'));
+    applyTier('deluxe');
+    UI.appendEntry('system', t('tier.upgraded'));
+  } else {
+    // Free tier — use embedded key, no prompt needed.
+    setValue('ai.key', getFreeKey());
+    applyTier('free');
+    UI.appendEntry('system', '');
+  }
 }
 
-// Upgrade to deluxe from settings — prompts for key if needed.
+// Upgrade to deluxe from settings — prompts for key.
 export async function upgradeToDeluxe() {
-  if (!appState.ai?.key) {
-    const key = await UI.prompt(t('setup.pasteKey'));
-    if (!key.trim()) return;
-    setValue('ai.key', key.trim());
-  }
+  const key = await UI.prompt(t('setup.pasteKey'));
+  if (!key.trim()) return;
+  setValue('ai.key', key.trim());
   const valid = await checkApiKey();
   if (valid) {
     applyTier('deluxe');
     UI.appendEntry('system', t('tier.upgraded'));
   } else {
     UI.appendEntry('error', t('tier.downgraded'));
+    setValue('ai.key', getFreeKey());
     applyTier('free');
   }
 }
 
 async function reAuthKey() {
+  // Try to re-auth; on failure fall back to free key.
   setValue('ai.key', '');
   tick();
   UI.appendEntry('system', '');
@@ -133,20 +139,26 @@ async function reAuthKey() {
     tick();
     saveToStorage();
     UI.appendEntry('system', t('setup.keyUpdated'));
+  } else {
+    setValue('ai.key', getFreeKey());
+    applyTier('free');
   }
 }
 
 export async function ensureKey() {
+  // No key at all — first visit. Run setup.
   if (!appState.ai?.key) { await setupKey(); tick(); return; }
-  // Returning player — validate key, restore tier.
-  const valid = await checkApiKey();
-  if (!valid) {
-    setValue('ai.key', '');
-    applyTier('free');
-    UI.appendEntry('error', t('tier.downgraded'));
-    await setupKey();
-    tick();
+
+  // Returning player with deluxe key — validate it.
+  if ((appState.ai?.tier ?? 'free') === 'deluxe') {
+    const valid = await checkApiKey();
+    if (!valid) {
+      UI.appendEntry('error', t('tier.downgraded'));
+      setValue('ai.key', getFreeKey());
+      applyTier('free');
+    }
   }
+  // Free tier with embedded key — always valid, no check needed.
 }
 
 // Helper: check if current tier allows a feature, show gate message if not.
