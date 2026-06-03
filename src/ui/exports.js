@@ -233,9 +233,47 @@ export async function exportWorldBible() {
     const { generateWorldBible } = await import('../game/worldbible.js');
     const { world, chapters } = await generateWorldBible(progress);
 
-    // Save raw world JSON to localStorage for potential import.
+    // Structure hierarchically and expose for debugging.
+    const structured = {
+      L00_world: {
+        name: world.seed?.name,
+        tone: world.seed?.tone,
+        creation: world.seed?.creation,
+        gods: world.seed?.gods,
+        redThread: world.seed?.redThread,
+        digest: world.seed?.digest,
+        factions: Object.fromEntries((world.factions ?? []).map(f => [f.id, f])),
+        beats: world.beats ?? [],
+      },
+      L02_regions: {
+        [world.region?.id ?? 'region-0']: {
+          ...world.region,
+          L03_settlements: {
+            [world.settlement?.id ?? 'settlement-0']: {
+              ...world.settlement,
+              L04_dungeons: {
+                [world.dungeon?.id ?? 'dungeon-0']: {
+                  id: world.dungeon?.id,
+                  name: world.dungeon?.name,
+                  theme: world.dungeon?.theme,
+                  digest: world.dungeon?.digest,
+                  seed: world.dungeon?.seed,
+                  roomCount: Object.keys(world.dungeon?.rooms ?? {}).length,
+                  enemyCount: Object.keys(world.dungeon?.npcs ?? {}).length,
+                  rooms: world.dungeon?.rooms,
+                  npcs: world.dungeon?.npcs,
+                },
+              },
+            },
+          },
+        },
+      },
+    };
+    window.world = structured;
+    console.log('%c[World Bible] Explore with: world', 'color: #d4b896; font-weight: bold', structured);
+
     try {
-      localStorage.setItem('dg-world-bible', JSON.stringify(world));
+      localStorage.setItem('dg-world-bible', JSON.stringify(structured));
     } catch { /* quota */ }
 
     appendEntry('system', t('exports.worldBibleBuilding'));
