@@ -4,7 +4,7 @@
 // JSON repair pass, and key validation. No prompt logic lives here.
 
 import { appState, addValue } from '../core/state.js';
-import { DEFAULT_MODELS } from './tiers.js';
+import { DEFAULT_MODELS, FREE_FALLBACKS } from './tiers.js';
 import { NarrationExtractor } from './stream.js';
 
 // ─── Internal helpers ─────────────────────────────────────────────────────────
@@ -44,10 +44,10 @@ export async function checkKey() {
 
 // ─── Non-streaming fetch ──────────────────────────────────────────────────────
 
-async function _callOnce({ tier = 'medium', messages, schema, max_tokens }) {
+async function _callOnce({ tier = 'medium', messages, schema, max_tokens, _modelOverride }) {
   const ai    = appState.ai || {};
   const base  = (ai.baseUrl || 'https://openrouter.ai/api/v1').replace(/\/$/, '');
-  const model = modelFor(tier, ai);
+  const model = _modelOverride ?? modelFor(tier, ai);
   if (!model) throw new Error(`No model configured for tier '${tier}'.`);
 
   const body = {
@@ -80,13 +80,26 @@ async function _callOnce({ tier = 'medium', messages, schema, max_tokens }) {
   return data.choices[0].message.content;
 }
 
-// On 400 (content filter, unsupported feature, etc.) retry with the medium tier.
+// On 400: retry with medium tier. On 429: try fallback models from FREE_FALLBACKS.
 export async function _call(opts) {
   try {
     return await _callOnce(opts);
   } catch (err) {
+    // 400 — content filter / unsupported feature → fall back to medium tier.
     if (err.message.startsWith('AI 400:') && opts.tier !== 'medium') {
       return await _callOnce({ ...opts, tier: 'medium' });
+    }
+    // 429 — rate limited → try fallback models for this tier.
+    if (err.message.startsWith('AI 429:') && opts.tier) {
+      const fallbacks = FREE_FALLBACKS[opts.tier] ?? [];
+      for (const model of fallbacks) {
+        try {
+          return await _callOnce({ ...opts, _modelOverride: model });
+        } catch (fbErr) {
+          if (!fbErr.message.startsWith('AI 429:')) throw fbErr;
+          // Also 429 on fallback — try next
+        }
+      }
     }
     throw err;
   }

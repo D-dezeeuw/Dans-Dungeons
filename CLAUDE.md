@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Commands
 
 ```bash
-npm run serve   # serves the repo root; open: http://localhost:8000
+npm run serve   # serves the repo root; open: http://localhost:3000
 node build.js   # esbuild bundle → vendor/app.bundle.js + version stamp
 npm test        # node --test tests/ — zero-dep test runner (Node 20+)
 ```

@@ -82,7 +82,14 @@
     "pasteValid": "Paste a valid OpenRouter API key to continue:",
     "keyUpdated": "Key updated — retrying…",
     "reRunSetup": "Re-running key setup…",
-    "createCancelled": "Character creation cancelled. Refresh to try again."
+    "createCancelled": "Character creation cancelled. Refresh to try again.",
+    "connectQuestion": "How would you like to connect?",
+    "connectOAuth": "Connect with OpenRouter (free, 30 seconds)",
+    "connectPaste": "I already have an API key",
+    "connectTry": "Try without an account (shared, may be slow)",
+    "connectingOAuth": "Redirecting to OpenRouter…",
+    "oauthSuccess": "Connected! Your personal API key has been saved.",
+    "oauthFail": "Connection failed. You can paste a key manually with /settings."
   },
   "tier": {
     "upgradeQuestion": "Do you want to upgrade to the Deluxe tier?",

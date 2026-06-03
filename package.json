@@ -6,7 +6,7 @@
   "description": "Text-based, AI-driven D&D type game. 100% client-side, Dan's Dungeons is hostable on GitHub Pages.",
   "scripts": {
     "build": "node build.js",
-    "serve": "python3 -m http.server 8000",
+    "serve": "python3 -m http.server 3000",
     "test": "node --test 'tests/**/*.test.js'"
   },
   "devDependencies": {

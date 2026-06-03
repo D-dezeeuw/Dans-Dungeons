@@ -125,8 +125,28 @@ async function boot() {
   if (appState.settings?.roleplayMode) document.body.classList.add('roleplay-mode');
   if (appState.settings?.autoplay) document.getElementById('autoplay-btn')?.classList.add('active');
 
-  const urlKey = new URLSearchParams(location.search).get('key');
-  if (urlKey) {
+  // Handle OAuth callback (?code=) or direct key (?key=) from URL.
+  const params = new URLSearchParams(location.search);
+  const urlKey  = params.get('key');
+  const urlCode = params.get('code');
+
+  if (urlCode) {
+    history.replaceState(null, '', location.pathname);
+    try {
+      const { exchangeCodeForKey } = await import('./ai/auth.js');
+      const key = await exchangeCodeForKey(urlCode);
+      setValue('ai.key', key);
+      saveToStorage();
+      import('./ui/transcript.js').then(({ appendEntry }) =>
+        appendEntry('system', t('setup.oauthSuccess'))
+      );
+    } catch (e) {
+      console.error('OAuth key exchange failed:', e);
+      import('./ui/transcript.js').then(({ appendEntry }) =>
+        appendEntry('error', t('setup.oauthFail'))
+      );
+    }
+  } else if (urlKey) {
     setValue('ai.key', urlKey.trim());
     history.replaceState(null, '', location.pathname);
   }

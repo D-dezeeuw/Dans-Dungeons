@@ -39,3 +39,12 @@ export const PAID_MODELS = {
 export function modelsForTier(tier) {
   return tier === 'deluxe' ? { ...PAID_MODELS } : { ...FREE_MODELS };
 }
+
+// Fallback chains for 429 rate-limit retries.
+// Each tier slot maps to an ordered list of alternative models.
+// On 429, the client tries the next model in the chain.
+export const FREE_FALLBACKS = {
+  tiny:   ['qwen/qwen3-72b:free', 'meta-llama/llama-4-scout:free'],
+  medium: ['deepseek/deepseek-chat-v3-0324:free', 'meta-llama/llama-4-maverick:free'],
+  large:  ['deepseek/deepseek-chat-v3-0324:free', 'meta-llama/llama-4-maverick:free'],
+};

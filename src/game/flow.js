@@ -12,6 +12,7 @@ import * as UI from '../ui/console.js';
 import { t } from '../i18n/i18n.js';
 import { getSkills } from '../ui/chips.js';
 import { modelsForTier, _cfg } from '../ai/tiers.js';
+import { redirectToOpenRouter } from '../ai/auth.js';
 
 // TTS helpers — imported lazily so the audio module is a no-op when TTS is off.
 function _speak(text) {
@@ -80,15 +81,26 @@ export async function setupKey() {
   UI.appendEntry('gm',     t('setup.gameName'));
   UI.appendEntry('system', '');
 
-  // Tier choice — free plays immediately, deluxe requires a key.
-  const tierChoice = await UI.pickFrom(
-    t('tier.upgradeQuestion'),
-    ['free', 'deluxe'],
-    x => x === 'deluxe' ? t('tier.upgradeYes') : t('tier.upgradeNo'),
+  // Three-option connect flow.
+  const choice = await UI.pickFrom(
+    t('setup.connectQuestion'),
+    ['oauth', 'paste', 'try'],
+    x => x === 'oauth' ? t('setup.connectOAuth')
+       : x === 'paste' ? t('setup.connectPaste')
+       : t('setup.connectTry'),
     0,
   );
 
-  if (tierChoice === 'deluxe') {
+  if (choice === 'oauth') {
+    // Redirect to OpenRouter — page navigates away, returns with ?code=.
+    UI.appendEntry('system', t('setup.connectingOAuth'));
+    redirectToOpenRouter();
+    // Flow resumes on reload (main.js handles ?code=).
+    return;
+  }
+
+  if (choice === 'paste') {
+    // Manual key paste (existing flow).
     UI.appendEntry('system', '');
     UI.appendEntry('system', t('setup.needKey'));
     UI.appendEntry('system', t('setup.signUp'));
@@ -102,13 +114,24 @@ export async function setupKey() {
     if (customUrl.trim()) setValue('ai.baseUrl', customUrl.trim());
     UI.appendEntry('system', '');
     UI.appendEntry('system', t('setup.keySaved'));
-    applyTier('deluxe');
-    UI.appendEntry('system', t('tier.upgraded'));
-  } else {
-    // Free tier — use embedded key, no prompt needed.
+  }
+
+  if (choice === 'try') {
+    // Shared embedded key — rate-limited.
     setValue('ai.key', _cfg());
-    applyTier('free');
     UI.appendEntry('system', '');
+  }
+
+  // Tier choice (for paste + try paths; OAuth returns later).
+  if (choice !== 'oauth') {
+    const tierChoice = await UI.pickFrom(
+      t('tier.upgradeQuestion'),
+      ['free', 'deluxe'],
+      x => x === 'deluxe' ? t('tier.upgradeYes') : t('tier.upgradeNo'),
+      0,
+    );
+    applyTier(tierChoice);
+    if (tierChoice === 'deluxe') UI.appendEntry('system', t('tier.upgraded'));
   }
 }
 
