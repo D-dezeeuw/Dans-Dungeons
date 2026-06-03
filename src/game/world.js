@@ -287,6 +287,31 @@ export function generateDungeon(seed) {
   };
 }
 
+// ─── Dungeon entry wrapper ────────────────────────────────────────────────────
+// Wraps raw generateDungeon() output with metadata for world.dungeons storage.
+
+const DUNGEON_THEMES = ['undead', 'goblin', 'cult', 'beast', 'arcane', 'ruin'];
+
+export function createDungeonEntry({ id, name, regionId, seed: entrySeed }) {
+  const dungeonSeed = entrySeed ?? Math.floor(Math.random() * 2147483647);
+  const dungeon     = generateDungeon(dungeonSeed);
+  const roomCount   = Object.keys(dungeon.rooms).length;
+  const enemyNames  = Object.values(dungeon.npcs).map(n => n.name);
+  const theme       = pick(DUNGEON_THEMES);
+
+  return {
+    id:          id ?? `dungeon-${dungeonSeed}`,
+    name:        name ?? 'Unknown Dungeon',
+    description: `A ${theme} dungeon with ${roomCount} chambers.`,
+    theme,
+    regionId:    regionId ?? null,
+    digest:      `${name ?? 'Dungeon'} — ${theme}, ${roomCount} rooms, ${enemyNames.join(', ') || 'no enemies'}.`,
+    completed:   false,
+    seed:        dungeonSeed,
+    ...dungeon,
+  };
+}
+
 // Legacy wrapper — returns the flat world shape that flow.js currently expects.
 // Once flow.js is updated for the layered model, this can be removed.
 export function generateWorld() {

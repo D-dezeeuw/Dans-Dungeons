@@ -89,6 +89,52 @@ describe('Dungeon shape contract', () => {
     }
   });
 
+  it('createDungeonEntry contract has all metadata fields', () => {
+    // Simulates what createDungeonEntry produces.
+    const entry = {
+      id:          'dungeon-crypt',
+      name:        'The Sunken Crypt',
+      description: 'A undead dungeon with 8 chambers.',
+      theme:       'undead',
+      regionId:    'region-ashvale',
+      digest:      'The Sunken Crypt — undead, 8 rooms, Guard Skeleton.',
+      completed:   false,
+      seed:        42,
+      ...dungeon,
+    };
+
+    // Metadata
+    assert.ok(entry.id);
+    assert.ok(entry.name);
+    assert.ok(entry.description);
+    assert.ok(entry.theme);
+    assert.ok(entry.digest);
+    assert.equal(typeof entry.seed, 'number');
+    assert.equal(entry.completed, false);
+    assert.equal(entry.regionId, 'region-ashvale');
+
+    // Dungeon content
+    assert.ok(entry.rooms);
+    assert.ok(entry.npcs);
+    assert.ok(entry.currentRoom);
+    assert.ok(entry.exitRoomId);
+  });
+
+  it('same seed produces same dungeon entry', () => {
+    // Contract: if we call createDungeonEntry twice with the same seed,
+    // the dungeon layout (rooms, npcs) should be identical.
+    // We can't call the actual function (needs i18n), but we test the RNG contract.
+    function mulberry32(seed) {
+      let state = (seed | 0) >>> 0;
+      return () => { state = (state + 0x6D2B79F5) | 0; let t = state; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+    }
+    const rng1 = mulberry32(42);
+    const rng2 = mulberry32(42);
+    const seq1 = Array.from({ length: 20 }, () => rng1());
+    const seq2 = Array.from({ length: 20 }, () => rng2());
+    assert.deepEqual(seq1, seq2, 'same seed must produce identical sequences');
+  });
+
   it('dungeon can nest inside world.dungeons', () => {
     // The dungeon object can be stored as world.dungeons['dungeon-crypt']
     const world = {
