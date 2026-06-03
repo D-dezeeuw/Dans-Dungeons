@@ -6,6 +6,7 @@
 
 import { generateWorldSeed, generateFactions, generateBeats, generateRegion, generateSettlement } from './worldgen.js';
 import { createDungeonEntry } from './world.js';
+import { buildWorldBlueprint } from './worldseed.js';
 import { chatCompletion } from '../ai/client.js';
 import { t, locale } from '../i18n/i18n.js';
 import { JOURNAL_SCHEMA } from '../ai/schemas.js';
@@ -35,33 +36,37 @@ function truncate(s, n = 200) {
 // ─── Pipeline ────────────────────────────────────────────────────────────────
 
 export async function generateWorldBible(onProgress) {
-  // Step 1: World seed (critical — retry once)
+  // Step 0: Build blueprint from seeded RNG (instant, deterministic).
+  const blueprintSeed = Math.floor(Math.random() * 2147483647);
+  const blueprint = buildWorldBlueprint(blueprintSeed);
+  onProgress('detail', `Blueprint: ${blueprint.tone} ${blueprint.worldArchetype}, ${blueprint.threatType}, ${blueprint.climate}.`);
+
+  // Step 1: World seed (critical — retry once). Blueprint constrains the AI.
   onProgress('worldgenStep1');
-  const seed = await withRetry(() => generateWorldSeed(), 'World seed');
+  const seed = await withRetry(() => generateWorldSeed(blueprint), 'World seed');
   if (!seed) throw new Error('World seed generation failed — no response from AI.');
-  ensureDigest(seed, `${seed.name ?? 'World'} — ${seed.tone ?? 'fantasy'}. ${seed.redThread?.premise ?? ''}`);
+  ensureDigest(seed, `${seed.name ?? 'World'} — ${seed.tone ?? blueprint.tone}. ${seed.redThread?.premise ?? ''}`);
 
   const gods = (seed.gods ?? []).map(g => g.name).join(', ');
   onProgress('detail', `World: "${seed.name}" (${seed.tone}). Gods: ${gods || 'none'}.`);
 
-  // Step 2: Factions (optional — no retry, fail-and-continue)
+  // Steps 2+3: Factions + Beats IN PARALLEL (both depend on world digest only).
   onProgress('worldgenStep2');
-  let factions = [];
-  try {
-    const result = await generateFactions(seed.digest);
-    factions = result?.factions ?? [];
-  } catch (e) {
-    console.warn('Faction generation failed, continuing without:', e.message);
-  }
-  if (factions.length) {
-    onProgress('detail', `Factions: ${factions.length} created — ${factions.map(f => f.name).join(', ')}.`);
-  } else {
-    onProgress('detail', 'Factions: skipped (generation failed).');
-  }
-
-  // Step 3: Beats / red thread (optional — no retry, fail-and-continue)
   onProgress('worldgenStep3');
-  let beats = [];
+
+  const [factionsResult, beatsResult] = await Promise.allSettled([
+    generateFactions(seed.digest, blueprint),
+    generateBeats(seed.digest, blueprint),
+  ]);
+
+  let factions = factionsResult.status === 'fulfilled' ? (factionsResult.value?.factions ?? []) : [];
+  let beats    = beatsResult.status === 'fulfilled'    ? (beatsResult.value?.beats ?? [])       : [];
+
+  if (factionsResult.status === 'rejected') console.warn('Faction generation failed:', factionsResult.reason?.message);
+  if (beatsResult.status === 'rejected')    console.warn('Beat generation failed:', beatsResult.reason?.message);
+
+  onProgress('detail', factions.length ? `Factions: ${factions.length} — ${factions.map(f => f.name).join(', ')}.` : 'Factions: skipped.');
+  onProgress('detail', beats.length ? `Red thread: ${beats.length} beats. "${truncate(beats[0]?.dramaticPurpose, 120)}"` : 'Red thread: skipped.');
   try {
     const result = await generateBeats(seed.digest);
     beats = result?.beats ?? [];
@@ -78,7 +83,7 @@ export async function generateWorldBible(onProgress) {
   onProgress('worldgenStep4');
   let region = null;
   try {
-    region = await withRetry(() => generateRegion(seed.digest), 'Region');
+    region = await withRetry(() => generateRegion(seed.digest, blueprint), 'Region');
     if (region) {
       ensureDigest(region, `${region.name ?? 'Region'} — ${region.climate ?? ''}. ${region.settlementName ?? ''}.`);
       onProgress('detail', `Region: "${region.name}" (${region.climate}). Settlement: ${region.settlementName}. Dungeon: ${region.dungeonName}.`);
@@ -93,7 +98,7 @@ export async function generateWorldBible(onProgress) {
   let settlement = null;
   if (region) {
     try {
-      settlement = await withRetry(() => generateSettlement(region.digest, region.id), 'Settlement');
+      settlement = await withRetry(() => generateSettlement(region.digest, region.id, blueprint), 'Settlement');
       if (settlement) {
         ensureDigest(settlement, `${settlement.name ?? 'Settlement'} — ${(settlement.npcs ?? []).map(n => n.name).join(', ')}.`);
         const npcNames = (settlement.npcs ?? []).map(n => `${n.name} (${n.role})`).join(', ');
@@ -123,7 +128,7 @@ export async function generateWorldBible(onProgress) {
     onProgress('detail', 'Dungeon: skipped (generation failed).');
   }
 
-  const world = { seed, factions, beats, region, settlement, dungeon };
+  const world = { blueprint, seed, factions, beats, region, settlement, dungeon };
   const rawChapters = formatChapters(world);
 
   // Step 7: LLM prose polish — rewrite raw chapters into D&D sourcebook prose.
