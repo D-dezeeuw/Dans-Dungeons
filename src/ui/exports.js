@@ -247,6 +247,8 @@ export async function exportWorldBible() {
       title:    world.seed?.name ?? 'Unknown World',
       subtitle: `A ${world.seed?.tone ?? 'fantasy'} world — Dan's Dungeons`,
       lang:     locale(),
+      tone:     world.seed?.tone ?? null,
+      tagline:  world.seed?.redThread?.premise ?? null,
       chapters,
     });
 

@@ -6,6 +6,9 @@
 
 import { generateWorldSeed, generateFactions, generateBeats, generateRegion, generateSettlement } from './worldgen.js';
 import { createDungeonEntry } from './world.js';
+import { chatCompletion } from '../ai/client.js';
+import { t, locale } from '../i18n/i18n.js';
+import { JOURNAL_SCHEMA } from '../ai/schemas.js';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -103,9 +106,65 @@ export async function generateWorldBible(onProgress) {
   onProgress('detail', `Dungeon: "${dungeon.name}" (${dungeon.theme}). ${roomCount} rooms, ${enemyCount} enemies.`);
 
   const world = { seed, factions, beats, region, settlement, dungeon };
-  const chapters = formatChapters(world);
+  const rawChapters = formatChapters(world);
+
+  // Step 7: LLM prose polish — rewrite raw chapters into D&D sourcebook prose.
+  onProgress('detail', 'Polishing chapters into prose…');
+  let chapters;
+  try {
+    chapters = await polishChapters(rawChapters);
+    onProgress('detail', `Polished ${chapters.length} chapters.`);
+  } catch (e) {
+    console.warn('Polish pass failed, using raw chapters:', e.message);
+    chapters = rawChapters;
+  }
+
+  // Add colophon (metadata page — not LLM-generated)
+  chapters.push({
+    heading: 'Colophon',
+    text: [
+      'Generation Metadata',
+      '',
+      `World: ${seed.name}`,
+      `Tone: ${seed.tone}`,
+      `Generated: ${new Date().toISOString().slice(0, 10)}`,
+      '',
+      'Layers generated:',
+      `  World seed — ${seed.name} (${(seed.gods ?? []).length} gods)`,
+      `  Factions — ${factions.length} created`,
+      `  Red thread — ${beats.length} story beats`,
+      `  Region — ${region.name} (${region.climate})`,
+      `  Settlement — ${settlement.name} (${(settlement.npcs ?? []).length} NPCs)`,
+      `  Dungeon — ${dungeon.name} (${roomCount} rooms, ${enemyCount} enemies)`,
+    ].join('\n'),
+  });
 
   return { world, chapters };
+}
+
+// ─── LLM prose polish ────────────────────────────────────────────────────────
+// Rewrites raw chapters into polished D&D sourcebook prose via a single LLM call.
+
+async function polishChapters(rawChapters) {
+  // Exclude the appendix (last chapter if it's raw JSON) from polishing.
+  const toPolish = rawChapters.filter(ch => ch.heading !== 'Appendix: World Data');
+
+  const rawText = toPolish.map(ch => `=== ${ch.heading} ===\n${ch.text}`).join('\n\n');
+
+  const result = await chatCompletion({
+    tier: 'medium',
+    max_tokens: 6000,
+    messages: [
+      { role: 'system', content: t('ai.polishPrompt', { language: locale() === 'nl' ? 'Dutch' : 'English' }) },
+      { role: 'user',   content: rawText },
+    ],
+    schema: JOURNAL_SCHEMA,   // reuses { title, chapters: [{ heading, text }] }
+  });
+
+  if (result?.chapters?.length) {
+    return result.chapters;
+  }
+  return toPolish; // fallback to raw if LLM fails
 }
 
 // ─── Chapter formatter ───────────────────────────────────────────────────────
@@ -244,17 +303,6 @@ function formatChapters({ seed, factions, beats, region, settlement, dungeon }) 
       '',
       enemies.length ? `Enemies:\n${enemyText}` : 'No enemies.',
     ].join('\n'),
-  });
-
-  // Appendix: Raw JSON
-  const worldJson = JSON.stringify({
-    seed, factions, beats, region,
-    settlement: { ...settlement, npcs: (settlement.npcs ?? []).map(({ inventory, ...npc }) => ({ ...npc, hasInventory: !!inventory?.length })) },
-    dungeon: { id: dungeon.id, name: dungeon.name, theme: dungeon.theme, seed: dungeon.seed, roomCount: rooms.length, enemyCount: enemies.length },
-  }, null, 2);
-  ch.push({
-    heading: 'Appendix: World Data',
-    text: worldJson,
   });
 
   return ch;

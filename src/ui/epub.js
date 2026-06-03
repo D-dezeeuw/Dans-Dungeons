@@ -125,29 +125,38 @@ function _crc32(buf) {
 
 // ─── Cover image (canvas-rendered) ───────────────────────────────────────────
 
-async function _renderCover(title, subtitle) {
+// Tone-driven color palettes for covers.
+const TONE_PALETTE = {
+  grimdark:    { bg: '#1a0a0a', border: '#6b2020', accent: '#a03030', text: '#d4a878', brand: '#8c5a3a' },
+  heroic:      { bg: '#0a1a3a', border: '#2a4a7a', accent: '#c8a020', text: '#e0d8c0', brand: '#8ca0c0' },
+  mysterious:  { bg: '#1a0a2a', border: '#4a2a6a', accent: '#8a6ab0', text: '#d0c8e0', brand: '#9080a8' },
+};
+const DEFAULT_PALETTE = { bg: '#f5e6c8', border: '#8c6a3a', accent: '#c8a878', text: '#3a2a1a', brand: '#8c6a3a' };
+
+async function _renderCover(title, subtitle, tone, tagline) {
   const W = 600, H = 800;
   const canvas = new OffscreenCanvas(W, H);
   const ctx    = canvas.getContext('2d');
+  const p      = TONE_PALETTE[tone] ?? DEFAULT_PALETTE;
 
-  // Parchment background
-  ctx.fillStyle = '#f5e6c8';
+  // Background
+  ctx.fillStyle = p.bg;
   ctx.fillRect(0, 0, W, H);
 
   // Decorative border
-  ctx.strokeStyle = '#8c6a3a';
+  ctx.strokeStyle = p.border;
   ctx.lineWidth   = 2;
   ctx.strokeRect(30, 30, W - 60, H - 60);
   ctx.strokeRect(36, 36, W - 72, H - 72);
 
   // Brand
-  ctx.fillStyle    = '#8c6a3a';
+  ctx.fillStyle    = p.brand;
   ctx.font         = '18px Georgia, serif';
   ctx.textAlign    = 'center';
   ctx.fillText("DAN'S DUNGEONS", W / 2, 100);
 
   // Decorative rule
-  ctx.strokeStyle = '#c8a878';
+  ctx.strokeStyle = p.accent;
   ctx.lineWidth   = 1;
   ctx.beginPath();
   ctx.moveTo(100, 120);
@@ -155,7 +164,7 @@ async function _renderCover(title, subtitle) {
   ctx.stroke();
 
   // Title — word-wrap
-  ctx.fillStyle = '#3a2a1a';
+  ctx.fillStyle = p.text;
   ctx.font      = 'bold 36px Georgia, serif';
   const words   = title.split(' ');
   const lines   = [];
@@ -168,26 +177,45 @@ async function _renderCover(title, subtitle) {
   if (line) lines.push(line);
 
   const lineH = 46;
-  const titleY = 300 - (lines.length * lineH) / 2;
+  const titleY = 280 - (lines.length * lineH) / 2;
   for (let i = 0; i < lines.length; i++) {
     ctx.fillText(lines[i], W / 2, titleY + i * lineH);
   }
 
   // Decorative rule below title
   const ruleY = titleY + lines.length * lineH + 20;
-  ctx.strokeStyle = '#c8a878';
+  ctx.strokeStyle = p.accent;
   ctx.beginPath();
   ctx.moveTo(100, ruleY);
   ctx.lineTo(W - 100, ruleY);
   ctx.stroke();
 
   // Subtitle
-  ctx.fillStyle = '#5c3d1a';
+  ctx.fillStyle = p.brand;
   ctx.font      = 'italic 20px Georgia, serif';
   ctx.fillText(subtitle, W / 2, ruleY + 50);
 
+  // Tagline (red thread premise) — word-wrapped, smaller
+  if (tagline) {
+    ctx.fillStyle = p.accent;
+    ctx.font      = 'italic 14px Georgia, serif';
+    const tagWords = tagline.split(' ');
+    const tagLines = [];
+    let tl = '';
+    for (const w of tagWords) {
+      const test = tl ? `${tl} ${w}` : w;
+      if (ctx.measureText(test).width > W - 140) { tagLines.push(tl); tl = w; }
+      else tl = test;
+    }
+    if (tl) tagLines.push(tl);
+    const tagY = ruleY + 90;
+    for (let i = 0; i < Math.min(tagLines.length, 3); i++) {
+      ctx.fillText(tagLines[i], W / 2, tagY + i * 20);
+    }
+  }
+
   // Ornament
-  ctx.fillStyle = '#c8a878';
+  ctx.fillStyle = p.accent;
   ctx.font      = '28px serif';
   ctx.fillText('⁂', W / 2, H - 80);
 
@@ -210,7 +238,7 @@ p { margin: 0.6em 0; text-align: justify; }
 .ornament { text-align: center; color: #c8a878; font-size: 1.5em; margin: 1.5em 0; }
 `;
 
-export async function buildEpub({ title, subtitle, lang, chapters }) {
+export async function buildEpub({ title, subtitle, lang, chapters, tone, tagline }) {
   const uuid = 'urn:uuid:' + crypto.randomUUID();
   const entries = [];
 
@@ -226,7 +254,7 @@ export async function buildEpub({ title, subtitle, lang, chapters }) {
   entries.push({ path: 'OEBPS/style.css', data: _str(STYLE_CSS) });
 
   // Cover image
-  const coverPng = await _renderCover(title, subtitle);
+  const coverPng = await _renderCover(title, subtitle, tone, tagline);
   entries.push({ path: 'OEBPS/images/cover.png', data: coverPng });
 
   // Extract chapter images
