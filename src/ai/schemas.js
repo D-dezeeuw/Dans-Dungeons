@@ -142,6 +142,31 @@ export const NPC_SCHEMA = {
   additionalProperties: false,
 };
 
+export const FACTION_SCHEMA = {
+  type: 'object',
+  properties: {
+    id:          { type: 'string' },
+    name:        { type: 'string' },
+    description: { type: 'string' },
+    values:      { type: 'string' },
+    allies:      { type: 'array', items: { type: 'string' } },
+    enemies:     { type: 'array', items: { type: 'string' } },
+    territory:   { type: 'array', items: { type: 'string' } },
+    digest:      { type: 'string' },
+  },
+  required: ['id', 'name', 'description', 'values', 'allies', 'enemies', 'territory', 'digest'],
+  additionalProperties: false,
+};
+
+export const FACTIONS_SCHEMA = {
+  type: 'object',
+  properties: {
+    factions: { type: 'array', items: FACTION_SCHEMA },
+  },
+  required: ['factions'],
+  additionalProperties: false,
+};
+
 export const SETTLEMENT_SCHEMA = {
   type: 'object',
   properties: {

@@ -49,6 +49,9 @@ const DEFAULTS = {
     lore:   null,
     digest: null,
 
+    // Factions
+    factions: {},
+
     // L02 — Regions
     regions: {},
 

@@ -6,7 +6,7 @@
 // Returns structured data matching the schemas in ai/schemas.js.
 
 import { chatCompletion } from '../ai/client.js';
-import { WORLD_SEED_SCHEMA, REGION_SCHEMA, SETTLEMENT_SCHEMA } from '../ai/schemas.js';
+import { WORLD_SEED_SCHEMA, REGION_SCHEMA, SETTLEMENT_SCHEMA, FACTIONS_SCHEMA } from '../ai/schemas.js';
 import { t } from '../i18n/i18n.js';
 
 // ─── World seed (L00) ────────────────────────────────────────────────────────
@@ -21,6 +21,21 @@ export async function generateWorldSeed() {
       { role: 'user',   content: t('ai.worldSeedUserMsg') },
     ],
     schema: WORLD_SEED_SCHEMA,
+  });
+}
+
+// ─── Factions ────────────────────────────────────────────────────────────────
+// Receives world.digest only. Generates 2-3 factions that shape the world's politics.
+
+export async function generateFactions(worldDigest) {
+  return chatCompletion({
+    tier: 'medium',
+    max_tokens: 1200,
+    messages: [
+      { role: 'system', content: t('ai.factionsPrompt', { parentDigest: worldDigest }) },
+      { role: 'user',   content: t('ai.factionsUserMsg') },
+    ],
+    schema: FACTIONS_SCHEMA,
   });
 }
 

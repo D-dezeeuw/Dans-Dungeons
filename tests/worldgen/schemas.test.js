@@ -161,6 +161,54 @@ describe('WORLD_SEED_SCHEMA', () => {
   });
 });
 
+describe('FACTION_SCHEMA', () => {
+  const FACTION_SCHEMA = {
+    type: 'object',
+    properties: {
+      id: { type: 'string' }, name: { type: 'string' }, description: { type: 'string' },
+      values: { type: 'string' }, allies: { type: 'array', items: { type: 'string' } },
+      enemies: { type: 'array', items: { type: 'string' } },
+      territory: { type: 'array', items: { type: 'string' } }, digest: { type: 'string' },
+    },
+    required: ['id', 'name', 'description', 'values', 'allies', 'enemies', 'territory', 'digest'],
+    additionalProperties: false,
+  };
+
+  const valid = {
+    id: 'faction-silver-court',
+    name: 'The Silver Court',
+    description: 'A council of noble houses that rules through tradition and secret pacts.',
+    values: 'order, tradition, secrecy',
+    allies: [],
+    enemies: ['faction-iron-pact'],
+    territory: ['region-ashvale'],
+    digest: 'Silver Court — noble council, values order and secrecy, opposes Iron Pact.',
+  };
+
+  it('accepts a valid faction', () => {
+    const r = validateAgainstSchema(valid, FACTION_SCHEMA);
+    assert.deepEqual(r.errors, []);
+  });
+
+  it('rejects missing values', () => {
+    const { values, ...noValues } = valid;
+    const r = validateAgainstSchema(noValues, FACTION_SCHEMA);
+    assert.equal(r.valid, false);
+  });
+
+  it('allows empty allies array', () => {
+    const r = validateAgainstSchema(valid, FACTION_SCHEMA);
+    assert.equal(r.valid, true);
+    assert.deepEqual(valid.allies, []);
+  });
+
+  it('requires enemies to be string array', () => {
+    const bad = { ...valid, enemies: [123] };
+    const r = validateAgainstSchema(bad, FACTION_SCHEMA);
+    assert.equal(r.valid, false);
+  });
+});
+
 describe('REGION_SCHEMA', () => {
   const valid = {
     id: 'region-ashvale',
