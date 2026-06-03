@@ -102,28 +102,54 @@ export const REGION_SCHEMA = {
   additionalProperties: false,
 };
 
+const NPC_RELATIONSHIP_SCHEMA = {
+  type: 'object',
+  properties: {
+    targetId: { type: 'string' },
+    type:     { type: 'string', enum: ['spouse', 'parent', 'child', 'rival', 'ally', 'employer', 'mentor'] },
+  },
+  required: ['targetId', 'type'],
+  additionalProperties: false,
+};
+
+const NPC_INVENTORY_ITEM_SCHEMA = {
+  type: 'object',
+  properties: {
+    name:        { type: 'string' },
+    price:       { type: 'number' },
+    description: { type: 'string' },
+  },
+  required: ['name', 'price', 'description'],
+  additionalProperties: false,
+};
+
+export const NPC_SCHEMA = {
+  type: 'object',
+  properties: {
+    id:            { type: 'string' },
+    name:          { type: 'string' },
+    role:          { type: 'string', enum: ['innkeeper', 'questgiver', 'merchant', 'guard', 'elder', 'blacksmith', 'healer', 'hermit'] },
+    attitude:      { type: 'string', enum: ['friendly', 'neutral', 'suspicious', 'hostile'] },
+    greeting:      { type: 'string' },
+    questHook:     { type: ['string', 'null'] },
+    personality:   { type: 'string' },
+    secret:        { type: ['string', 'null'] },
+    factionId:     { type: ['string', 'null'] },
+    relationships: { type: 'array', items: NPC_RELATIONSHIP_SCHEMA },
+    inventory:     { type: ['array', 'null'], items: NPC_INVENTORY_ITEM_SCHEMA },
+  },
+  required: ['id', 'name', 'role', 'attitude', 'greeting', 'questHook', 'personality', 'secret', 'factionId', 'relationships', 'inventory'],
+  additionalProperties: false,
+};
+
 export const SETTLEMENT_SCHEMA = {
   type: 'object',
   properties: {
     id:          { type: 'string' },
     name:        { type: 'string' },
     description: { type: 'string' },
-    npcs: {
-      type: 'array',
-      items: {
-        type: 'object',
-        properties: {
-          id:        { type: 'string' },
-          name:      { type: 'string' },
-          role:      { type: 'string', enum: ['innkeeper', 'questgiver', 'merchant', 'guard', 'elder'] },
-          attitude:  { type: 'string', enum: ['friendly', 'neutral', 'suspicious'] },
-          greeting:  { type: 'string' },
-          questHook: { type: ['string', 'null'] },
-        },
-        required: ['id', 'name', 'role', 'attitude', 'greeting', 'questHook'],
-        additionalProperties: false,
-      },
-    },
+    regionId:    { type: 'string' },
+    npcs:        { type: 'array', items: NPC_SCHEMA },
     exits: {
       type: 'array',
       items: {
@@ -140,7 +166,7 @@ export const SETTLEMENT_SCHEMA = {
     },
     digest: { type: 'string' },
   },
-  required: ['id', 'name', 'description', 'npcs', 'exits', 'digest'],
+  required: ['id', 'name', 'description', 'regionId', 'npcs', 'exits', 'digest'],
   additionalProperties: false,
 };
 

@@ -42,12 +42,12 @@ export async function generateRegion(parentDigest) {
 // ─── Settlement (L03) ────────────────────────────────────────────────────────
 // Receives region.digest only (~200 tok).
 
-export async function generateSettlement(parentDigest) {
+export async function generateSettlement(parentDigest, regionId) {
   return chatCompletion({
     tier: 'medium',
-    max_tokens: 1200,
+    max_tokens: 2000,
     messages: [
-      { role: 'system', content: t('ai.settlementPrompt', { parentDigest }) },
+      { role: 'system', content: t('ai.settlementPrompt', { parentDigest, regionId }) },
       { role: 'user',   content: t('ai.settlementUserMsg') },
     ],
     schema: SETTLEMENT_SCHEMA,

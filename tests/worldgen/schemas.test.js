@@ -35,8 +35,12 @@ function validateAgainstSchema(data, schema) {
     } else if (sch.type === 'boolean') {
       if (typeof val !== 'boolean') errors.push(`${path}: expected boolean`);
     } else if (Array.isArray(sch.type)) {
-      // nullable: ['string', 'null']
-      if (val !== null && !sch.type.includes(typeof val)) {
+      // nullable union types: ['string', 'null'], ['array', 'null'], etc.
+      if (val === null) {
+        if (!sch.type.includes('null')) errors.push(`${path}: null not allowed`);
+      } else if (sch.type.includes('array') && Array.isArray(val)) {
+        if (sch.items) val.forEach((item, i) => check(item, sch.items, `${path}[${i}]`));
+      } else if (!sch.type.includes(typeof val)) {
         errors.push(`${path}: expected one of [${sch.type}]`);
       }
     }
@@ -79,17 +83,37 @@ const REGION_SCHEMA = {
   additionalProperties: false,
 };
 
+const NPC_SCHEMA = {
+  type: 'object',
+  properties: {
+    id:            { type: 'string' },
+    name:          { type: 'string' },
+    role:          { type: 'string', enum: ['innkeeper', 'questgiver', 'merchant', 'guard', 'elder', 'blacksmith', 'healer', 'hermit'] },
+    attitude:      { type: 'string', enum: ['friendly', 'neutral', 'suspicious', 'hostile'] },
+    greeting:      { type: 'string' },
+    questHook:     { type: ['string', 'null'] },
+    personality:   { type: 'string' },
+    secret:        { type: ['string', 'null'] },
+    factionId:     { type: ['string', 'null'] },
+    relationships: { type: 'array', items: { type: 'object', properties: { targetId: { type: 'string' }, type: { type: 'string', enum: ['spouse', 'parent', 'child', 'rival', 'ally', 'employer', 'mentor'] } }, required: ['targetId', 'type'], additionalProperties: false } },
+    inventory:     { type: ['array', 'null'], items: { type: 'object', properties: { name: { type: 'string' }, price: { type: 'number' }, description: { type: 'string' } }, required: ['name', 'price', 'description'], additionalProperties: false } },
+  },
+  required: ['id', 'name', 'role', 'attitude', 'greeting', 'questHook', 'personality', 'secret', 'factionId', 'relationships', 'inventory'],
+  additionalProperties: false,
+};
+
 const SETTLEMENT_SCHEMA = {
   type: 'object',
   properties: {
     id:          { type: 'string' },
     name:        { type: 'string' },
     description: { type: 'string' },
-    npcs:        { type: 'array', items: { type: 'object', properties: { id: { type: 'string' }, name: { type: 'string' }, role: { type: 'string', enum: ['innkeeper', 'questgiver', 'merchant', 'guard', 'elder'] }, attitude: { type: 'string', enum: ['friendly', 'neutral', 'suspicious'] }, greeting: { type: 'string' }, questHook: { type: ['string', 'null'] } }, required: ['id', 'name', 'role', 'attitude', 'greeting', 'questHook'], additionalProperties: false } },
+    regionId:    { type: 'string' },
+    npcs:        { type: 'array', items: NPC_SCHEMA },
     exits:       { type: 'array', items: { type: 'object', properties: { direction: { type: 'string' }, targetName: { type: 'string' }, targetType: { type: 'string', enum: ['dungeon', 'road', 'wilderness'] }, targetId: { type: ['string', 'null'] } }, required: ['direction', 'targetName', 'targetType', 'targetId'], additionalProperties: false } },
     digest:      { type: 'string' },
   },
-  required: ['id', 'name', 'description', 'npcs', 'exits', 'digest'],
+  required: ['id', 'name', 'description', 'regionId', 'npcs', 'exits', 'digest'],
   additionalProperties: false,
 };
 
@@ -162,14 +186,87 @@ describe('REGION_SCHEMA', () => {
   });
 });
 
+describe('NPC_SCHEMA', () => {
+  const validNpc = {
+    id: 'npc-bera', name: 'Old Bera', role: 'innkeeper', attitude: 'friendly',
+    greeting: 'Welcome, traveler.', questHook: null,
+    personality: 'warm and motherly',
+    secret: 'saw cultists enter the crypt at midnight',
+    factionId: null,
+    relationships: [{ targetId: 'npc-thorn', type: 'rival' }],
+    inventory: null,
+  };
+
+  const validMerchant = {
+    id: 'npc-syl', name: 'Syl', role: 'merchant', attitude: 'suspicious',
+    greeting: 'What do you want?', questHook: null,
+    personality: 'paranoid whisperer',
+    secret: null, factionId: null,
+    relationships: [],
+    inventory: [
+      { name: 'healing potion', price: 50, description: 'Restores 2d4+2 HP.' },
+      { name: 'rope (50 ft)', price: 1, description: 'Sturdy hempen rope.' },
+    ],
+  };
+
+  it('accepts a valid NPC with relationships', () => {
+    const r = validateAgainstSchema(validNpc, NPC_SCHEMA);
+    assert.deepEqual(r.errors, []);
+  });
+
+  it('accepts a merchant with inventory', () => {
+    const r = validateAgainstSchema(validMerchant, NPC_SCHEMA);
+    assert.deepEqual(r.errors, []);
+  });
+
+  it('allows null secret', () => {
+    const r = validateAgainstSchema(validMerchant, NPC_SCHEMA);
+    assert.equal(r.valid, true);
+    assert.equal(validMerchant.secret, null);
+  });
+
+  it('allows null inventory for non-merchants', () => {
+    const r = validateAgainstSchema(validNpc, NPC_SCHEMA);
+    assert.equal(r.valid, true);
+    assert.equal(validNpc.inventory, null);
+  });
+
+  it('rejects invalid relationship type', () => {
+    const bad = { ...validNpc, relationships: [{ targetId: 'x', type: 'friend' }] };
+    const r = validateAgainstSchema(bad, NPC_SCHEMA);
+    assert.equal(r.valid, false);
+  });
+
+  it('validates extended role enum', () => {
+    for (const role of ['innkeeper', 'questgiver', 'merchant', 'guard', 'elder', 'blacksmith', 'healer', 'hermit']) {
+      const r = validateAgainstSchema({ ...validNpc, role }, NPC_SCHEMA);
+      assert.equal(r.valid, true, `role '${role}' should be valid`);
+    }
+  });
+
+  it('rejects missing personality field', () => {
+    const { personality, ...noPersonality } = validNpc;
+    const r = validateAgainstSchema(noPersonality, NPC_SCHEMA);
+    assert.equal(r.valid, false);
+    assert.ok(r.errors.some(e => e.includes('personality')));
+  });
+});
+
 describe('SETTLEMENT_SCHEMA', () => {
+  const validNpc = {
+    id: 'npc-bera', name: 'Old Bera', role: 'innkeeper', attitude: 'friendly',
+    greeting: 'Welcome, traveler.', questHook: null,
+    personality: 'warm and motherly', secret: null, factionId: null,
+    relationships: [], inventory: null,
+  };
   const valid = {
     id: 'settlement-millhaven',
     name: 'Millhaven',
     description: 'A quiet farming village with a crumbling watchtower.',
+    regionId: 'region-ashvale',
     npcs: [
-      { id: 'npc-1', name: 'Old Bera', role: 'innkeeper', attitude: 'friendly', greeting: 'Welcome, traveler.', questHook: null },
-      { id: 'npc-2', name: 'Captain Thorn', role: 'questgiver', attitude: 'neutral', greeting: 'You look capable.', questHook: 'Clear the crypt south of town.' },
+      validNpc,
+      { ...validNpc, id: 'npc-thorn', name: 'Captain Thorn', role: 'questgiver', attitude: 'neutral', greeting: 'You look capable.', questHook: 'Clear the crypt south of town.', personality: 'stern and duty-bound', secret: 'lost his son to the cult', relationships: [{ targetId: 'npc-bera', type: 'ally' }] },
     ],
     exits: [
       { direction: 'south', targetName: 'The Sunken Crypt', targetType: 'dungeon', targetId: 'dungeon-crypt' },
@@ -178,16 +275,22 @@ describe('SETTLEMENT_SCHEMA', () => {
     digest: 'Millhaven — quiet farming village. Innkeeper: Old Bera. Questgiver: Captain Thorn (clear the crypt).',
   };
 
-  it('accepts a valid settlement', () => {
+  it('accepts a valid settlement with rich NPCs', () => {
     const r = validateAgainstSchema(valid, SETTLEMENT_SCHEMA);
     assert.deepEqual(r.errors, []);
+  });
+
+  it('requires regionId', () => {
+    const { regionId, ...noRegion } = valid;
+    const r = validateAgainstSchema(noRegion, SETTLEMENT_SCHEMA);
+    assert.equal(r.valid, false);
+    assert.ok(r.errors.some(e => e.includes('regionId')));
   });
 
   it('rejects invalid NPC role', () => {
     const bad = { ...valid, npcs: [{ ...valid.npcs[0], role: 'wizard' }] };
     const r = validateAgainstSchema(bad, SETTLEMENT_SCHEMA);
     assert.equal(r.valid, false);
-    assert.ok(r.errors.some(e => e.includes('role')));
   });
 
   it('rejects invalid exit type', () => {
@@ -197,15 +300,15 @@ describe('SETTLEMENT_SCHEMA', () => {
   });
 
   it('allows null questHook', () => {
+    assert.equal(valid.npcs[0].questHook, null);
     const r = validateAgainstSchema(valid, SETTLEMENT_SCHEMA);
     assert.equal(r.valid, true);
-    assert.equal(valid.npcs[0].questHook, null);
   });
 
-  it('allows null targetId', () => {
+  it('allows null targetId on exits', () => {
+    assert.equal(valid.exits[1].targetId, null);
     const r = validateAgainstSchema(valid, SETTLEMENT_SCHEMA);
     assert.equal(r.valid, true);
-    assert.equal(valid.exits[1].targetId, null);
   });
 });
 
