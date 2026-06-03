@@ -1,124 +1,148 @@
 # 02 — World generation
 
-> **Status:** rough sketch. Schemas will get nailed down in the implementation
-> phase per agent.
+> **Status:** Phase A in progress. Schemas, data model, AI generators, seeded
+> RNG, and dungeon refactor are implemented with 50 passing tests.
+> See [implementation/world-gen.md](../implementation/world-gen.md) for the
+> concrete build plan.
 
 ## Strategy
 
-**Eager generation, lazy fallback.** When the player clicks "New Campaign", we
-walk a fixed pipeline of agents that each consume the prior layer's output and
-produce the next. The result is a coherent world with a ~100-hour story
-backbone. If the player walks somewhere unplanned, an on-demand agent fills in
-that gap *consistent with* what already exists.
+**Eager seed, lazy expansion.** When the player starts a campaign, an AI
+pipeline generates a minimal world skeleton (world → region → settlement).
+Everything deeper is generated on-demand as the player explores. A "Quick
+Dungeon" option skips worldgen entirely for instant play.
 
 Each layer is a separate AI call with a strict JSON schema (see
-[05-ai-runtime.md](05-ai-runtime.md)). All entities get stable IDs so later
-layers can reference them and lazy fallbacks can append without collisions.
+`src/ai/schemas.js`). All entities get stable slug IDs (`region-ashvale`,
+`settlement-millhaven`) so later layers can reference them and lazy fallbacks
+can append without collisions.
 
-## The pipeline
+## The layer hierarchy
 
 ```text
-seed ─► geography ─► history ─► red-thread ─► cities ─► quest-weave ─► READY
-                                                ▲                ▲
-                                                └── lazy NPC ─────┘
-                                                └── lazy region ──┘
+L00  World       — name, cosmology, gods, tone, red thread premise
+L01  Continent   — climate, biomes, geography graph (v1: collapsed into L00)
+L02  Region      — countries/territories: factions, rulers, history
+L03  Settlement  — cities/villages: NPCs, shops, quest hooks
+L04  Building    — dungeons, taverns, temples (procedural + AI-themed)
+L05  Room        — individual rooms (existing procedural dungeon generator)
 ```
 
-### Layer 1 — Geography
+Every layer is strictly hierarchical: an L05 always belongs inside an L04,
+an L03 cannot be connected to L00 or L05. Context trickles from world to room.
 
-Continents, climates, biomes, major sites (cities, towns, forests, caves,
-lakes, ruins, roads). Output is a **graph of regions with adjacency** so the
-GM can reason about travel time and visibility.
+## Cascading digests (token efficiency)
 
-### Layer 2 — History & powers
+The key design constraint: **a child only sees its parent's digest, never
+the full tree.** This keeps token counts bounded regardless of world size.
 
-Religions, factions, dynasties, legendary events, a coarse timeline. Seeded by
-geography: a desert spawns sun-worship, a coast spawns trade leagues, etc.
+| Generating...  | Gets digest from         | Tokens |
+|----------------|--------------------------|--------|
+| L02 Region     | L00 World (~150 tok)     | ~150   |
+| L03 Settlement | L02 Region (~200 tok)    | ~200   |
+| L04 Building   | L03 Settlement (~150 tok)| ~150   |
+| L05 Room       | L04 Building (~100 tok)  | ~100   |
 
-### Layer 3 — Main goal (the red thread)
+The **narrator per turn** gets the leaf-to-root path as S-size cards
+(~50 tok each), totaling ~250 tok of lore context regardless of world size.
 
-The campaign's central dramatic question: a murdered heir whose killer is
-unknown; an amulet whose shards are scattered; a gate to another plane
-cracking open. Output is a **beat sheet of ~10–20 story nodes**, each tagged
-with a region/city, required NPCs (by archetype, not yet detailed), required
-items, and a target playtime.
+Every entity stores its own digest at creation time. Adding 100 new regions
+does not increase per-turn cost — the narrator only sees the current path.
 
-Beats conform to **`bag-of-holding`**'s `beats/schema` — see
-[`../../../bag-of-holding/docs/beat-schema.md`](../../../bag-of-holding/docs/beat-schema.md)
-in the sibling repo. The schema carries `successors[]` so the same beats
-become branchable in a later release; v1 walks them linearly by index.
+## Eager generation pipeline (campaign start)
 
-### Layer 4 — City & people details
+```text
+world seed ─► starting region ─► starting settlement ─► READY
+                                                         │
+                                                    player explores
+                                                         │
+                                                    lazy expansion ──►
+```
 
-For every city the red thread *touches*: politics, royal family tree,
-important NPCs (clergy, merchants, hunters, knights, criminals), local
-problems, hooks. Cities not on the thread get a one-paragraph stub and are
-expanded lazily if the player visits.
+1. **World seed** (medium tier, ~1000 tok): world name, tone, creation myth,
+   2-3 gods, red thread premise + hook, self-generated digest.
+2. **Starting region** (medium tier, injected: world.digest): region name,
+   climate, settlement name, dungeon name, rumor, adjacent hints, digest.
+3. **Starting settlement** (medium tier, injected: region.digest): NPCs
+   (innkeeper, questgiver, merchant), exits, digest.
+4. **Starting dungeon** — procedural generator (instant, seeded RNG).
 
-### Layer 5 — Quest weave
+## Quick start option
 
-Cross-references everything: which beat happens where, which NPC carries
-which secret, which dungeon contains which clue, which item unlocks which
-door. Also estimates **playtime per beat** to roughly hit the ~100h target;
-beats that come up short get optional side quests attached.
+The player can choose:
+- **Quick Dungeon** — instant procedural dungeon, no worldgen, no settlement.
+  Same as the current game experience.
+- **New Campaign** — full worldgen pipeline (~30-60s), starts in settlement.
 
-## Lazy fallback
+## Lazy expansion
 
-The player will go off-script. The lazy expander handles four cases:
+When the player moves beyond what's been generated, on-demand generators fill
+in the gaps — each receiving only its parent's digest.
 
-| Trigger | What it generates |
-| --- | --- |
-| Enters undescribed region | Region detail consistent with adjacency + biome |
-| Talks to nameless NPC | NPC stub: name, role, attitude, 1 secret |
-| Opens unexplored building | Interior + occupants consistent with city's politics |
-| Investigates an absent topic | Rumor or lore fragment that doesn't contradict history |
+| Trigger | What gets generated | Digest from |
+|---------|--------------------|----|
+| Complete dungeon | Return to settlement | — |
+| Talk to questgiver after dungeon | New quest + new dungeon | settlement.digest |
+| Travel to unknown region | Region + settlement + dungeon | world.digest |
+| Enter new settlement | Settlement detail | region.digest |
+| Enter new dungeon | Procedural dungeon + AI theme | settlement.digest |
 
-Lazy outputs are persisted into the same world store and become canon — they
-must respect existing IDs, factions, and the red thread.
+Lazy outputs are persisted into the same world store and become canon.
 
-## Determinism & seeds
+## Seeded RNG
 
-- A single **campaign seed** is generated at "New Campaign" (UUID v4 is fine).
-- Each layer agent is called with `(campaignSeed, layerName)` so re-running a
-  layer with the same inputs is reproducible-ish (LLMs aren't perfectly
-  deterministic but `temperature: 0` + identical inputs gets close enough for
-  debugging and "share this world" workflows).
-- The seed is included in the exported `.dnd.json`.
+All procedural generation (dungeon topology, room picks, enemy placement,
+direction assignment) flows through a **Mulberry32 seeded PRNG** from
+`bag-of-holding`. The seed is stored in `world.seed` and included in exports.
+
+- Same seed → same dungeon layout (deterministic).
+- LLM calls include the seed for best-effort reproducibility (`temperature: 0`).
+- World exports (`.world.json`) preserve the seed for sharing/replaying.
+
+## World export/import
+
+Generated worlds can be exported as standalone `.world.json` files, separate
+from game saves. This allows:
+- Sharing worlds between players.
+- Re-using a world across multiple campaigns.
+- Backing up worldgen output without game state.
 
 ## Coherence guards
 
-To keep a 100-hour world internally consistent:
-
-- **ID stability.** Every place/person/faction has a slug like
-  `city.thornharbor` or `npc.queen-eliana`. Agents reference by ID, never by
-  loose name.
-- **World digest + per-entity cards.** A compressed summary of canonical facts
-  (places, factions, key NPCs, red-thread state) is injected into every
-  subsequent agent and GM call so newly generated content doesn't contradict
-  old content. The digest is one of several **size-tiered cards** per entity;
-  see [12-context-scoping.md](12-context-scoping.md) for how they're picked
-  per turn and per scope tier.
+- **ID stability.** Every place/person/faction has a slug ID. Generators
+  reference by ID, never by loose name.
+- **Cascading digests.** Each child sees only its parent's summary — never
+  sibling or grandparent data.
 - **Schema validation + repair.** Outputs that fail schema get one retry with
-  the validation error pasted back; second failure surfaces to the player and
-  pauses generation. We do not silently accept malformed lore.
-- **No retcons without a flag.** The lazy expander may *add*, never *change*.
-  Any change must go through an explicit retcon action (see
-  [03-game-loop-and-sessions.md](03-game-loop-and-sessions.md)).
+  the error; second failure surfaces to the player.
+- **No retcons.** The lazy expander may *add*, never *change*. Changes go
+  through explicit retcon actions.
 
-## Cost & latency budget
+## Red thread (Phase C — planned)
 
-Eager generation will take **minutes** and **measurable money**. The UI must:
+The campaign's central dramatic question, generated as a 5-10 beat story arc
+using `bag-of-holding`'s beat schema. Beats drive quest progression; the
+narrator nudges the player via NPC dialogue. Linear v1, branching v2.
 
-- Show a layer-by-layer progress bar with live token/USD counters.
-- Make each layer cancellable (we keep what's been generated so far).
-- Cache and dedupe — re-rolling Layer 3 shouldn't re-spend Layer 1.
+## Current implementation status
 
-A rough target for v1: a full world in **under 5 minutes** on a 100 Mbps
-connection and **under $1** on a mid-tier OpenRouter model. These are
-guesses to refine with measurement.
+| Component | Status | Location |
+|-----------|--------|----------|
+| Layer hierarchy + data model | Done | `src/core/state.js` |
+| AI schemas (world, region, settlement) | Done | `src/ai/schemas.js` |
+| AI generators (worldgen pipeline) | Done | `src/game/worldgen.js` |
+| Procedural dungeon generator (L04/L05) | Done | `src/game/world.js` |
+| Seeded RNG | Done | `src/game/world.js` (uses `Dice.seededRng`) |
+| Cascading digest tests | Done | `tests/worldgen/digest.test.js` |
+| Schema validation tests | Done | `tests/worldgen/schemas.test.js` |
+| Location pointer tests | Done | `tests/worldgen/location.test.js` |
+| Settlement resolver tests | Done | `tests/worldgen/resolver-settlement.test.js` |
+| Dungeon shape contract tests | Done | `tests/worldgen/dungeon.test.js` |
+| Game flow integration | In progress | `src/game/flow.js` |
+| Settlement UI + chips | Planned | `src/ui/chips.js` |
+| Narrator world context | Planned | `src/ai/narrate.js` |
+| Lazy expansion | Planned | Phase B |
+| Red thread + beats | Planned | Phase C |
+| Advanced settlements | Planned | Phase D |
 
-## Open
-
-- Should the red thread be branching or linear? (Linear MVP, branching later?)
-- How many cities is "enough" before play feels rich? (10? 20?)
-- Do we want a "tone" knob (grimdark / heroic / comedic) at campaign start?
+**Total tests:** 50 passing.
