@@ -221,7 +221,13 @@ ${entriesHtml}
 // ─── World Bible (standalone worldgen → EPUB) ────────────────────────────────
 
 export async function exportWorldBible() {
-  const progress = (key) => appendEntry('system', t(`ai.${key}`));
+  const progress = (key, detail) => {
+    if (key === 'detail') {
+      appendEntry('system', `  → ${detail}`);
+    } else {
+      appendEntry('system', t(`ai.${key}`));
+    }
+  };
 
   try {
     const { generateWorldBible } = await import('../game/worldbible.js');

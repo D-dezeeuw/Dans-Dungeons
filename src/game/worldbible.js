@@ -7,22 +7,41 @@
 import { generateWorldSeed, generateFactions, generateBeats, generateRegion, generateSettlement } from './worldgen.js';
 import { createDungeonEntry } from './world.js';
 
-// ─── Fallback digest ─────────────────────────────────────────────────────────
-// If the AI omits a digest field, derive one from available data.
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function ensureDigest(obj, fallback) {
   if (obj && !obj.digest) obj.digest = fallback;
   return obj;
 }
 
+async function withRetry(fn, label) {
+  try {
+    return await fn();
+  } catch (e) {
+    console.warn(`${label} failed, retrying in 2s:`, e.message);
+    await new Promise(r => setTimeout(r, 2000));
+    return await fn();
+  }
+}
+
+function truncate(s, n = 200) {
+  if (!s) return '';
+  return s.length > n ? s.slice(0, n) + '…' : s;
+}
+
 // ─── Pipeline ────────────────────────────────────────────────────────────────
 
 export async function generateWorldBible(onProgress) {
+  // Step 1: World seed (critical — retry once)
   onProgress('worldgenStep1');
-  const seed = await generateWorldSeed();
+  const seed = await withRetry(() => generateWorldSeed(), 'World seed');
   if (!seed) throw new Error('World seed generation failed — no response from AI.');
   ensureDigest(seed, `${seed.name ?? 'World'} — ${seed.tone ?? 'fantasy'}. ${seed.redThread?.premise ?? ''}`);
 
+  const gods = (seed.gods ?? []).map(g => g.name).join(', ');
+  onProgress('detail', `World: "${seed.name}" (${seed.tone}). Gods: ${gods || 'none'}.`);
+
+  // Step 2: Factions (optional — no retry, fail-and-continue)
   onProgress('worldgenStep2');
   let factions = [];
   try {
@@ -31,7 +50,13 @@ export async function generateWorldBible(onProgress) {
   } catch (e) {
     console.warn('Faction generation failed, continuing without:', e.message);
   }
+  if (factions.length) {
+    onProgress('detail', `Factions: ${factions.length} created — ${factions.map(f => f.name).join(', ')}.`);
+  } else {
+    onProgress('detail', 'Factions: skipped (generation failed).');
+  }
 
+  // Step 3: Beats / red thread (optional — no retry, fail-and-continue)
   onProgress('worldgenStep3');
   let beats = [];
   try {
@@ -40,17 +65,31 @@ export async function generateWorldBible(onProgress) {
   } catch (e) {
     console.warn('Beat generation failed, continuing without:', e.message);
   }
+  if (beats.length) {
+    onProgress('detail', `Red thread: ${beats.length} beats. "${truncate(beats[0]?.dramaticPurpose, 120)}"`);
+  } else {
+    onProgress('detail', 'Red thread: skipped (generation failed).');
+  }
 
+  // Step 4: Region (critical — retry once)
   onProgress('worldgenStep4');
-  const region = await generateRegion(seed.digest);
+  const region = await withRetry(() => generateRegion(seed.digest), 'Region');
   if (!region) throw new Error('Region generation failed — no response from AI.');
   ensureDigest(region, `${region.name ?? 'Region'} — ${region.climate ?? ''}. ${region.settlementName ?? ''}.`);
 
+  onProgress('detail', `Region: "${region.name}" (${region.climate}). Settlement: ${region.settlementName}. Dungeon: ${region.dungeonName}.`);
+
+  // Step 5: Settlement (critical — retry once)
   onProgress('worldgenStep5');
-  const settlement = await generateSettlement(region.digest, region.id);
+  const settlement = await withRetry(() => generateSettlement(region.digest, region.id), 'Settlement');
   if (!settlement) throw new Error('Settlement generation failed — no response from AI.');
   ensureDigest(settlement, `${settlement.name ?? 'Settlement'} — ${(settlement.npcs ?? []).map(n => n.name).join(', ')}.`);
 
+  const npcNames = (settlement.npcs ?? []).map(n => `${n.name} (${n.role})`).join(', ');
+  const exitCount = (settlement.exits ?? []).length;
+  onProgress('detail', `Settlement: "${settlement.name}". NPCs: ${npcNames}. ${exitCount} exits.`);
+
+  // Step 6: Dungeon (procedural — instant, no retry needed)
   onProgress('worldgenStep6');
   const dungeonExit = (settlement.exits ?? []).find(e => e.targetType === 'dungeon');
   const dungeon = createDungeonEntry({
@@ -59,6 +98,10 @@ export async function generateWorldBible(onProgress) {
     regionId: region.id,
   });
 
+  const roomCount = Object.keys(dungeon.rooms ?? {}).length;
+  const enemyCount = Object.keys(dungeon.npcs ?? {}).length;
+  onProgress('detail', `Dungeon: "${dungeon.name}" (${dungeon.theme}). ${roomCount} rooms, ${enemyCount} enemies.`);
+
   const world = { seed, factions, beats, region, settlement, dungeon };
   const chapters = formatChapters(world);
 
@@ -66,7 +109,6 @@ export async function generateWorldBible(onProgress) {
 }
 
 // ─── Chapter formatter ───────────────────────────────────────────────────────
-// Converts structured worldgen data into readable prose chapters for the EPUB.
 
 function formatChapters({ seed, factions, beats, region, settlement, dungeon }) {
   const ch = [];
