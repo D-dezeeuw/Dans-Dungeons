@@ -71,6 +71,8 @@ async function _blobToBase64(blob) {
 // Returns the transcript string or throws on API error.
 export async function transcribeAudio(blob) {
   const ai     = appState.ai || {};
+  const model  = modelFor('stt', ai);
+  if (!model) throw new Error('STT not available on the free tier.');
   const base   = (ai.baseUrl || 'https://openrouter.ai/api/v1').replace(/\/$/, '');
   const format = blob.type.includes('ogg') ? 'ogg' : 'webm';
   const data64 = await _blobToBase64(blob);

@@ -10,7 +10,7 @@ import { NarrationExtractor } from './stream.js';
 // ─── Internal helpers ─────────────────────────────────────────────────────────
 
 export function modelFor(tier, ai) {
-  return ai.models?.[tier] ?? DEFAULT_MODELS[tier] ?? DEFAULT_MODELS.medium;
+  return ai.models?.[tier] ?? DEFAULT_MODELS[tier] ?? null;
 }
 
 export function headers(key, origin) {
@@ -48,6 +48,7 @@ async function _callOnce({ tier = 'medium', messages, schema, max_tokens }) {
   const ai    = appState.ai || {};
   const base  = (ai.baseUrl || 'https://openrouter.ai/api/v1').replace(/\/$/, '');
   const model = modelFor(tier, ai);
+  if (!model) throw new Error(`No model configured for tier '${tier}'.`);
 
   const body = {
     model,

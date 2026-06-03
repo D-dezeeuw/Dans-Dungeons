@@ -69,14 +69,16 @@ export async function speakText(text) {
   if (!text?.trim()) return;
 
   const ai   = appState.ai || {};
+  const primary = modelFor('tts', ai);
+  if (!primary) return; // no TTS model available (free tier)
+
   const base = (ai.baseUrl || 'https://openrouter.ai/api/v1').replace(/\/$/, '');
 
   cancelSpeech(); // stop any ongoing audio before fetching new
 
   const reqHeaders = headers(ai.key || '', location.origin);
 
-  // TODO: static test payload — swap back to dynamic once Gemini TTS is verified.
-  const models = [modelFor('tts', ai), ...TTS_FALLBACKS];
+  const models = [primary, ...TTS_FALLBACKS];
   let res;
   let usedModel;
   for (const model of models) {

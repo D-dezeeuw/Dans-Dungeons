@@ -47,6 +47,7 @@ export async function generateSceneImage(sceneDescription) {
   const ai   = appState.ai || {};
   const base = (ai.baseUrl || 'https://openrouter.ai/api/v1').replace(/\/$/, '');
   const model = modelFor('image', ai);
+  if (!model) return null; // no image model available (free tier)
 
   const prompt =
     'Old hand-drawn journal sketch of a medieval fantasy scene. ' +
