@@ -130,9 +130,10 @@ function assignRoomType(idx, spineLen, totalRooms, isSpine) {
   return pick(MID_TYPES);
 }
 
-// ─── Generator ────────────────────────────────────────────────────────────────
+// ─── Dungeon generator (L04/L05) ──────────────────────────────────────────────
+// Returns { rooms, npcs, currentRoom, exitRoomId } for embedding in world.dungeons.
 
-export function generateWorld() {
+export function generateDungeon() {
   const style = pick(tRaw('world.houseStyles'));
 
   // 1. Spine: 4-6 rooms
@@ -277,4 +278,10 @@ export function generateWorld() {
     rooms,
     npcs,
   };
+}
+
+// Legacy wrapper — returns the flat world shape that flow.js currently expects.
+// Once flow.js is updated for the layered model, this can be removed.
+export function generateWorld() {
+  return generateDungeon();
 }
