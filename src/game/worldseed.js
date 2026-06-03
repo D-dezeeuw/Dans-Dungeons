@@ -207,6 +207,86 @@ export function buildWorldBlueprint(seed) {
   };
 }
 
+// ─── Dungeon theme overlays (24) ─────────────────────────────────────────────
+// Each theme maps to an atmosphere sentence + preferred enemy names.
+
+export const DUNGEON_OVERLAYS = {
+  'undead crypt':          { atmosphere: 'The air reeks of embalming salts and grave earth.',                    enemies: ['Guard Skeleton', 'Shambling Corpse'] },
+  'goblin warren':         { atmosphere: 'Crude markings cover the walls. Something gnaws in the dark.',        enemies: ['Grizzik the Goblin', 'Giant Rat'] },
+  'cult sanctum':          { atmosphere: 'Candle wax pools on every surface. Chanting echoes from deeper within.', enemies: ['Feral Cultist', 'Guard Skeleton'] },
+  'beast lair':            { atmosphere: 'Claw marks gouge the stone. The stench of animal musk is overwhelming.', enemies: ['Giant Rat', 'Cave Spider'] },
+  'arcane ruin':           { atmosphere: 'Faint runes pulse along the walls. The air crackles with residual magic.', enemies: ['Feral Cultist', 'Guard Skeleton'] },
+  'flooded cavern':        { atmosphere: 'Water drips from the ceiling. The floor is slick and treacherous.',     enemies: ['Giant Rat', 'Cave Spider'] },
+  'haunted manor':         { atmosphere: 'Dust motes drift through pale light. A door creaks on its own.',       enemies: ['Shambling Corpse', 'Cave Spider'] },
+  'abandoned mine':        { atmosphere: 'Rotting timber props sag under the weight of earth. Pickaxes rust in corners.', enemies: ['Giant Rat', 'Grizzik the Goblin'] },
+  'dragon hoard':          { atmosphere: 'Scorch marks blacken the walls. The heat is unnatural.',               enemies: ['Guard Skeleton', 'Feral Cultist'] },
+  'vampire castle':        { atmosphere: 'Velvet drapes hang in tatters. The scent of old blood lingers.',       enemies: ['Shambling Corpse', 'Feral Cultist'] },
+  'elemental nexus':       { atmosphere: 'Sparks of raw energy arc between the walls. The ground hums.',         enemies: ['Guard Skeleton', 'Cave Spider'] },
+  'fungal depths':         { atmosphere: 'Bioluminescent mushrooms cast an eerie glow. Spores drift lazily.',    enemies: ['Giant Rat', 'Cave Spider'] },
+  'clockwork vault':       { atmosphere: 'Gears click and whir behind the walls. The floor vibrates rhythmically.', enemies: ['Guard Skeleton', 'Shambling Corpse'] },
+  'planar rift':           { atmosphere: 'Reality shimmers at the edges. Colours that shouldn\'t exist bleed through.', enemies: ['Feral Cultist', 'Cave Spider'] },
+  'sunken temple':         { atmosphere: 'Waterlogged stone and barnacle-crusted pillars. Fish bones crunch underfoot.', enemies: ['Shambling Corpse', 'Giant Rat'] },
+  'frozen tomb':           { atmosphere: 'Ice coats every surface. Your breath crystallizes instantly.',          enemies: ['Guard Skeleton', 'Shambling Corpse'] },
+  'spider nest':           { atmosphere: 'Silk threads catch the light everywhere. Husks of drained prey line the walls.', enemies: ['Cave Spider', 'Giant Rat'] },
+  'bandit fortress':       { atmosphere: 'Crude barricades and stolen goods are piled in every corner.',         enemies: ['Grizzik the Goblin', 'Feral Cultist'] },
+  'fey glade gone wrong':  { atmosphere: 'Flowers bloom in impossible colours. The laughter you hear isn\'t human.', enemies: ['Cave Spider', 'Feral Cultist'] },
+  'demonic hellgate':      { atmosphere: 'The stone is warm to the touch. Symbols of binding cover every surface.', enemies: ['Feral Cultist', 'Shambling Corpse'] },
+  'ancient library':       { atmosphere: 'Shelves of rotting tomes stretch into shadow. Pages flutter with no wind.', enemies: ['Guard Skeleton', 'Feral Cultist'] },
+  'petrified giant':       { atmosphere: 'The walls are organic — veins of stone pulse faintly. You\'re inside something.', enemies: ['Cave Spider', 'Giant Rat'] },
+  'living dungeon':        { atmosphere: 'The corridors shift when you\'re not looking. The dungeon is alive.',  enemies: ['Shambling Corpse', 'Cave Spider'] },
+  'dream prison':          { atmosphere: 'The geometry is wrong. Stairs lead sideways. Gravity is a suggestion.', enemies: ['Feral Cultist', 'Guard Skeleton'] },
+};
+
+// ─── Domain-themed treasures (20 domains) ────────────────────────────────────
+
+export const DOMAIN_TREASURES = {
+  'death':     { name: 'skull-crowned scepter',       desc: 'A scepter topped with a silver skull whose eye sockets glow faintly.' },
+  'war':       { name: 'battle-scarred war banner',   desc: 'A tattered banner that fills you with courage when unfurled.' },
+  'nature':    { name: 'living seed crystal',         desc: 'A gemstone with a tiny fern growing inside, warm to the touch.' },
+  'trickery':  { name: 'mirror of false faces',       desc: 'A hand mirror that shows a different face each time you look.' },
+  'light':     { name: 'sunstone pendant',            desc: 'A golden pendant that radiates warmth and a soft, steady glow.' },
+  'knowledge': { name: 'tome of whispered truths',    desc: 'An ancient book that murmurs answers when you ask questions aloud.' },
+  'tempest':   { name: 'stormcaller\'s horn',         desc: 'A curved horn that crackles with static electricity.' },
+  'forge':     { name: 'anvil shard',                 desc: 'A fragment of a divine anvil, impossibly dense and warm.' },
+  'life':      { name: 'chalice of renewal',          desc: 'A silver chalice. Any water poured in becomes sweet and restorative.' },
+  'grave':     { name: 'mourner\'s lantern',          desc: 'A lantern that burns without fuel. The dead are drawn to its light.' },
+  'order':     { name: 'seal of binding oaths',       desc: 'A heavy seal ring. Promises made while wearing it cannot be broken.' },
+  'twilight':  { name: 'duskweave cloak',             desc: 'A cloak that seems woven from the last light of sunset.' },
+  'arcana':    { name: 'crystallized spell',          desc: 'A hovering crystal containing a spell frozen mid-cast.' },
+  'vengeance': { name: 'grudge-keeper\'s blade',      desc: 'A dagger that grows warm when pointed at someone who wronged you.' },
+  'chaos':     { name: 'entropy marble',              desc: 'A sphere of constantly shifting matter. It is never the same twice.' },
+  'sea':       { name: 'tide pearl',                  desc: 'A black pearl that hums with the rhythm of distant waves.' },
+  'hunting':   { name: 'predator\'s fang necklace',   desc: 'A necklace of fangs from creatures that no longer exist.' },
+  'dreams':    { name: 'sleepwalker\'s compass',      desc: 'A compass that points toward whatever you dreamed of last.' },
+  'madness':   { name: 'whispering orb',              desc: 'A glass orb filled with smoke that forms words you almost understand.' },
+  'beauty':    { name: 'rose that never wilts',       desc: 'A perfect crimson rose, eternally in bloom. It smells like nostalgia.' },
+};
+
+// ─── Domain-themed keys (20 domains) ─────────────────────────────────────────
+
+export const DOMAIN_KEYS = {
+  'death':     { name: 'bone key',          desc: 'Carved from a single finger bone. It feels heavier than it should.' },
+  'war':       { name: 'iron war key',      desc: 'Forged from a melted-down sword hilt. Still warm.' },
+  'nature':    { name: 'living vine key',   desc: 'A key of twisted green vine that pulses with sap.' },
+  'trickery':  { name: 'invisible key',     desc: 'You can feel it in your hand but can only see it from the corner of your eye.' },
+  'light':     { name: 'sunmetal key',      desc: 'A golden key that glows softly in darkness.' },
+  'knowledge': { name: 'runic key',         desc: 'Covered in tiny runes that rearrange themselves when you blink.' },
+  'tempest':   { name: 'lightning-scarred key', desc: 'A key with branching fracture lines like a lightning bolt.' },
+  'forge':     { name: 'slag key',          desc: 'Rough-cast metal, still showing the pour marks. Unbreakable.' },
+  'life':      { name: 'heartwood key',     desc: 'Smooth wood from a tree that was already ancient when the world was young.' },
+  'grave':     { name: 'mourner\'s key',    desc: 'Cold iron wrapped in black cloth. It smells of lilies.' },
+  'order':     { name: 'magistrate\'s key', desc: 'An official key stamped with a judicial seal. Heavy with authority.' },
+  'twilight':  { name: 'dusk key',          desc: 'A key that only becomes solid at twilight. The rest of the time it shimmers.' },
+  'arcana':    { name: 'crystal key',       desc: 'Transparent and faintly humming. It refracts light into impossible colours.' },
+  'vengeance': { name: 'barbed key',        desc: 'A key with tiny hooks. It draws blood when turned.' },
+  'chaos':     { name: 'shifting key',      desc: 'Its shape changes slightly each time you look away. It always fits.' },
+  'sea':       { name: 'coral key',         desc: 'Encrusted with barnacles. It smells of salt and deep water.' },
+  'hunting':   { name: 'antler key',        desc: 'Carved from a stag\'s antler. The tines form the teeth.' },
+  'dreams':    { name: 'gossamer key',      desc: 'Light as a thought. You\'re not sure it\'s entirely real.' },
+  'madness':   { name: 'wrong key',         desc: 'It shouldn\'t fit any lock. It does anyway.' },
+  'beauty':    { name: 'rose-gold key',     desc: 'Delicate and ornate, too beautiful to be merely functional.' },
+};
+
 // Simple string → number hash for seed conversion.
 function hashString(s) {
   let h = 0;
@@ -221,5 +301,5 @@ function hashString(s) {
 export const _lists = {
   TONES, WORLD_ARCHETYPES, THREAT_TYPES, BEAT_ARCS, FACTION_ARCHETYPES,
   CLIMATES, SETTLEMENT_TYPES, DUNGEON_THEMES, GOD_DOMAINS,
-  BUILDING_TYPES, LOCATION_TYPES,
+  BUILDING_TYPES, LOCATION_TYPES, DUNGEON_OVERLAYS, DOMAIN_TREASURES, DOMAIN_KEYS,
 };

@@ -15,6 +15,7 @@
 
 import { t, tRaw } from '../i18n/i18n.js';
 import { Dice } from './rules.js';
+import { DUNGEON_OVERLAYS, DOMAIN_TREASURES, DOMAIN_KEYS } from './worldseed.js';
 
 // ─── Seeded RNG helpers ──────────────────────────────────────────────────────
 // All randomness flows through _rng so dungeons are reproducible from a seed.
@@ -139,9 +140,14 @@ function assignRoomType(idx, spineLen, totalRooms, isSpine) {
 // ─── Dungeon generator (L04/L05) ──────────────────────────────────────────────
 // Returns { rooms, npcs, currentRoom, exitRoomId } for embedding in world.dungeons.
 
-export function generateDungeon(seed) {
+export function generateDungeon(seed, blueprint) {
   if (seed != null) _rng = Dice.seededRng(seed);
   const style = pick(tRaw('world.houseStyles'));
+
+  // Theme overlay from blueprint (if provided).
+  const overlay = blueprint?.dungeonTheme ? (DUNGEON_OVERLAYS[blueprint.dungeonTheme] ?? null) : null;
+  const atmosphere = overlay?.atmosphere ?? '';
+  const primaryDomain = blueprint?.godDomains?.[0]?.domain ?? null;
 
   // 1. Spine: 4-6 rooms
   const spineLen  = randInt(4, 6);
@@ -183,8 +189,13 @@ export function generateDungeon(seed) {
     roomTypes[i] = assignRoomType(i, spineLen, totalRooms, isSpine);
   }
 
-  const treasure   = { ...pick(tRaw('world.treasures')) };
-  const keyItem    = { ...pick(tRaw('world.keys')) };
+  // Themed treasure + key from god domain (if blueprint), else generic.
+  const treasure = primaryDomain && DOMAIN_TREASURES[primaryDomain]
+    ? { ...DOMAIN_TREASURES[primaryDomain], id: 'treasure', type: 'treasure', value: 250, taken: false }
+    : { ...pick(tRaw('world.treasures')), id: 'treasure', type: 'treasure', value: 250, taken: false };
+  const keyItem = primaryDomain && DOMAIN_KEYS[primaryDomain]
+    ? { ...DOMAIN_KEYS[primaryDomain], id: 'found-key', taken: false }
+    : { ...pick(tRaw('world.keys')), id: 'found-key', taken: false };
 
   const rooms = {};
   for (let i = 0; i < totalRooms; i++) {
@@ -196,10 +207,16 @@ export function generateDungeon(seed) {
     const descParams = { style };
     if (type === 'vault') descParams.treasure = treasure.name;
 
+    // Append theme atmosphere to non-entrance, non-vault rooms.
+    const baseDesc = interp(def.desc, descParams);
+    const themedDesc = (atmosphere && type !== 'entrance' && type !== 'vault')
+      ? `${baseDesc} ${atmosphere}`
+      : baseDesc;
+
     rooms[id] = {
       id,
       name:        def.name,
-      description: interp(def.desc, descParams),
+      description: themedDesc,
       exits:       adjacency[i].map(a => ({
         dir:    a.dir,
         roomId: `room-${a.target}`,
@@ -240,11 +257,27 @@ export function generateDungeon(seed) {
 
   // Place treasure in vault
   const vaultId = `room-${spineLen - 1}`;
-  rooms[vaultId].loot.push({ id: 'treasure', name: treasure.name, description: treasure.desc, type: 'treasure', value: 250, taken: false });
+  rooms[vaultId].loot.push(treasure);
 
-  // 6. Place enemies (1-3) in non-start, non-vault rooms
-  const enemyDefs  = tRaw('world.enemies');
-  const enemyStats = tRaw('world.enemyStats');
+  // 6. Place enemies (1-3) in non-start, non-vault rooms.
+  //    Filter by theme overlay if blueprint provided.
+  const allEnemyDefs  = tRaw('world.enemies');
+  const allEnemyStats = tRaw('world.enemyStats');
+
+  let enemyDefs, enemyStats;
+  if (overlay?.enemies?.length) {
+    // Filter to theme-appropriate enemies.
+    const indices = [];
+    for (let i = 0; i < allEnemyDefs.length; i++) {
+      if (overlay.enemies.includes(allEnemyDefs[i].name)) indices.push(i);
+    }
+    enemyDefs  = indices.map(i => allEnemyDefs[i]);
+    enemyStats = indices.map(i => allEnemyStats[i] ?? allEnemyStats[0]);
+  } else {
+    enemyDefs  = allEnemyDefs;
+    enemyStats = allEnemyStats;
+  }
+
   const enemyCount = randInt(1, Math.min(3, totalRooms - 2));
   const enemyCandidates = shuffle(
     Array.from({ length: totalRooms }, (_, i) => i).filter(i => i !== 0 && i !== spineLen - 1)

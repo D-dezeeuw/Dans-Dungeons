@@ -5,6 +5,7 @@
 
 import { appState, setValue, tick, saveToStorage, clearSave, restoreState } from '../core/state.js';
 import { generateWorld, generateDungeon, createDungeonEntry } from './world.js';
+import { buildWorldBlueprint } from './worldseed.js';
 import { createCharacter } from './character.js';
 import { processTurn, checkApiKey, generateTurnImage, buildScene } from './loop.js';
 import * as UI from '../ui/console.js';
@@ -234,11 +235,18 @@ export async function startNewGame() {
 // ─── Quick Dungeon (legacy flow) ─────────────────────────────────────────────
 
 async function startQuickDungeon() {
-  const world = generateWorld();
+  const seed = Math.floor(Math.random() * 2147483647);
+  const blueprint = buildWorldBlueprint(seed);
+  const world = generateDungeon(seed, blueprint);
   setValue('world', world);
   setValue('session.phase', 'play');
   tick();
   saveToStorage();
+
+  // Show the dungeon theme in transcript for flavor.
+  UI.appendEntry('system', `Theme: ${blueprint.dungeonTheme}. Tone: ${blueprint.tone}.`);
+  UI.appendEntry('system', '');
+
   await beginAdventure();
 }
 
