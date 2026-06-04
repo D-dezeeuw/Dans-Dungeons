@@ -3,8 +3,36 @@
 // Text-based character creation wizard.
 // Returns { record, sheet } or null if the player cancelled.
 
-import { SRD, Character, createEngine } from './rules.js';
+import { SRD, createEngine } from './rules.js';
 import { t } from '../i18n/i18n.js';
+
+// One shared engine for all sheet derivation (the vendor default-singleton
+// shape; registries are bound inside `deriveSheet`).
+const engine = createEngine();
+
+// ─── Sheet derivation ─────────────────────────────────────────────────────────
+// The DerivedSheet is a pure function of the host-owned record. Anything that
+// re-derives a sheet (creation, save-load, future level-ups / equipment swaps)
+// must go through here so a cached sheet can never drift from its record.
+
+export function deriveSheetFor(record) {
+  return engine.deriveSheet(record);
+}
+
+// Re-derive a { record, sheet } pc from its record, preserving the record
+// (which holds host-owned runtime state like hpCurrent) and refreshing the
+// derived sheet. Returns the pc unchanged if there's no record to derive from.
+export function reconcilePc(pc) {
+  if (!pc?.record) return pc;
+  try {
+    return { ...pc, sheet: deriveSheetFor(pc.record) };
+  } catch (e) {
+    // A corrupt or older-shape record shouldn't brick boot/import — fall back
+    // to the stored sheet (the prior behaviour) rather than throwing.
+    console.warn('[character] sheet re-derivation failed; keeping stored sheet:', e?.message);
+    return pc;
+  }
+}
 
 // ─── Starter options ──────────────────────────────────────────────────────────
 
@@ -81,8 +109,7 @@ export async function createCharacter(ui) {
   };
 
   // Derive the sheet
-  const engine = createEngine();
-  const sheet  = engine.deriveSheet(record);
+  const sheet = deriveSheetFor(record);
 
   // Initialise current HP to max
   record.hpCurrent = sheet.hp.max;

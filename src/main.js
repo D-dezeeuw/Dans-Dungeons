@@ -5,6 +5,7 @@ import { appState, setValue, bindDOM, initState, restoreState, loadFromStorage, 
 import { registerReactiveSidebar }                                                           from './ui/reactive.js';
 import { createJournal, exportScreenshot, exportAllSketches, importSave, handleImportFile, exportWorldBible } from './ui/exports.js';
 import { startNewGame, resumeGame, ensureKey, applySketchView, upgradeToDeluxe, requireDeluxe } from './game/flow.js';
+import { reconcilePc }                                                                        from './game/character.js';
 import { initSpeakHover }                                                                   from './ui/transcript.js';
 import { initMicButton }                                                                    from './ui/input.js';
 import * as UI from './ui/console.js';
@@ -121,7 +122,12 @@ async function boot() {
   initState();
 
   const save = loadFromStorage();
-  if (save) restoreState(save);
+  if (save) {
+    restoreState(save);
+    // Re-derive the sheet from the record — never trust the persisted sheet,
+    // which may have been produced by an older rules engine.
+    if (appState.party?.pc) setValue('party.pc', reconcilePc(appState.party.pc));
+  }
   if (appState.settings?.roleplayMode) document.body.classList.add('roleplay-mode');
   if (appState.settings?.autoplay) document.getElementById('autoplay-btn')?.classList.add('active');
 

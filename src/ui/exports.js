@@ -1,9 +1,10 @@
 // src/ui/exports.js — journal, screenshot, sketch gallery, and save file I/O.
 // All functions are triggered by user action; none interact with the game loop.
 
-import { appState, restoreState, tick, saveToStorage } from '../core/state.js';
+import { appState, setValue, restoreState, tick, saveToStorage } from '../core/state.js';
 import { appendEntry, setThinking } from './transcript.js';
 import { getJournalLog } from '../game/flow.js';
+import { reconcilePc } from '../game/character.js';
 import { t, locale } from '../i18n/i18n.js';
 
 // ─── Download helper ──────────────────────────────────────────────────────────
@@ -77,6 +78,9 @@ export function handleImportFile(e) {
     try {
       const snap = JSON.parse(ev.target.result);
       restoreState(snap);
+      // Re-derive the sheet from the imported record rather than trusting the
+      // sheet in the file (which may be stale or engine-version-mismatched).
+      if (appState.party?.pc) setValue('party.pc', reconcilePc(appState.party.pc));
       tick();
       saveToStorage();
       appendEntry('system', t('exports.imported', { file: file.name }));
