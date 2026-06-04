@@ -12,6 +12,20 @@ npm test        # node --test tests/ — zero-dep test runner (Node 20+)
 
 Run a single test file: `node --test tests/dnd/dice.test.js`
 
+## Development workflow
+
+Every feature request follows this loop (no PRs — direct merge to `main`):
+
+1. **Branch** — `git checkout main && git checkout -b feature/<short-slug>`.
+2. **Implement** — make the change on the feature branch.
+3. **Verify** — `npm test` must be green **and** `node build.js` must bundle
+   cleanly. A failure blocks the merge; fix before proceeding.
+4. **Commit** — commit on the feature branch with a clear message. Rebuild the
+   bundle so `vendor/app.bundle.js` + version stamp are in the commit.
+5. **Merge** — `git checkout main && git merge --no-ff feature/<short-slug>`,
+   then push `main` to origin (this is the GitHub Pages deploy trigger).
+6. **Clean up** — delete the merged feature branch (local and remote).
+
 ## Architecture
 
 **Dan's Dungeons** is a text-based, AI-driven D&D game that runs 100% in the browser — no backend, no installed npm dependencies. esbuild bundles `src/main.js` into `vendor/app.bundle.js` for GitHub Pages.
