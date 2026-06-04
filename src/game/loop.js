@@ -12,7 +12,9 @@ import { appState, addValue, saveToStorage } from '../core/state.js';
 import { classify }                          from '../ai/classify.js';
 import { narrate, generateSceneImage }       from '../ai/narrate.js';
 import { checkKey }                          from '../ai/client.js';
-import { resolveRules, goblinRetaliates, commitAll, appendTranscript } from './resolver.js';
+import { resolveRules, goblinRetaliates, commitAll, appendTranscript,
+         isPcDown, resolveDownTurn, commitDownTurn } from './resolver.js';
+import { t }                                 from '../i18n/i18n.js';
 
 // ─── Scene context (pure snapshot for AI) ────────────────────────────────────
 
@@ -79,6 +81,10 @@ export async function generateTurnImage(prompt)  { return generateSceneImage(pro
 // ─── Main turn ────────────────────────────────────────────────────────────────
 
 export async function processTurn(playerInput, onNarrationChunk) {
+  // If the PC is downed, this turn is a death save — resolved deterministically
+  // (vendor death-save rules) with no AI call.
+  if (isPcDown()) return processDownTurn(playerInput);
+
   // Snapshot scene BEFORE any mutations.
   const scene = buildScene();
 
@@ -119,4 +125,33 @@ export async function processTurn(playerInput, onNarrationChunk) {
   saveToStorage();
 
   return { ...narratorResp, _debug: { classified, resolved, goblinResult } };
+}
+
+// ─── Down turn (deterministic, no AI) ────────────────────────────────────────
+
+function processDownTurn(playerInput) {
+  const down  = resolveDownTurn();
+  const lines = [];
+
+  if (down.strike) lines.push(t('deathsave.strike', { enemy: down.strike.by, damage: down.strike.damage }));
+
+  if (down.dead) {
+    lines.push(t('deathsave.dead'));
+  } else if (down.revived) {
+    // Natural 20 on the save vs. stabilising with the room clear.
+    lines.push(down.save?.outcome === 'revived' ? t('deathsave.revived') : t('deathsave.stable'));
+  } else if (down.save?.outcome === 'success') {
+    lines.push(t('deathsave.success', { d20: down.save.d20, n: down.deathSaves.successes }));
+  } else if (down.save?.outcome === 'failure') {
+    lines.push(t('deathsave.failure', { d20: down.save.d20, n: down.deathSaves.failures }));
+  }
+
+  const narration = lines.join('\n\n');
+
+  commitDownTurn(down);
+  appendTranscript(playerInput, narration);
+  addValue('session.turnCount', 1);
+  saveToStorage();
+
+  return { narration, _debug: { down } };
 }

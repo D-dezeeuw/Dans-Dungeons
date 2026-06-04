@@ -156,6 +156,80 @@ export function goblinRetaliates() {
   };
 }
 
+// ─── Death saves (PC at 0 HP) ──────────────────────────────────────────────────
+
+// True while the PC is downed: at 0 HP and not yet dead. (resolveDownTurn
+// tolerates a missing tracker, so we don't require one here.)
+export function isPcDown() {
+  const r = appState.party?.pc?.record;
+  return !!r && (r.hpCurrent ?? 1) <= 0 && !r.deathSaves?.dead;
+}
+
+// Resolve one turn while the PC is downed. All math is the vendor's: a hostile
+// in the room strikes the helpless PC (SRD: a melee hit on a downed creature is
+// an auto-crit = two failed saves), then the PC rolls a death save. Stabilising
+// with no hostiles left revives the PC at 1 HP (house rule — the game has no
+// healing). Pure: reads appState, mutates nothing.
+export function resolveDownTurn() {
+  const { record, sheet } = appState.party.pc;
+  let actor = {
+    hp:         record.hpCurrent,
+    hpMax:      sheet.hp.max,
+    deathSaves: record.deathSaves ?? Combat.freshDeathSaves(),
+    conditions: record.conditions ?? [],
+  };
+
+  const roomId  = appState.world?.currentRoom;
+  const hostile = Object.values(appState.world?.npcs ?? {})
+    .find(n => n.roomId === roomId && n.alive && n.attitude === 'hostile');
+
+  let strike = null;
+  if (hostile) {
+    const dmg = Combat.damageRoll({ damageDice: hostile.damageDie, damageMod: hostile.damageBonus, critical: true });
+    const res = Combat.applyDamageWhileDown(actor, dmg.total, { critical: true, hpMax: actor.hpMax });
+    actor = res.actor;
+    strike = { by: hostile.name, damage: dmg.total, outcome: res.outcome };
+  }
+
+  let save = null;
+  if (!actor.deathSaves.dead && !actor.deathSaves.stable) {
+    const ds = Combat.deathSave(actor);
+    actor = ds.actor;
+    save = { d20: ds.d20, outcome: ds.outcome };
+  }
+
+  // Revive-on-clear: stabilised and no hostiles remain → come to at 1 HP.
+  const stillHostile = Object.values(appState.world?.npcs ?? {})
+    .some(n => n.roomId === roomId && n.alive && n.attitude === 'hostile');
+  let revived = save?.outcome === 'revived';   // natural 20 on the save
+  if (actor.deathSaves.stable && !stillHostile) {
+    actor = Combat.reviveTo(actor, 1);
+    revived = true;
+  }
+
+  return {
+    intent:     'deathSave',
+    strike, save,
+    deathSaves: actor.deathSaves,
+    hp:         actor.hp,
+    conditions: actor.conditions,
+    dead:       actor.deathSaves.dead === true,
+    revived,
+  };
+}
+
+// Commit a resolved down-turn to the PC record.
+export function commitDownTurn(down) {
+  const prev = appState.party.pc.record;
+  setValue('party', {
+    ...appState.party,
+    pc: {
+      ...appState.party.pc,
+      record: { ...prev, hpCurrent: down.hp, deathSaves: down.deathSaves, conditions: down.conditions },
+    },
+  });
+}
+
 // ─── State commits ────────────────────────────────────────────────────────────
 
 export function commitAll(resolved, goblinResult) {
@@ -211,13 +285,17 @@ export function commitAll(resolved, goblinResult) {
 
   // PC HP after goblin attack
   if (goblinResult?.hit) {
-    setValue('party', {
-      ...appState.party,
-      pc: {
-        ...appState.party.pc,
-        record: { ...appState.party.pc.record, hpCurrent: goblinResult.pcNewHp },
-      },
-    });
+    const prev = appState.party.pc.record;
+    const record = { ...prev, hpCurrent: goblinResult.pcNewHp };
+    // On a fresh transition from >0 to 0 HP, (re)initialise the death-save
+    // tracker and apply Unconscious so the next turn rolls saves.
+    if (goblinResult.pcNewHp <= 0 && (prev.hpCurrent ?? 1) > 0) {
+      record.deathSaves = Combat.freshDeathSaves();
+      record.conditions = prev.conditions?.includes('unconscious')
+        ? prev.conditions
+        : [...(prev.conditions ?? []), 'unconscious'];
+    }
+    setValue('party', { ...appState.party, pc: { ...appState.party.pc, record } });
   }
 }
 
