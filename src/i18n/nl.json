@@ -254,20 +254,12 @@
       ]
     },
     "enemies": [
-      { "name": "Grizzik de Goblin", "intro": "Een goblin hurkt in de schaduwen, gele ogen die openspringen als je binnenkomt. Hij grijpt een gebutst kromzwaard en ontbloot zijn tanden: \"Deze plek is van Grizzik! Ga terug of bloed, grootvolk!\"" },
-      { "name": "Wachtskelet", "intro": "Botten rammelen terwijl een skelet overeind komt vanuit de hoek. Zijn holle oogkassen richten zich op jou; een verroest lang zwaard rijst in een gevechtshouding met verschrikkelijke doelbewustheid." },
-      { "name": "Verwilderde Cultist", "intro": "Een figuur in een gewaad draait zich naar je toe, waanzin helder in zijn ogen. Hij heeft hier gewacht om een reden die je nog niet begrijpt — en richt een lange dolk op je keel." },
-      { "name": "Reusachtige Rat", "intro": "Een rat zo groot als een terriër barst los onder het puin, nekharen overeind en gele tanden ontbloot. Hij valt aan voordat je adem kunt halen." },
-      { "name": "Slepend Lijk", "intro": "Iets rijst op van de vloer — een lijk in verroest harnas, gewrichten krakend terwijl het opstaat. Zijn kaak hangt los en een guttural gekreun ontsnapt aan wat er over is van zijn keel." },
-      { "name": "Grotspin", "intro": "Zijdedraden vangen het licht een moment voordat je de spin ziet — opgezwollen, met zwarte poten, en snel. Hij laat zich van het plafond vallen met een nat gesis." }
-    ],
-    "enemyStats": [
-      { "hp": 7, "maxHp": 7, "ac": 15, "toHit": 4, "damageDie": "1d6", "damageBonus": 2, "damageType": "slashing" },
-      { "hp": 9, "maxHp": 9, "ac": 13, "toHit": 4, "damageDie": "1d6", "damageBonus": 2, "damageType": "slashing" },
-      { "hp": 8, "maxHp": 8, "ac": 12, "toHit": 3, "damageDie": "1d6", "damageBonus": 1, "damageType": "piercing" },
-      { "hp": 5, "maxHp": 5, "ac": 12, "toHit": 3, "damageDie": "1d4", "damageBonus": 0, "damageType": "piercing" },
-      { "hp": 10, "maxHp": 10, "ac": 8, "toHit": 3, "damageDie": "1d6", "damageBonus": 1, "damageType": "bludgeoning" },
-      { "hp": 6, "maxHp": 6, "ac": 13, "toHit": 5, "damageDie": "1d4", "damageBonus": 2, "damageType": "piercing" }
+      { "name": "Grizzik de Goblin", "monsterId": "goblin", "intro": "Een goblin hurkt in de schaduwen, gele ogen die openspringen als je binnenkomt. Hij grijpt een gebutst kromzwaard en ontbloot zijn tanden: \"Deze plek is van Grizzik! Ga terug of bloed, grootvolk!\"" },
+      { "name": "Wachtskelet", "monsterId": "skeleton", "intro": "Botten rammelen terwijl een skelet overeind komt vanuit de hoek. Zijn holle oogkassen richten zich op jou; een verroest lang zwaard rijst in een gevechtshouding met verschrikkelijke doelbewustheid." },
+      { "name": "Verwilderde Cultist", "monsterId": "cultist", "intro": "Een figuur in een gewaad draait zich naar je toe, waanzin helder in zijn ogen. Hij heeft hier gewacht om een reden die je nog niet begrijpt — en richt een lange dolk op je keel." },
+      { "name": "Reusachtige Rat", "monsterId": "giant-rat", "intro": "Een rat zo groot als een terriër barst los onder het puin, nekharen overeind en gele tanden ontbloot. Hij valt aan voordat je adem kunt halen." },
+      { "name": "Slepend Lijk", "monsterId": "zombie", "intro": "Iets rijst op van de vloer — een lijk in verroest harnas, gewrichten krakend terwijl het opstaat. Zijn kaak hangt los en een guttural gekreun ontsnapt aan wat er over is van zijn keel." },
+      { "name": "Grotspin", "monsterId": "cave-spider", "intro": "Zijdedraden vangen het licht een moment voordat je de spin ziet — opgezwollen, met zwarte poten, en snel. Hij laat zich van het plafond vallen met een nat gesis." }
     ],
     "keys": [
       { "name": "koperen sleutel", "desc": "Een aangelopen koperen sleutel, de greep gegoten in de vorm van een halve maan." },

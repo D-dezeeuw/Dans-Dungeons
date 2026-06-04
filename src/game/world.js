@@ -15,6 +15,7 @@
 
 import { t, tRaw } from '../i18n/i18n.js';
 import { Dice } from './rules.js';
+import { statBlockFor } from './bestiary.js';
 import { DUNGEON_OVERLAYS, DOMAIN_TREASURES, DOMAIN_KEYS } from './worldseed.js';
 
 // ─── Seeded RNG helpers ──────────────────────────────────────────────────────
@@ -261,22 +262,16 @@ export function generateDungeon(seed, blueprint) {
 
   // 6. Place enemies (1-3) in non-start, non-vault rooms.
   //    Filter by theme overlay if blueprint provided.
-  const allEnemyDefs  = tRaw('world.enemies');
-  const allEnemyStats = tRaw('world.enemyStats');
+  const allEnemyDefs = tRaw('world.enemies');
 
-  let enemyDefs, enemyStats;
+  let enemyDefs;
   if (overlay?.enemies?.length) {
     // Filter to theme-appropriate enemies.
-    const indices = [];
-    for (let i = 0; i < allEnemyDefs.length; i++) {
-      if (overlay.enemies.includes(allEnemyDefs[i].name)) indices.push(i);
-    }
-    enemyDefs  = indices.map(i => allEnemyDefs[i]);
-    enemyStats = indices.map(i => allEnemyStats[i] ?? allEnemyStats[0]);
+    enemyDefs = allEnemyDefs.filter(d => overlay.enemies.includes(d.name));
   } else {
-    enemyDefs  = allEnemyDefs;
-    enemyStats = allEnemyStats;
+    enemyDefs = allEnemyDefs;
   }
+  if (!enemyDefs.length) enemyDefs = allEnemyDefs;
 
   const enemyCount = randInt(1, Math.min(3, totalRooms - 2));
   const enemyCandidates = shuffle(
@@ -288,13 +283,12 @@ export function generateDungeon(seed, blueprint) {
     const roomIdx  = enemyCandidates[e];
     const eIdx     = e % enemyDefs.length;
     const def      = enemyDefs[eIdx];
-    const stats    = enemyStats[eIdx] ?? enemyStats[0];
     const npcId    = `enemy-${e + 1}`;
     npcs[npcId] = {
       id:          npcId,
       roomId:      `room-${roomIdx}`,
       name:        def.name,
-      ...stats,
+      ...statBlockFor(def.monsterId),
       conditions:  [],
       attitude:    'hostile',
       alive:       true,

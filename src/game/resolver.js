@@ -5,14 +5,7 @@
 // commitAll() and appendTranscript() write the resolved state to Spektrum.
 
 import { appState, setValue, addValue } from '../core/state.js';
-import { Dice } from './rules.js';
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-export function doubleDice(spec) {
-  // "1d8" → "2d8",  "2d6" → "4d6" (critical hit)
-  return spec.replace(/^(\d+)d(\d+)$/, (_, n, d) => `${Number(n) * 2}d${d}`);
-}
+import { Combat, Checks } from './rules.js';
 
 // ─── Rules resolver ───────────────────────────────────────────────────────────
 
@@ -36,50 +29,49 @@ export function resolveRules(classified) {
       damageType:   'bludgeoning',
     };
 
-    const d20        = Dice.roll('1d20');
-    const crit       = d20.total === 20;
-    const fumble     = d20.total === 1;
-    const totalHit   = d20.total + weapon.attackBonus;
-    const hit        = !fumble && (crit || totalHit >= target.ac);
+    const atk = Combat.attackRoll({ attackBonus: weapon.attackBonus, ac: target.ac });
 
     let damage = 0;
     let targetNewHp = target.hp;
     let targetDead  = false;
 
-    if (hit) {
-      const diceSpec   = crit ? doubleDice(weapon.damageDice) : weapon.damageDice;
-      const dmgRoll    = Dice.roll(diceSpec);
-      damage           = Math.max(1, dmgRoll.total + (weapon.damageMod ?? 0));
-      targetNewHp      = Math.max(0, target.hp - damage);
-      targetDead       = targetNewHp <= 0;
+    if (atk.hit) {
+      const dmg   = Combat.damageRoll({
+        damageDice: weapon.damageDice,
+        damageMod:  weapon.damageMod ?? 0,
+        critical:   atk.critical,
+      });
+      damage      = dmg.total;
+      targetNewHp = Math.max(0, target.hp - damage);
+      targetDead  = targetNewHp <= 0;
     }
 
     return {
       intent, targetId, targetName: target.name,
       weaponName: weapon.name,
-      d20: d20.total, totalHit, targetAC: target.ac,
-      hit, crit, fumble, damage,
+      d20: atk.d20, totalHit: atk.total, targetAC: target.ac,
+      hit: atk.hit, crit: atk.critical, fumble: atk.fumble, damage,
       targetPrevHp: target.hp, targetNewHp, targetDead,
     };
   }
 
   // ── SKILL CHECK ───────────────────────────────────────────────────────────
   if (intent === 'skill') {
-    const SKILL_ABILITY = {
-      athletics: 'str', acrobatics: 'dex', 'sleight-of-hand': 'dex', stealth: 'dex',
-      arcana: 'int', history: 'int', investigation: 'int', nature: 'int', religion: 'int',
-      'animal-handling': 'wis', insight: 'wis', medicine: 'wis', perception: 'wis', survival: 'wis',
-      deception: 'cha', intimidation: 'cha', performance: 'cha', persuasion: 'cha',
-    };
     const skillId  = skill ?? 'perception';
-    const ability  = SKILL_ABILITY[skillId] ?? 'str';
-    const abilMod  = sheet.abilityScores.mod[ability] ?? 0;
-    const skillRow = sheet.skills?.[skillId];
+    const skillRow = sheet.skills?.[skillId] ?? sheet.skills?.perception;
+    const ability  = skillRow?.ability ?? 'wis';
+    const checkDC  = dc ?? 12;
+    // Expertise doubles the proficiency portion; abilityCheck takes a flat
+    // proficiencyBonus, so pass the doubled value when the skill has expertise.
     const profBonus = skillRow?.proficient ? sheet.proficiencyBonus : 0;
-    const d20       = Dice.roll('1d20');
-    const total     = d20.total + abilMod + profBonus;
-    const checkDC   = dc ?? 12;
-    return { intent, skill: skillId, ability, d20: d20.total, abilMod, profBonus, total, dc: checkDC, success: total >= checkDC };
+    const check = Checks.abilityCheck({
+      abilityScore:     sheet.abilityScores.final[ability],
+      proficient:       skillRow?.proficient ?? false,
+      proficiencyBonus: skillRow?.expertise ? sheet.proficiencyBonus * 2 : sheet.proficiencyBonus,
+      dc:               checkDC,
+    });
+    const abilMod = sheet.abilityScores.mod[ability] ?? 0;
+    return { intent, skill: skillId, ability, d20: check.d20, abilMod, profBonus, total: check.total, dc: check.dc, success: check.success };
   }
 
   // ── MOVE ──────────────────────────────────────────────────────────────────
@@ -142,24 +134,23 @@ export function goblinRetaliates() {
   const { record, sheet } = appState.party?.pc ?? {};
   if (!record || !sheet) return null;
 
-  const d20      = Dice.roll('1d20');
-  const fumble   = d20.total === 1;
-  const crit     = d20.total === 20;
-  const totalHit = d20.total + goblin.toHit;
-  const hit      = !fumble && (crit || totalHit >= sheet.ac.value);
+  const atk = Combat.attackRoll({ attackBonus: goblin.toHit, ac: sheet.ac.value });
 
   let damage = 0, pcNewHp = record.hpCurrent;
-  if (hit) {
-    const spec = crit ? doubleDice(goblin.damageDie) : goblin.damageDie;
-    const dmg  = Dice.roll(spec);
-    damage     = Math.max(1, dmg.total + goblin.damageBonus);
-    pcNewHp    = Math.max(0, record.hpCurrent - damage);
+  if (atk.hit) {
+    const dmg = Combat.damageRoll({
+      damageDice: goblin.damageDie,
+      damageMod:  goblin.damageBonus,
+      critical:   atk.critical,
+    });
+    damage  = dmg.total;
+    pcNewHp = Math.max(0, record.hpCurrent - damage);
   }
 
   return {
     goblinName: goblin.name,
-    d20: d20.total, totalHit, pcAC: sheet.ac.value,
-    hit, crit, fumble, damage,
+    d20: atk.d20, totalHit: atk.total, pcAC: sheet.ac.value,
+    hit: atk.hit, crit: atk.critical, fumble: atk.fumble, damage,
     pcPrevHp: record.hpCurrent, pcNewHp,
     pcUnconscious: pcNewHp === 0,
   };
