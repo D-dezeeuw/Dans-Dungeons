@@ -183,6 +183,14 @@
     "text": "De wereld vervaagt. Grizziks spottende lach echoot door de steen terwijl je ineenzakt op de koude vloer. Je avontuur eindigt hier — voor nu.",
     "hint": "Typ /restart om het opnieuw te proberen."
   },
+  "deathsave": {
+    "strike": "{{enemy}} doemt op boven je bewusteloze lichaam en haalt uit voor {{damage}} schade — een slag tegen de stervende.",
+    "success": "Je hart vecht door. (Doodsworp: {{d20}} gegooid — succes {{n}}/3)",
+    "failure": "Je leven sijpelt verder weg in het duister. (Doodsworp: {{d20}} gegooid — mislukking {{n}}/3)",
+    "stable": "Je ademhaling stabiliseert. Met geen vijand meer overeind sleep je jezelf terug van de rand en sta je op met 1 levenspunt.",
+    "revived": "Een natuurlijke 20! Je hapt naar adem en krabbelt terug overeind met 1 levenspunt.",
+    "dead": "Je ogen breken en je strijd valt stil. Hier eindigt je verhaal."
+  },
   "charCreate": {
     "banner1": "═══════════════════════════",
     "banner2": "    PERSONAGE AANMAKEN",

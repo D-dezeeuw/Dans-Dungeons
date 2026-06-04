@@ -183,6 +183,14 @@
     "text": "The world dims. Grizzik's mocking cackle echoes through the stone as you collapse to the cold floor. Your adventure ends here — for now.",
     "hint": "Type /restart to try again."
   },
+  "deathsave": {
+    "strike": "{{enemy}} looms over your unconscious body and strikes for {{damage}} damage — a wound against the dying.",
+    "success": "Your heart fights on. (Death save: rolled {{d20}} — success {{n}}/3)",
+    "failure": "Your life ebbs further into the dark. (Death save: rolled {{d20}} — failure {{n}}/3)",
+    "stable": "Your breathing steadies. With no enemy left standing, you drag yourself back from the brink and rise at 1 hit point.",
+    "revived": "A natural 20! You gasp awake, clawing back to your feet at 1 hit point.",
+    "dead": "Your eyes glaze and your struggle stills. This is where your story ends."
+  },
   "charCreate": {
     "banner1": "═══════════════════════════",
     "banner2": "    CHARACTER CREATION",

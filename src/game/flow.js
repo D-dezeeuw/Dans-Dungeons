@@ -623,8 +623,10 @@ export async function playLoop() {
       break;
     }
 
-    const pcHp = appState.party?.pc?.record?.hpCurrent ?? 1;
-    if (pcHp <= 0) { await doDefeat(); break; }
+    // Defeat only once the PC has actually died (three failed death saves).
+    // At 0 HP but not dead, the PC is downed and the turn resolves as a death
+    // save (loop.js → processDownTurn).
+    if (appState.party?.pc?.record?.deathSaves?.dead) { await doDefeat(); break; }
 
     _cancelSpeech();
 
