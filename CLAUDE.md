@@ -5,12 +5,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Commands
 
 ```bash
-npm run serve   # serves the repo root; open: http://localhost:3000
+npm run serve   # serves the repo root on :3000 via python3 -m http.server
 node build.js   # esbuild bundle → vendor/app.bundle.js + version stamp
-npm test        # node --test tests/ — zero-dep test runner (Node 20+)
+npm test        # node --test 'tests/**/*.test.js' — zero-dep test runner (Node 20+)
 ```
 
-Run a single test file: `node --test tests/dnd/dice.test.js`
+Run a single test file: `node --test tests/worldgen/dungeon.test.js`
+
+> esbuild is the only npm dependency (`devDependencies`). If `node_modules` is
+> absent, run `npm install` before `node build.js`. Tests need no install.
 
 ## Architecture
 
@@ -33,18 +36,24 @@ src/
 ├── game/
 │   ├── flow.js           Game lifecycle FSM: setup, play loop, victory/defeat, autoplay
 │   ├── loop.js           Turn engine: classify → resolve → narrate → commit
-│   ├── resolver.js       Pure D&D rules: attack, skill, move, take, unlock
+│   ├── resolver.js       D&D rules + Spektrum commits: attack, skill, move, take, unlock
+│   ├── combat-math.js    Pure combat/skill arithmetic (no state, no Dice) — unit-tested
 │   ├── character.js      Character creation wizard
-│   ├── world.js          Procedural dungeon generator
+│   ├── world.js          Procedural dungeon generator (single dungeon)
+│   ├── worldseed.js      Pure seeded "blueprint" builder (tone, archetypes, factions)
+│   ├── worldgen.js       AI worldgen pipeline: world → factions → beats → region → settlement
+│   ├── worldbible.js     Runs full pipeline + formats it into EPUB chapters
 │   └── rules.js          Thin re-export shim for bag-of-holding
 ├── ai/
-│   ├── client.js         OpenRouter HTTP transport, retry, streaming
+│   ├── client.js         OpenRouter HTTP transport, retry, 429 fallback chains, streaming
+│   ├── auth.js           OpenRouter OAuth (PKCE) one-click connect, key exchange
+│   ├── openrouter.js     Back-compat re-export barrel (prefer importing specific modules)
 │   ├── classify.js       Intent classifier (tiny tier)
 │   ├── narrate.js        GM narrator + scene image generation (medium tier)
 │   ├── autoplay.js       LLM-driven autopilot (tiny tier)
 │   ├── journal.js        LLM story weaver for journal export (medium tier)
-│   ├── schemas.js        JSON schemas: CLASSIFIER, NARRATOR, AUTOPLAY, JOURNAL
-│   ├── tiers.js          Default model IDs per tier
+│   ├── schemas.js        JSON schemas: classifier, narrator, autoplay, journal, worldgen
+│   ├── tiers.js          Free/Deluxe model sets, fallback chains, embedded free-tier key
 │   ├── stream.js         SSE stream parser / NarrationExtractor
 │   ├── tts.js            Text-to-speech via OpenRouter
 │   └── stt.js            Speech-to-text via OpenRouter
@@ -99,6 +108,24 @@ The turn engine (`src/game/loop.js`) is the only module that calls AI and commit
 - **Room types** — `entrance`, `hall`, `corridor`, `chamber`, `storage`, `quarters`, `shrine`, `vault` — each with 5 locale-driven descriptions
 - **Output shape** — `{ currentRoom, exitRoomId, rooms: {}, npcs: {} }` consumed by resolver, narrator, and UI unchanged
 
+### AI world generation pipeline
+
+Above the single dungeon sits a layered, AI-driven worldgen pipeline:
+
+- `worldseed.js` — **pure, seeded** blueprint builder. Picks tone, world
+  archetype, threat, climate, god domains, faction slots, etc. from curated
+  lists using seeded RNG. Same seed → same blueprint → reproducible world. No AI.
+- `worldgen.js` — turns the blueprint into prose via cascading AI calls
+  (world → factions → beats → region → settlement). Each generator gets its
+  parent's **digest** + the blueprint as constraints, so the LLM fleshes out
+  fixed choices rather than inventing freely. Schemas live in `ai/schemas.js`.
+- `worldbible.js` — runs the whole pipeline and formats the result into EPUB
+  chapters; also keeps the raw world JSON for export/import.
+
+The digest/S-card cascade (parent passes a compressed summary to children, and
+the narrator receives leaf-to-root cards rather than full digests) is what keeps
+prompts cheap — see `tests/worldgen/digest.test.js`.
+
 ### i18n
 
 Zero-dep locale system in `src/i18n/`:
@@ -130,15 +157,24 @@ LLM-driven autopilot (`src/ai/autoplay.js`):
 - Falls back to raw HTML journal if LLM fails
 - Step-by-step progress shown in transcript
 
-### AI model tiers
+### AI model tiers & free/Deluxe
 
-| Tier | Purpose | Default model |
-|------|---------|---------------|
-| `tiny` | Classifier, autoplay (every turn) | gemini-2.5-flash-lite |
-| `medium` | Narrator, journal story | deepseek-v4-pro |
-| `image` | Scene sketches | gemini-2.5-flash-image |
-| `tts` | Text-to-speech | gemini-3.1-flash-tts |
-| `stt` | Speech-to-text | nvidia/parakeet-tdt |
+`src/ai/tiers.js` defines named tiers (`tiny`, `medium`, `large`, `image`, `tts`,
+`stt`) and two model sets:
+
+- **Free** (`FREE_MODELS`, the default) — all `$0` OpenRouter models (`:free`
+  suffix). No image/TTS/STT (those slots are `null`). Uses an **embedded
+  free-tier key** (`_cfg()`, XOR-obfuscated). `FREE_FALLBACKS` gives each slot an
+  ordered list of alternates the client rotates through on a 429.
+- **Deluxe** (`PAID_MODELS`) — higher-quality paid models via the player's own
+  key (BYOK). Unlocks image sketches, TTS, mic/STT, autoplay, and roleplay.
+
+`modelsForTier(tier)` returns the set for `'deluxe'` vs anything else. Model IDs
+are versioned and change often — read `tiers.js`, don't trust a hardcoded list.
+
+> The embedded free-tier key ships in the bundle and is **public by design** —
+> see the SECURITY NOTE in `tiers.js`. It must be provisioned with a hard spend
+> cap and restricted to `:free` models.
 
 The `max_tokens` override in `chatCompletion()` opts allows per-call limits (journal uses 4000).
 
@@ -165,4 +201,16 @@ Saves in `localStorage` (key: `dans-dungeons`). Full state exported as `.dnd.jso
 
 ### Tests
 
-Tests in `tests/` using `node --test` (zero deps). Test deterministic logic only: dice, checks, combat, XP, schema validation.
+Tests in `tests/` using `node --test` (zero deps, no install). Test
+**deterministic logic only** — never network or AI.
+
+App source modules import bare specifiers (`spektrum`, `bag-of-holding`) and
+browser globals (`localStorage`), so they can't be imported under bare Node.
+Two patterns work around this:
+
+- **Contract tests** (`tests/worldgen/`) assert the *shape* a generator must
+  return, using inline fixtures — no app import.
+- **Pure-module tests** (`tests/combat/combat-math.test.js`) import a
+  browser-free module directly. Keep deterministic rules math in such modules
+  (e.g. `game/combat-math.js`) so `resolver.js` stays a thin state-I/O wrapper
+  over testable pure functions.

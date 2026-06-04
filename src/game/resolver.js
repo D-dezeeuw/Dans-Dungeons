@@ -6,13 +6,10 @@
 
 import { appState, setValue, addValue } from '../core/state.js';
 import { Dice } from './rules.js';
+import { doubleDice, resolveAttackOutcome, applyDamage, resolveSkillOutcome } from './combat-math.js';
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-export function doubleDice(spec) {
-  // "1d8" → "2d8",  "2d6" → "4d6" (critical hit)
-  return spec.replace(/^(\d+)d(\d+)$/, (_, n, d) => `${Number(n) * 2}d${d}`);
-}
+// Re-exported for callers that import it from the resolver.
+export { doubleDice };
 
 // ─── Rules resolver ───────────────────────────────────────────────────────────
 
@@ -36,22 +33,21 @@ export function resolveRules(classified) {
       damageType:   'bludgeoning',
     };
 
-    const d20        = Dice.roll('1d20');
-    const crit       = d20.total === 20;
-    const fumble     = d20.total === 1;
-    const totalHit   = d20.total + weapon.attackBonus;
-    const hit        = !fumble && (crit || totalHit >= target.ac);
+    const d20 = Dice.roll('1d20');
+    const { crit, fumble, totalHit, hit } = resolveAttackOutcome({
+      d20: d20.total, attackBonus: weapon.attackBonus, targetAc: target.ac,
+    });
 
     let damage = 0;
     let targetNewHp = target.hp;
     let targetDead  = false;
 
     if (hit) {
-      const diceSpec   = crit ? doubleDice(weapon.damageDice) : weapon.damageDice;
-      const dmgRoll    = Dice.roll(diceSpec);
-      damage           = Math.max(1, dmgRoll.total + (weapon.damageMod ?? 0));
-      targetNewHp      = Math.max(0, target.hp - damage);
-      targetDead       = targetNewHp <= 0;
+      const diceSpec = crit ? doubleDice(weapon.damageDice) : weapon.damageDice;
+      const dmgRoll  = Dice.roll(diceSpec);
+      ({ damage, newHp: targetNewHp, dead: targetDead } = applyDamage({
+        targetHp: target.hp, damageTotal: dmgRoll.total, damageMod: weapon.damageMod ?? 0,
+      }));
     }
 
     return {
@@ -77,9 +73,9 @@ export function resolveRules(classified) {
     const skillRow = sheet.skills?.[skillId];
     const profBonus = skillRow?.proficient ? sheet.proficiencyBonus : 0;
     const d20       = Dice.roll('1d20');
-    const total     = d20.total + abilMod + profBonus;
     const checkDC   = dc ?? 12;
-    return { intent, skill: skillId, ability, d20: d20.total, abilMod, profBonus, total, dc: checkDC, success: total >= checkDC };
+    const { total, success } = resolveSkillOutcome({ d20: d20.total, abilMod, profBonus, dc: checkDC });
+    return { intent, skill: skillId, ability, d20: d20.total, abilMod, profBonus, total, dc: checkDC, success };
   }
 
   // ── MOVE ──────────────────────────────────────────────────────────────────
@@ -142,18 +138,18 @@ export function goblinRetaliates() {
   const { record, sheet } = appState.party?.pc ?? {};
   if (!record || !sheet) return null;
 
-  const d20      = Dice.roll('1d20');
-  const fumble   = d20.total === 1;
-  const crit     = d20.total === 20;
-  const totalHit = d20.total + goblin.toHit;
-  const hit      = !fumble && (crit || totalHit >= sheet.ac.value);
+  const d20 = Dice.roll('1d20');
+  const { crit, fumble, totalHit, hit } = resolveAttackOutcome({
+    d20: d20.total, attackBonus: goblin.toHit, targetAc: sheet.ac.value,
+  });
 
   let damage = 0, pcNewHp = record.hpCurrent;
   if (hit) {
     const spec = crit ? doubleDice(goblin.damageDie) : goblin.damageDie;
     const dmg  = Dice.roll(spec);
-    damage     = Math.max(1, dmg.total + goblin.damageBonus);
-    pcNewHp    = Math.max(0, record.hpCurrent - damage);
+    ({ damage, newHp: pcNewHp } = applyDamage({
+      targetHp: record.hpCurrent, damageTotal: dmg.total, damageMod: goblin.damageBonus,
+    }));
   }
 
   return {

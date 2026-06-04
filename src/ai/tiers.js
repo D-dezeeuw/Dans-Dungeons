@@ -5,6 +5,18 @@
 // Deluxe tier uses higher-quality paid models (player provides their own key).
 
 // ─── Runtime config bootstrap ────────────────────────────────────────────────
+//
+// SECURITY NOTE — this is NOT a secret. The free-tier OpenRouter key below ships
+// in the client bundle, so it must be treated as fully public: anyone can extract
+// it from app.bundle.js. The XOR encode is only obfuscation to deter casual
+// scraping/key-logging crawlers — it provides zero real protection.
+//
+// To ship this safely the embedded key MUST be provisioned on OpenRouter with
+// hard guards that assume it will be abused:
+//   - a low credit limit / hard spend cap on the key,
+//   - restricted to free (`:free`) models only, and
+//   - rotated if abuse is observed.
+// Players who want paid models use BYOK (Deluxe), which never touches this key.
 
 const _a = [55,10,67,28,54,88,24,86,72,93,93,22,4,83,81,85,116,80,90,69,38,16,89,84,85,90,90,22,87,3,2,80,117,86,89,21,32,76,94,83,0,89,12,74,83,83,4,14,33,89,94,71,124,65,13,80,3,95,15,16,11,8,81,83,39,2,12,23,114,68,89,81,81];
 const _b = 'DansDungeons2026';
