@@ -71,6 +71,10 @@ function applyTier(tier) {
     setValue('settings.sceneImage', false);
     setValue('settings.tts', false);
     setValue('settings.stt', false);
+  } else if (tier === 'deluxe') {
+    setValue('settings.sceneImage', true);
+    setValue('settings.tts', true);
+    setValue('settings.stt', true);
   }
   tick();
   saveToStorage();
