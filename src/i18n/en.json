@@ -254,20 +254,12 @@
       ]
     },
     "enemies": [
-      { "name": "Grizzik the Goblin", "intro": "A goblin crouches in the shadows, yellow eyes snapping open as you enter. It snatches up a battered scimitar and bares its teeth: \"This place belongs to Grizzik! Turn back or bleed, big-folk!\"" },
-      { "name": "Guard Skeleton", "intro": "Bones rattle as a skeleton lurches upright from the corner. Its hollow eye sockets fix on you; a rusted longsword rises into a fighting stance with terrible purpose." },
-      { "name": "Feral Cultist", "intro": "A robed figure spins to face you, madness bright in its eyes. It has been waiting here for a reason you don't yet understand — and it levels a long dagger at your throat." },
-      { "name": "Giant Rat", "intro": "A rat the size of a terrier erupts from beneath the debris, hackles raised and yellow teeth bared. It lunges before you can take a breath." },
-      { "name": "Shambling Corpse", "intro": "Something rises from the floor — a corpse in rusted armour, joints cracking as it stands. Its jaw hangs loose and a guttural moan escapes what remains of its throat." },
-      { "name": "Cave Spider", "intro": "Silk threads catch the light a moment before you see the spider — bloated, black-legged, and fast. It drops from the ceiling with a wet hiss." }
-    ],
-    "enemyStats": [
-      { "hp": 7, "maxHp": 7, "ac": 15, "toHit": 4, "damageDie": "1d6", "damageBonus": 2, "damageType": "slashing" },
-      { "hp": 9, "maxHp": 9, "ac": 13, "toHit": 4, "damageDie": "1d6", "damageBonus": 2, "damageType": "slashing" },
-      { "hp": 8, "maxHp": 8, "ac": 12, "toHit": 3, "damageDie": "1d6", "damageBonus": 1, "damageType": "piercing" },
-      { "hp": 5, "maxHp": 5, "ac": 12, "toHit": 3, "damageDie": "1d4", "damageBonus": 0, "damageType": "piercing" },
-      { "hp": 10, "maxHp": 10, "ac": 8, "toHit": 3, "damageDie": "1d6", "damageBonus": 1, "damageType": "bludgeoning" },
-      { "hp": 6, "maxHp": 6, "ac": 13, "toHit": 5, "damageDie": "1d4", "damageBonus": 2, "damageType": "piercing" }
+      { "name": "Grizzik the Goblin", "monsterId": "goblin", "intro": "A goblin crouches in the shadows, yellow eyes snapping open as you enter. It snatches up a battered scimitar and bares its teeth: \"This place belongs to Grizzik! Turn back or bleed, big-folk!\"" },
+      { "name": "Guard Skeleton", "monsterId": "skeleton", "intro": "Bones rattle as a skeleton lurches upright from the corner. Its hollow eye sockets fix on you; a rusted longsword rises into a fighting stance with terrible purpose." },
+      { "name": "Feral Cultist", "monsterId": "cultist", "intro": "A robed figure spins to face you, madness bright in its eyes. It has been waiting here for a reason you don't yet understand — and it levels a long dagger at your throat." },
+      { "name": "Giant Rat", "monsterId": "giant-rat", "intro": "A rat the size of a terrier erupts from beneath the debris, hackles raised and yellow teeth bared. It lunges before you can take a breath." },
+      { "name": "Shambling Corpse", "monsterId": "zombie", "intro": "Something rises from the floor — a corpse in rusted armour, joints cracking as it stands. Its jaw hangs loose and a guttural moan escapes what remains of its throat." },
+      { "name": "Cave Spider", "monsterId": "cave-spider", "intro": "Silk threads catch the light a moment before you see the spider — bloated, black-legged, and fast. It drops from the ceiling with a wet hiss." }
     ],
     "keys": [
       { "name": "brass key", "desc": "A tarnished brass key, its bow cast in the shape of a crescent moon." },
