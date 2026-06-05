@@ -11,7 +11,7 @@
 import { appState, setValue, tick } from '../core/state.js';
 import {
   currentBeat, completeBeat, setFlag as setBeatFlag, storyProgress,
-  adjustReputation, standingFor, reputationOf,
+  adjustReputation, standingFor,
 } from 'bag-of-holding-client';
 
 const emptyRT = () => ({ beats: [], currentIndex: 0, flags: {} });
@@ -24,10 +24,6 @@ export function setStoryFlag(flag) {
   if (next === rt) return;
   setValue('world', { ...appState.world, redThread: next });
   tick();
-}
-
-export function hasFlag(flag) {
-  return !!(appState.world?.redThread?.flags ?? {})[flag];
 }
 
 // ─── Beats ──────────────────────────────────────────────────────────────────
@@ -56,10 +52,6 @@ export function awardReputation(factionId, delta) {
 
 export function reputationStanding(factionId) {
   return standingFor(appState.world?.factionReputation, factionId);
-}
-
-export function reputationValue(factionId) {
-  return reputationOf(appState.world?.factionReputation, factionId);
 }
 
 // ─── Narrator story-context block (Phase 4.10) ────────────────────────────────

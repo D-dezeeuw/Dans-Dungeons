@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 // vendored engine's SRD monsters + Dice (the same module the production bundle
 // aliases `bag-of-holding` to), so this exercises shipping code, not mirrors.
 import {
-  CUSTOM_MONSTERS, DEFAULT_ENEMY_IDS, TIER_BANDS, tierForCr,
+  CUSTOM_MONSTERS, DEFAULT_ENEMY_IDS,
 } from '../../src/game/creatures.js';
 import { DUNGEON_OVERLAYS } from '../../src/game/dungeon-overlays.js';
 import { SRD, Dice } from '../../vendor/bag-of-holding/index.js';
@@ -24,28 +24,6 @@ function parseDamage(spec) {
   return { count: 1, sides: 1, modifier: flat - 1 };
 }
 const crOf = (id) => ROSTER[id]?.cr ?? 0;
-
-describe('tierForCr — depth bands', () => {
-  it('buckets minions (CR ≤ 0.25)', () => {
-    for (const cr of [0, 0.125, 0.25]) assert.equal(tierForCr(cr), 'minion');
-  });
-  it('buckets standard (CR 0.5–1)', () => {
-    for (const cr of [0.5, 1]) assert.equal(tierForCr(cr), 'standard');
-  });
-  it('buckets elite (CR ≥ 2)', () => {
-    for (const cr of [2, 3, 4, 5, 10]) assert.equal(tierForCr(cr), 'elite');
-  });
-  it('defaults a null CR to standard', () => {
-    assert.equal(tierForCr(null), 'standard');
-    assert.equal(tierForCr(undefined), 'standard');
-  });
-  it('every tier band is represented across the custom roster', () => {
-    const tiers = new Set(Object.values(CUSTOM_MONSTERS).map(m => tierForCr(m.cr)));
-    for (const band of Object.keys(TIER_BANDS)) {
-      assert.ok(tiers.has(band), `no custom creature in tier '${band}'`);
-    }
-  });
-});
 
 describe('Custom creatures — valid stat blocks', () => {
   for (const [id, m] of Object.entries(CUSTOM_MONSTERS)) {
@@ -110,12 +88,13 @@ describe('DUNGEON_OVERLAYS — coverage & CR variety', () => {
     });
   }
 
-  it('the overlays collectively span minion, standard, and elite tiers', () => {
-    const tiers = new Set();
+  it('the overlays collectively span low-, mid-, and high-CR creatures', () => {
+    const crs = [];
     for (const overlay of Object.values(DUNGEON_OVERLAYS)) {
-      for (const id of overlay.enemies) tiers.add(tierForCr(crOf(id)));
+      for (const id of overlay.enemies) crs.push(crOf(id));
     }
-    assert.ok(tiers.has('minion') && tiers.has('standard') && tiers.has('elite'),
-      `overlays only span tiers: ${[...tiers].join(', ')}`);
+    assert.ok(Math.min(...crs) <= 0.25, 'includes low-CR (entrance) creatures');
+    assert.ok(crs.some(cr => cr >= 0.5 && cr <= 1), 'includes mid-CR creatures');
+    assert.ok(Math.max(...crs) >= 2, 'includes high-CR (vault) creatures');
   });
 });

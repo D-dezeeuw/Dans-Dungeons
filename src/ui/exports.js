@@ -6,6 +6,7 @@ import { appendEntry, setThinking } from './transcript.js';
 import { getJournalLog } from '../game/flow.js';
 import { reconcilePc } from '../game/character.js';
 import { t, locale } from '../i18n/i18n.js';
+import { escHtml } from '../core/utils.js';
 
 // ─── Download helper ──────────────────────────────────────────────────────────
 
@@ -89,12 +90,6 @@ export function handleImportFile(e) {
     }
   };
   reader.readAsText(file);
-}
-
-// ─── HTML escape ─────────────────────────────────────────────────────────────
-
-function esc(s) {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 // ─── Journal (LLM-enhanced) ──────────────────────────────────────────────────
@@ -187,7 +182,7 @@ function _downloadRawJournal(journalLog, pcName, pcClass) {
     const img = entry.imageSrc
       ? `<img src="${entry.imageSrc}" alt="Scene sketch" style="width:100%;display:block;margin-bottom:1.2rem;border-radius:2px;">`
       : '';
-    const text = esc(entry.narration).replace(/\n/g, '<br>');
+    const text = escHtml(entry.narration).replace(/\n/g, '<br>');
     return `<div class="entry">
   <div class="turn-label">${heading}</div>
   ${img}
