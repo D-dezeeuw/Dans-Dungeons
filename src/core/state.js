@@ -69,6 +69,9 @@ const DEFAULTS = {
     // Quest tracker (Phase 2) — { [questId]: { id, npcId, npcName, description, status } }
     quests: {},
 
+    // Faction reputation (Phase 4) — { [factionId]: number in [-100, 100] }
+    factionReputation: {},
+
     // L04/L05 — Dungeons (each contains rooms + npcs)
     dungeons: {},
 

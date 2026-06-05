@@ -2,7 +2,7 @@
 // structured action object using the tiny model and a fixed JSON schema.
 
 import { chatCompletion } from './client.js';
-import { CLASSIFIER_SCHEMA } from './schemas.js';
+import { CLASSIFIER_SCHEMA, BEAT_CHECK_SCHEMA } from './schemas.js';
 import { t } from '../i18n/i18n.js';
 
 export async function classify(playerInput, sceneContext) {
@@ -17,5 +17,19 @@ export async function classify(playerInput, sceneContext) {
       { role: 'user',   content: playerInput },
     ],
     schema: CLASSIFIER_SCHEMA,
+  });
+}
+
+// Phase 4.4: does the latest GM narration fulfil the current beat's dramatic
+// purpose? Strict by design — only true when the scene clearly resolves it.
+export async function checkBeatFulfilled(beatPurpose, narration) {
+  return chatCompletion({
+    tier: 'tiny',
+    max_tokens: 120,
+    messages: [
+      { role: 'system', content: t('ai.beatCheckPrompt', { purpose: beatPurpose }) },
+      { role: 'user',   content: narration },
+    ],
+    schema: BEAT_CHECK_SCHEMA,
   });
 }

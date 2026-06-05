@@ -76,6 +76,7 @@ export function makeQuest(npc) {
     id:          questId(npc),
     npcId:       npc?.id ?? null,
     npcName:     npc?.name ?? '',
+    factionId:   npc?.factionId ?? null,   // for faction reputation on completion
     description: npc?.questHook ?? '',
     status:      'active', // 'active' | 'completed' | 'failed'
   };
