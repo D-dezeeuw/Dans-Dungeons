@@ -6,14 +6,14 @@
 // bosses). New code reads monsters from `BESTIARY` and turns them into
 // combat-ready NPC stats via `statBlockFor`.
 //
-// Difficulty scales by CR. `tierForCr` (from creatures.js) buckets a creature
-// into a depth band so the dungeon generator can place weak minions near the
-// entrance and elites / bosses near the vault (see world.js).
+// Difficulty scales by CR: the dungeon generator sorts a theme's pool by `cr`
+// and places weaker creatures near the entrance, stronger ones near the vault
+// (see world.js / the client lib's generateDungeon).
 
 import { SRD, Dice } from './rules.js';
-import { CUSTOM_MONSTERS, DEFAULT_ENEMY_IDS, TIER_BANDS, tierForCr } from './creatures.js';
+import { CUSTOM_MONSTERS, DEFAULT_ENEMY_IDS } from './creatures.js';
 
-export { CUSTOM_MONSTERS, DEFAULT_ENEMY_IDS, TIER_BANDS, tierForCr };
+export { CUSTOM_MONSTERS, DEFAULT_ENEMY_IDS };
 
 // Vendor SRD monsters first, our own layered on top (and able to override —
 // e.g. `cultist` becomes our flavoured "Feral Cultist").
@@ -22,8 +22,8 @@ export const BESTIARY = Object.freeze({ ...SRD.monsters, ...CUSTOM_MONSTERS });
 // ─── Stat-block → NPC combat shape ────────────────────────────────────────────
 // The resolver/world expect flat combat fields (toHit, damageDie, damageBonus).
 // SRD/custom blocks carry a single `damage` spec like "1d6+2"; split it with the
-// vendor dice parser so we never hand-maintain the breakdown. `cr` and `tier`
-// ride along so the dungeon generator can scale placement by depth.
+// vendor dice parser so we never hand-maintain the breakdown. `cr` rides along so
+// the dungeon generator can scale placement by depth.
 
 // Split a damage spec into {count, sides, modifier}. Most SRD/custom blocks use
 // dice notation ("1d6+2"), but a few low creatures (rat, bat, spider) carry a
@@ -49,6 +49,5 @@ export function statBlockFor(monsterId) {
     damageBonus: modifier,
     damageType:  attack.damageType,
     cr:          m.cr ?? 0,
-    tier:        tierForCr(m.cr),
   };
 }

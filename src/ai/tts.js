@@ -48,10 +48,6 @@ let _currentUrl   = null;
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 
-export function isSpeaking() {
-  return !!(_currentAudio && !_currentAudio.ended && !_currentAudio.paused);
-}
-
 export function cancelSpeech() {
   if (_currentAudio) {
     _currentAudio.pause();

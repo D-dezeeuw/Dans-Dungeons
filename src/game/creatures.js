@@ -1,29 +1,10 @@
-// src/game/creatures.js — pure creature roster data + tier helpers.
+// src/game/creatures.js — pure creature roster data.
 //
-// Zero imports on purpose: the custom creature stat blocks, the default enemy
-// pool, and the CR→tier bucketing all live here so they're unit-testable in the
-// node test runner (which can't resolve the `bag-of-holding` bare specifier that
-// bestiary.js pulls in). bestiary.js merges these with the vendor SRD monsters.
-
-// ─── Tier bands (depth → difficulty) ──────────────────────────────────────────
-// Each band maps a CR range to a dungeon depth zone. `minion` creatures guard
-// the entrance, `standard` the mid-rooms, `elite` the approach to the vault.
-// The vault boss is simply the highest-CR creature in a theme's pool.
-
-export const TIER_BANDS = Object.freeze({
-  minion:   { min: 0,   max: 0.25 },     // rats, kobolds, skeletons
-  standard: { min: 0.5, max: 1 },        // orcs, ghouls, dire wolves
-  elite:    { min: 2,   max: Infinity }, // ogres, owlbears, wights, bosses
-});
-
-// Bucket a CR into a tier name. Anything ≤ 0.25 is a minion; 0.5–1 standard;
-// 2+ elite. (CRs strictly between 1 and 2 don't exist in the SRD set; clamp up.)
-export function tierForCr(cr) {
-  if (cr == null) return 'standard';
-  if (cr <= TIER_BANDS.minion.max) return 'minion';
-  if (cr <= TIER_BANDS.standard.max) return 'standard';
-  return 'elite';
-}
+// Zero imports on purpose: the custom creature stat blocks and the default enemy
+// pool live here so they're unit-testable in the node test runner (which can't
+// resolve the `bag-of-holding` bare specifier that bestiary.js pulls in).
+// bestiary.js merges these with the vendor SRD monsters; the dungeon generator
+// scales placement directly off each creature's CR.
 
 // ─── Our own creatures, in the SRD monster shape ──────────────────────────────
 // Same field layout as the vendor's `SRD.monsters` entries so the two merge

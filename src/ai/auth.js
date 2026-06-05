@@ -24,13 +24,3 @@ export async function exchangeCodeForKey(code) {
   const data = await res.json();
   return data.key;
 }
-
-// Check if we're returning from an OAuth redirect.
-export function getOAuthCode() {
-  return new URLSearchParams(location.search).get('code');
-}
-
-// Clean the code from the URL after exchange.
-export function clearOAuthCode() {
-  history.replaceState(null, '', location.pathname);
-}
