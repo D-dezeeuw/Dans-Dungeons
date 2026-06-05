@@ -9,8 +9,10 @@
 // read or save (Spektrum merges deltas on tick()).
 
 import { appState, setValue, tick } from '../core/state.js';
-import { currentBeat, completeBeat, setFlag as setBeatFlag, storyProgress } from './beats.js';
-import { adjustReputation, standingFor, reputationOf } from './factions.js';
+import {
+  currentBeat, completeBeat, setFlag as setBeatFlag, storyProgress,
+  adjustReputation, standingFor, reputationOf,
+} from 'bag-of-holding-client';
 
 const emptyRT = () => ({ beats: [], currentIndex: 0, flags: {} });
 

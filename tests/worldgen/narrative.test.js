@@ -3,14 +3,16 @@ import assert from 'node:assert/strict';
 
 // Phase 4 (4.11): unit-test beat prerequisite evaluation, flag gating, beat
 // completion, and faction reputation math. Both modules are pure → real code.
+// Beats + faction math now live in the client library; the app consumes them
+// via the 'bag-of-holding-client' alias (esbuild). Test the vendored copy.
 import {
   isBeatDone, isBeatEligible, nextEligibleBeats, currentBeat,
   setFlag, completeBeat, storyProgress, storyHint,
-} from '../../src/game/beats.js';
+} from '../../vendor/bag-of-holding-client/src/narrative/beats.js';
 import {
   REP_MIN, REP_MAX, THRESHOLDS, clampRep, reputationOf, adjustReputation,
   standing, standingFor, priceModifier, adjustPrice, isHostile,
-} from '../../src/game/factions.js';
+} from '../../vendor/bag-of-holding-client/src/narrative/factions.js';
 
 const makeRT = () => ({
   currentIndex: 0,

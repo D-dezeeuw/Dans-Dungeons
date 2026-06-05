@@ -1,10 +1,13 @@
-// src/game/settlement.js — pure settlement economy / quest / dialogue helpers.
+// settlement/economy.js — pure settlement economy / quest / dialogue helpers.
 //
 // Zero imports: trade math, the carried-inventory model, quest state
 // transitions, and per-NPC dialogue memory are all pure functions of their
-// arguments so they're unit-testable in the node test runner. flow.js wires
-// these to Spektrum (gold on party.pc.record, items on party.inventory, quests
-// on world.quests, dialogue history on the NPC objects in world.settlements).
+// arguments so they're unit-testable. The host wires these to its own state
+// (gold on the character record, items on an inventory array, quests in a map,
+// dialogue history on the NPC objects).
+//
+// Pairs with the worldgen blueprint's `settlementHints`, which constrains the AI
+// that generates the settlements + NPCs this module then operates on.
 
 export const DEFAULT_START_GOLD = 25;   // gp a fresh character carries
 export const DEFAULT_REST_COST  = 5;    // gp for a night at an inn
@@ -16,15 +19,15 @@ export function slug(s) {
   return String(s ?? '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'item';
 }
 
-export function goldOf(record) {
+export function goldOf(record, startGold = DEFAULT_START_GOLD) {
   const g = record?.gold;
-  return Number.isFinite(g) ? g : DEFAULT_START_GOLD;
+  return Number.isFinite(g) ? g : startGold;
 }
 
 // ─── Trade ────────────────────────────────────────────────────────────────────
 
 // Can the PC afford `item`? Returns the post-purchase gold and the inventory
-// line to add. Never mutates — flow.js commits the returned values.
+// line to add. Never mutates — the host commits the returned values.
 export function resolvePurchase(record, item) {
   if (!item) return { ok: false, reason: 'no-item' };
   const gold  = goldOf(record);
@@ -108,8 +111,8 @@ export function pushDialogue(history, role, text, max = DIALOGUE_MEMORY) {
 }
 
 // A secret can only surface after enough back-and-forth and only once.
-export function canRevealSecret(npc) {
+export function canRevealSecret(npc, minExchanges = SECRET_MIN_EXCHANGES) {
   if (!npc?.secret || npc.secretRevealed) return false;
   const playerLines = (npc.dialogueHistory ?? []).filter(e => e.role === 'player').length;
-  return playerLines >= SECRET_MIN_EXCHANGES;
+  return playerLines >= minExchanges;
 }

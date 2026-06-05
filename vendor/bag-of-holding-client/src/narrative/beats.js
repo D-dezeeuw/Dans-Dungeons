@@ -1,10 +1,13 @@
-// src/game/beats.js — pure red-thread (story beat) evaluator.
+// narrative/beats.js — pure red-thread (story beat) evaluator.
 //
 // Zero imports: beat eligibility, flag gating, completion, and progress are
-// pure functions of the worldState's `redThread` ({ beats, currentIndex, flags })
-// so they're unit-testable. flow.js / loop.js set flags as the player acts,
-// inject the current beat's dramatic purpose into the narrator, and ask a
-// tiny-tier LLM whether a beat was fulfilled (then call completeBeat here).
+// pure functions of a `redThread` ({ beats, currentIndex, flags }) so they're
+// unit-testable. The host sets flags as the player acts, injects the current
+// beat's dramatic purpose into the narrator, and (typically via a tiny-tier LLM
+// check) decides whether a beat was fulfilled — then calls completeBeat here.
+//
+// Pairs with the worldgen blueprint's `beatsHints`, which constrains the AI that
+// generates the beats this module then runs.
 //
 // Flag convention: a beat with id "B" is marked done by the flag `beat-done-B`.
 // Beats also declare `prerequisites` (flags that must be set first) and

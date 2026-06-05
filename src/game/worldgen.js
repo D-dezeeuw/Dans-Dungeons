@@ -4,10 +4,10 @@
 // The blueprint provides pre-seeded archetype choices that constrain the AI.
 
 import { chatCompletion } from '../ai/client.js';
-import { WORLD_SEED_SCHEMA, REGION_SCHEMA, SETTLEMENT_SCHEMA, FACTIONS_SCHEMA, RED_THREAD_SCHEMA } from '../ai/schemas.js';
 import { t } from '../i18n/i18n.js';
 import {
   worldSeedConstraints, beatsHints, factionsHints, regionHints, settlementHints, runPipeline,
+  WORLD_SEED_SCHEMA, REGION_SCHEMA, SETTLEMENT_SCHEMA, FACTIONS_SCHEMA, RED_THREAD_SCHEMA,
 } from 'bag-of-holding-client';
 
 // ─── World seed (L00) ────────────────────────────────────────────────────────
