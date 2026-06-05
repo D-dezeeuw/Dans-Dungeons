@@ -70,9 +70,17 @@ highest value-to-effort move available.
 
 ---
 
-## Tier 1 — pure engines, already at the bar (ship now, S each)
+## Tier 1 — pure engines, already at the bar — ✅ SHIPPED
 
-These are verbatim moves + a test suite. Zero coupling, no API design needed.
+> **Done** (merge `092a7ee`). All four moved into `@zeeuw/bag-of-holding-client`
+> (`narrative/beats.js`, `narrative/factions.js`, `settlement/economy.js`,
+> `worldgen/schemas.js`), exported from `index.js`, vendored, and re-pointed in
+> `story.js`/`flow.js`/`character.js`/`worldgen.js`. App `src` −453 LOC. Lib tests
+> 32 → 72; app tests 233, all green; bundle clean. The refuted `tierForCr`/
+> `TIER_BANDS` was **not** moved (left as-is). Two settlement constants
+> (`startGold`, `minExchanges`) became backward-compatible default params.
+
+These were verbatim moves + a test suite. Zero coupling, no API design needed.
 
 | Source | → Library module | Exports | Notes |
 |---|---|---|---|
