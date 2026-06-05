@@ -4,12 +4,14 @@ import assert from 'node:assert/strict';
 // Phase 2 testing strategy: unit-test trade math, quest state transitions,
 // inventory ops, rest, and dialogue memory. settlement.js is pure (no AI /
 // Spektrum / i18n imports) so we exercise the REAL shipping code here.
+// Settlement economy now lives in the client library; the app consumes it via
+// the 'bag-of-holding-client' alias (esbuild). Test the vendored copy directly.
 import {
   DEFAULT_START_GOLD, DEFAULT_REST_COST, DIALOGUE_MEMORY, SECRET_MIN_EXCHANGES,
   slug, goldOf, resolvePurchase, addToInventory, resolveRest,
   questId, makeQuest, addQuest, setQuestStatus, activeQuests,
   pushDialogue, canRevealSecret,
-} from '../../src/game/settlement.js';
+} from '../../vendor/bag-of-holding-client/src/settlement/economy.js';
 
 describe('goldOf / slug', () => {
   it('defaults missing gold to the starting amount', () => {

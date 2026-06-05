@@ -1,10 +1,13 @@
-// src/game/factions.js — pure faction-reputation math.
+// narrative/factions.js — pure faction-reputation math.
 //
-// Zero imports: reputation lives in world.factionReputation ({ [factionId]:
-// number } in [-100, 100]). These helpers clamp adjustments, bucket a score
-// into a standing, and derive consequences (merchant prices, hostility). flow.js
-// applies the shifts (e.g. accepting/completing a faction's quest) and reads the
-// standing for dialogue tone and shop prices.
+// Zero imports: reputation is a plain map ({ [factionId]: number } in
+// [-100, 100]). These helpers clamp adjustments, bucket a score into a standing,
+// and derive consequences (merchant prices, hostility). The host applies the
+// shifts (e.g. accepting/completing a faction's quest) and reads the standing
+// for dialogue tone and shop prices.
+//
+// Pairs with the worldgen blueprint's `factionsHints`, which constrains the AI
+// that generates the factions this module then tracks.
 
 export const REP_MIN = -100;
 export const REP_MAX = 100;

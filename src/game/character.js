@@ -5,7 +5,7 @@
 
 import { SRD, createEngine } from './rules.js';
 import { t } from '../i18n/i18n.js';
-import { DEFAULT_START_GOLD } from './settlement.js';
+import { DEFAULT_START_GOLD } from 'bag-of-holding-client';
 
 // One shared engine for all sheet derivation (the vendor default-singleton
 // shape; registries are bound inside `deriveSheet`).

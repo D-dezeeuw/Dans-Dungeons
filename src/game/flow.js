@@ -12,11 +12,11 @@ import { processTurn, checkApiKey, generateTurnImage, buildScene } from './loop.
 import {
   goldOf, resolvePurchase, addToInventory, resolveRest, DEFAULT_REST_COST,
   questId, makeQuest, addQuest, canRevealSecret, pushDialogue, slug,
-} from './settlement.js';
-import { beginTravel, stepTravel, isTravelDone, pickEncounter } from 'bag-of-holding-client';
+  setQuestStatus, activeQuests,
+  adjustPrice, isHostile, standing,
+  beginTravel, stepTravel, isTravelDone, pickEncounter,
+} from 'bag-of-holding-client';
 import { setStoryFlag, awardReputation, reputationStanding, progress as storyProgressNow } from './story.js';
-import { adjustPrice, isHostile, standing } from './factions.js';
-import { setQuestStatus, activeQuests } from './settlement.js';
 import * as UI from '../ui/console.js';
 import { t, tRaw } from '../i18n/i18n.js';
 import { getSkills } from '../ui/chips.js';
