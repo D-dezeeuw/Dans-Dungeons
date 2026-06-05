@@ -79,6 +79,24 @@ function makeEnemy(npcId, roomIdx, id, style, extra = {}) {
   };
 }
 
+// Build a standalone combat NPC for a literal roomId (used by overworld travel
+// encounters in flow.js, which run combat outside the dungeon grid).
+export function buildEnemy(creatureId, { npcId = 'enc-1', roomId = 'encounter', style } = {}) {
+  const s    = style ?? pick(tRaw('world.houseStyles'));
+  const name = enemyName(creatureId);
+  return {
+    id:         npcId,
+    roomId,
+    name,
+    creatureId,
+    ...statBlockFor(creatureId),
+    conditions: [],
+    attitude:   'hostile',
+    alive:      true,
+    intro:      enemyIntro(creatureId, name, s),
+  };
+}
+
 // ─── Grid placement ──────────────────────────────────────────────────────────
 // Each room gets a (col, row) position. Connections between adjacent grid cells
 // map to cardinal directions.

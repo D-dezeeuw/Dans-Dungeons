@@ -120,3 +120,9 @@ export const CUSTOM_MONSTERS = Object.freeze({
 export const DEFAULT_ENEMY_IDS = Object.freeze([
   'goblin', 'skeleton', 'cultist', 'giant-rat', 'zombie', 'cave-spider',
 ]);
+
+// Wilderness creatures for overworld travel encounters (Phase 3). Kept low/mid
+// CR so a road ambush is survivable. Every id must exist in BESTIARY.
+export const OVERWORLD_ENEMY_IDS = Object.freeze([
+  'giant-rat', 'wolf', 'bandit', 'goblin', 'scout', 'worg', 'black-bear', 'dire-wolf',
+]);

@@ -4,9 +4,31 @@
 // generateSceneImage() produces a journal-sketch data URI (decorative, silent on failure).
 
 import { appState, addValue } from '../core/state.js';
-import { _call, _callStream, repairJson, modelFor, headers } from './client.js';
+import { _call, _callStream, repairJson, modelFor, headers, chatCompletion } from './client.js';
 import { NARRATOR_SCHEMA } from './schemas.js';
-import { t } from '../i18n/i18n.js';
+import { t, locale } from '../i18n/i18n.js';
+
+// ─── Travel narration (Phase 3) ───────────────────────────────────────────────
+//
+// One short prose paragraph for an overworld travel beat (departure, a segment,
+// an arrival). Plain text (no schema). Returns null on failure so flow.js can
+// fall back to a templated line.
+
+export async function narrateTravel(context) {
+  try {
+    const lang = locale() === 'nl' ? 'Dutch' : 'English';
+    return await chatCompletion({
+      tier: 'medium',
+      max_tokens: 220,
+      messages: [
+        { role: 'system', content: t('ai.travelPrompt', { language: lang, context: JSON.stringify(context) }) },
+        { role: 'user',   content: t('ai.travelUserMsg') },
+      ],
+    });
+  } catch {
+    return null;
+  }
+}
 
 // ─── Narrator ────────────────────────────────────────────────────────────────
 //

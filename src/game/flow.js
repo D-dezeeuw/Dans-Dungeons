@@ -4,16 +4,18 @@
 // All AI calls go through loop.js (checkApiKey, generateTurnImage, processTurn).
 
 import { appState, setValue, tick, saveToStorage, clearSave, restoreState } from '../core/state.js';
-import { generateWorld, generateDungeon, createDungeonEntry } from './world.js';
+import { generateWorld, generateDungeon, createDungeonEntry, buildEnemy } from './world.js';
 import { buildWorldBlueprint } from './worldseed.js';
+import { OVERWORLD_ENEMY_IDS } from './creatures.js';
 import { createCharacter } from './character.js';
 import { processTurn, checkApiKey, generateTurnImage, buildScene } from './loop.js';
 import {
   goldOf, resolvePurchase, addToInventory, resolveRest, DEFAULT_REST_COST,
   questId, makeQuest, addQuest, canRevealSecret, pushDialogue, slug,
 } from './settlement.js';
+import { beginTravel, stepTravel, isTravelDone, pickEncounter } from './travel.js';
 import * as UI from '../ui/console.js';
-import { t } from '../i18n/i18n.js';
+import { t, tRaw } from '../i18n/i18n.js';
 import { getSkills } from '../ui/chips.js';
 import { modelsForTier, _cfg } from '../ai/tiers.js';
 import { redirectToOpenRouter } from '../ai/auth.js';
@@ -211,6 +213,7 @@ async function handleMeta(raw) {
     return;
   }
   if (cmd === 'settings') { UI.appendEntry('system', t('setup.reRunSetup')); await setupKey(); return; }
+  if (cmd === 'map')  { renderRegionMap(); return; }
   if (cmd === 'help') { UI.appendEntry('system', t('meta.helpList')); return; }
   UI.appendEntry('system', t('meta.unknownCmd', { cmd: raw }));
 }
@@ -363,11 +366,26 @@ async function startCampaign() {
 
 // ─── Settlement scene ────────────────────────────────────────────────────────
 
-async function enterSettlement(settlementId) {
-  const settlement = appState.world?.settlements?.[settlementId];
-  if (!settlement) { await startQuickDungeon(); return; }
+// Settlement driver: render a town, run its loop, and — when the player travels
+// or fast-travels — transition to the returned settlement WITHOUT nesting a new
+// loop (each settlementLoop returns the next settlement id, or null to stop).
+async function enterSettlement(settlementId, skipFirstRender = false) {
+  let currentId = settlementId;
+  let first = true;
+  while (currentId && appState.session.phase === 'play') {
+    const settlement = appState.world?.settlements?.[currentId];
+    if (!settlement) { await startQuickDungeon(); return; }
+    // Resume keeps its own banner/transcript on screen — skip the first render.
+    if (!(first && skipFirstRender)) renderSettlement(settlement, currentId);
+    first = false;
+    currentId = await settlementLoop(currentId);
+  }
+}
 
+// Render the town banner, NPCs, exits, and gold; set the location pointer.
+function renderSettlement(settlement, settlementId) {
   setValue('world', { ...appState.world, location: { ...appState.world.location, type: 'settlement', settlementId, dungeonId: null } });
+  tick();
 
   UI.clear();
   UI.appendEntry('system', t('settlement.banner', { name: settlement.name }));
@@ -375,7 +393,6 @@ async function enterSettlement(settlementId) {
   UI.appendEntry('gm', settlement.description ?? t('settlement.youAreIn', { name: settlement.name }));
   UI.appendEntry('system', '');
 
-  // Show NPCs
   if (settlement.npcs?.length) {
     UI.appendEntry('system', t('settlement.npcList'));
     for (const npc of settlement.npcs) {
@@ -384,7 +401,6 @@ async function enterSettlement(settlementId) {
     UI.appendEntry('system', '');
   }
 
-  // Show exits
   if (settlement.exits?.length) {
     UI.appendEntry('system', t('settlement.exitList'));
     for (const exit of settlement.exits) {
@@ -397,7 +413,6 @@ async function enterSettlement(settlementId) {
   UI.appendEntry('system', '');
 
   _speak(settlement.description ?? settlement.name);
-  await settlementLoop(settlementId);
 }
 
 // Action chips for the town menu.
@@ -412,17 +427,27 @@ function settlementChips(settlement) {
   chips.push({ label: t('settlement.rest'),          value: t('settlement.restCmd') });
   chips.push({ label: t('settlement.questsChip'),    value: t('settlement.questsCmd') });
   chips.push({ label: t('settlement.inventoryChip'), value: t('settlement.inventoryCmd') });
+  chips.push({ label: t('settlement.mapChip'),       value: '/map' });
   for (const exit of (settlement.exits ?? [])) {
     chips.push({ label: t('settlement.travelTo', { name: exit.targetName }), value: t('settlement.travelCmd', { name: exit.targetName }) });
+  }
+  // Fast travel to other settlements already discovered (Phase 3.8).
+  for (const [sid, s] of Object.entries(appState.world?.settlements ?? {})) {
+    if (sid !== settlement.id) {
+      chips.push({ label: t('settlement.fastTravelTo', { name: s.name }), value: `fasttravel:${sid}` });
+    }
   }
   return chips;
 }
 
+// Run one town's interaction loop. Returns the id of the settlement to travel
+// to next (handled by the enterSettlement driver), or null when the loop ends
+// (game over). Travel/fast-travel produce a transition rather than nesting.
 async function settlementLoop(settlementId) {
-  if (!appState.world?.settlements?.[settlementId]) return;
+  if (!appState.world?.settlements?.[settlementId]) return null;
 
   while (true) {
-    if (appState.session.phase !== 'play') break;
+    if (appState.session.phase !== 'play') return null;
     const settlement = appState.world.settlements[settlementId];
 
     UI.showActionChips(settlementChips(settlement));
@@ -431,12 +456,49 @@ async function settlementLoop(settlementId) {
     if (!raw.trim()) continue;
     if (raw.startsWith('/')) { await handleMeta(raw); continue; }
 
+    // Fast travel to an already-discovered settlement (chip value).
+    const ft = raw.match(/^fasttravel:(.+)$/);
+    if (ft) { UI.clearChips(); return await fastTravelTo(ft[1]); }
+
     UI.appendEntry('player', `> ${raw}`);
     UI.clearChips();
 
     const action = await classifySettlementInput(raw, settlement);
-    await handleSettlementAction(action, settlementId);
+    const next = await handleSettlementAction(action, settlementId);
+    if (next) return next; // travel transition — driver re-renders the new town
   }
+}
+
+// Fast travel skips the journey (no encounters). Returns the destination id for
+// the driver to transition to, or null if it doesn't exist.
+async function fastTravelTo(settlementId) {
+  const dest = appState.world?.settlements?.[settlementId];
+  if (!dest) return null;
+  UI.appendEntry('system', t('travel.fastTravel', { name: dest.name }));
+  UI.appendEntry('system', '');
+  return settlementId;
+}
+
+// ─── Region map (Phase 3.6) ───────────────────────────────────────────────────
+
+function renderRegionMap() {
+  const regions = Object.values(appState.world?.regions ?? {});
+  if (!regions.length) { UI.appendEntry('system', t('map.empty')); return; }
+  const curRegionId = appState.world?.location?.regionId;
+  const curSettlementId = appState.world?.location?.settlementId;
+  UI.appendEntry('system', t('map.header'));
+  for (const r of regions) {
+    const here = r.id === curRegionId ? t('map.youAreHere') : '';
+    UI.appendEntry('system', t('map.regionLine', { name: r.name, climate: r.climate ?? '?', here }));
+    for (const sid of (r.settlements ?? [])) {
+      const s = appState.world.settlements?.[sid];
+      if (s) UI.appendEntry('system', t('map.settlementLine', { name: s.name, here: sid === curSettlementId ? t('map.youAreHere') : '' }));
+    }
+    if (r.adjacentRegions?.length) {
+      UI.appendEntry('system', t('map.connectsLine', { names: r.adjacentRegions.join(', ') }));
+    }
+  }
+  UI.appendEntry('system', '');
 }
 
 // Compact world snapshot for the settlement classifier.
@@ -511,6 +573,7 @@ function fallbackSettlementAction(raw, settlement) {
   return { type: 'look' };
 }
 
+// Returns a settlement id to transition to (travel), or undefined to stay.
 async function handleSettlementAction(action, settlementId) {
   const settlement = appState.world.settlements[settlementId];
   switch (action.type) {
@@ -524,7 +587,7 @@ async function handleSettlementAction(action, settlementId) {
     case 'inventory': showInventory(); return;
     case 'travel':
       if (!action.exit) { UI.appendEntry('system', t('settlement.noPath')); return; }
-      await doTravel(action.exit, settlementId); return;
+      return await doTravel(action.exit, settlementId);
     default:
       UI.appendEntry('gm', t('settlement.lookResult', { name: settlement.name }));
   }
@@ -726,10 +789,259 @@ async function doTravel(exit, settlementId) {
     UI.appendEntry('system', '');
     UI.appendEntry('system', t('settlement.returnSettlement', { name: settlement.name }));
     UI.appendEntry('system', '');
-    return;
+    return; // stay in this settlement; the driver re-renders it
   }
-  // Road / wilderness — overworld travel arrives in Phase 3.
-  UI.appendEntry('gm', t('settlement.roadNotReady'));
+  // Road / wilderness — overworld travel sequence (Phase 3) → arrival id.
+  return await doOverworldTravel(exit, settlementId);
+}
+
+// ─── Overworld travel (Phase 3) ───────────────────────────────────────────────
+
+// Climate-flavoured wilderness encounter pool: the base wilderness creatures
+// plus the lower-CR creatures of the world's dungeon theme, for variety.
+function overworldEncounterPool() {
+  const pool = [...OVERWORLD_ENEMY_IDS];
+  return pool;
+}
+
+// A short journey toward a road/wilderness exit. Narrates each beat, rolls
+// encounters (handed to the shared combat loop) and discoveries, then arrives
+// at a lazily-generated neighbouring settlement.
+async function doOverworldTravel(exit, fromSettlementId, opts = {}) {
+  const rng = Math.random;
+  let travel = beginTravel(exit.targetName, rng);
+  const climate = appState.world?.regions?.[appState.world?.location?.regionId]?.climate
+               ?? appState.world?.blueprint?.climate ?? 'wilderness';
+
+  while (!isTravelDone(travel)) {
+    const res = stepTravel(travel, rng, { safe: !!opts.safe });
+    travel = res.travel;
+    const ev = res.event;
+
+    if (ev.type === 'depart') {
+      await narrateTravelBeat('depart', { destination: exit.targetName, climate });
+    } else if (ev.type === 'uneventful') {
+      await narrateTravelBeat('segment', { destination: exit.targetName, climate });
+    } else if (ev.type === 'arrive') {
+      await narrateTravelBeat('arrive', { destination: exit.targetName, climate });
+    } else if (ev.type === 'encounter') {
+      const id = pickEncounter(overworldEncounterPool(), rng);
+      const outcome = await runEncounter(id);
+      if (outcome === 'defeat') { await doDefeat(); return null; }
+    } else if (ev.type === 'discovery') {
+      await applyDiscovery(ev.discovery, climate);
+    }
+    if (appState.party?.pc?.record?.deathSaves?.dead) { await doDefeat(); return null; }
+  }
+
+  // Arrived — return the destination settlement id to the settlement driver,
+  // which transitions without nesting a new loop.
+  return await arriveAtDestination(exit, fromSettlementId);
+}
+
+// Narrate a travel beat with the medium-tier LLM, falling back to a templated
+// locale line if the AI is unavailable.
+async function narrateTravelBeat(kind, ctx) {
+  let text = null;
+  if ((appState.ai?.tier ?? 'free') === 'deluxe') {
+    try {
+      const { narrateTravel } = await import('../ai/narrate.js');
+      text = await narrateTravel({ beat: kind, ...ctx });
+    } catch { text = null; }
+  }
+  if (!text || !text.trim()) text = t(`travel.${kind}`, ctx);
+  UI.appendEntry('gm', text);
+  UI.appendEntry('system', '');
+  _speak(text);
+}
+
+// ─── Travel combat encounter — reuses the dungeon turn loop ───────────────────
+
+async function runEncounter(enemyId) {
+  if (!enemyId) return 'flee';
+  // Snapshot the active dungeon-combat fields so travel doesn't corrupt them.
+  const snap = {
+    currentRoom: appState.world.currentRoom,
+    exitRoomId:  appState.world.exitRoomId,
+    rooms:       appState.world.rooms,
+    npcs:        appState.world.npcs,
+    location:    appState.world.location,
+  };
+
+  const enemy = buildEnemy(enemyId, { npcId: 'enc-1', roomId: 'encounter' });
+  setValue('world', {
+    ...appState.world,
+    currentRoom: 'encounter',
+    // currentRoom === exitRoomId so that a reload mid-encounter resolves through
+    // playLoop's vault-guarded victory gate (fight the enemy, then win) instead
+    // of soft-locking in an exit-less room.
+    exitRoomId:  'encounter',
+    rooms:       { encounter: { id: 'encounter', name: t('travel.encounterRoom'), description: enemy.intro, exits: [], loot: [] } },
+    npcs:        { 'enc-1': enemy },
+    location:    { ...appState.world.location, type: 'encounter' },
+  });
+  tick();
+
+  UI.appendEntry('gm', enemy.intro);
+  _speak(enemy.intro);
+
+  let outcome = 'win';
+  while (true) {
+    if (!appState.world.npcs['enc-1']?.alive) { outcome = 'win'; break; }
+    if (appState.party?.pc?.record?.deathSaves?.dead) { outcome = 'defeat'; break; }
+
+    UI.showRoomChips([], []);
+    UI.showCharacterChips(appState.party?.pc?.record, appState.party?.pc?.sheet);
+    UI.showSkillChips(appState.session?.skillCooldowns ?? {});
+    UI.insertActionChip(t('travel.fleeChip'), t('travel.fleeCmd'));
+
+    const raw = await UI.prompt('');
+    if (!raw.trim()) continue;
+    if (raw.startsWith('/')) { await handleMeta(raw); continue; }
+    if (/^\s*(flee|run|escape|vlucht|ren)\b/i.test(raw) || raw === t('travel.fleeCmd')) {
+      UI.appendEntry('player', `> ${raw}`);
+      outcome = 'flee';
+      break;
+    }
+
+    UI.appendEntry('player', `> ${raw}`);
+    UI.clearChips();
+    UI.setThinking(true);
+
+    let streamEl = null;
+    const onChunk = (text) => { if (!streamEl) { UI.setThinking(false); streamEl = UI.beginStreamEntry('gm'); } UI.appendStreamChunk(streamEl, text); };
+
+    let result = null;
+    try {
+      result = await processTurn(raw, onChunk);
+    } catch (e) {
+      UI.setThinking(false); streamEl?.remove();
+      UI.appendEntry('error', t('loop.error', { msg: e.message }));
+      continue;
+    }
+    tick();
+    UI.setThinking(false);
+    if (!streamEl && result?.narration) UI.appendEntry('gm', result.narration);
+    UI.appendEntry('system', '');
+    _speak(result?.narration);
+    UI.updateDebugPanel(result?._debug);
+  }
+
+  UI.clearChips();
+  // Restore the pre-encounter world fields.
+  setValue('world', { ...appState.world, ...snap });
+  tick();
+  saveToStorage();
+
+  if (outcome === 'win')      UI.appendEntry('system', t('travel.encounterWin'));
+  else if (outcome === 'flee') UI.appendEntry('gm', t('travel.encounterFlee'));
+  return outcome;
+}
+
+// ─── Travel discoveries (Phase 3) ─────────────────────────────────────────────
+
+async function applyDiscovery(discovery, climate) {
+  const pc = appState.party?.pc;
+  switch (discovery) {
+    case 'loot': {
+      const pool = tRaw('world.loot') ?? [];
+      const item = pool.length ? pool[Math.floor(Math.random() * pool.length)] : { name: 'trinket', desc: '' };
+      const entry = { id: slug(item.name), name: item.name, description: item.desc ?? '', quantity: 1 };
+      setValue('party', { ...appState.party, inventory: addToInventory(appState.party?.inventory, entry) });
+      tick(); saveToStorage();
+      UI.appendEntry('gm', t('travel.discoveryLoot', { name: item.name }));
+      break;
+    }
+    case 'shrine': {
+      if (pc) {
+        const record = { ...pc.record, hpCurrent: pc.sheet.hp.max, conditions: [], deathSaves: undefined };
+        setValue('party', { ...appState.party, pc: { ...pc, record } });
+        tick(); saveToStorage();
+      }
+      UI.appendEntry('gm', t('travel.discoveryShrine'));
+      break;
+    }
+    case 'clue': {
+      const n = Object.keys(appState.world?.redThread?.flags ?? {}).filter(f => f.startsWith('clue-')).length + 1;
+      setStoryFlag(`clue-${n}`);
+      UI.appendEntry('gm', t('travel.discoveryClue'));
+      break;
+    }
+    case 'wanderer':
+    default: {
+      const gift = 3 + Math.floor(Math.random() * 6);
+      if (pc) {
+        const record = { ...pc.record, gold: goldOf(pc.record) + gift };
+        setValue('party', { ...appState.party, pc: { ...pc, record } });
+        tick(); saveToStorage();
+      }
+      UI.appendEntry('gm', t('travel.discoveryWanderer', { gold: gift }));
+      break;
+    }
+  }
+  UI.appendEntry('system', '');
+}
+
+// ─── Arrival: lazy region + settlement generation (Phase 3) ───────────────────
+
+// Returns the settlement id the player arrives at (the driver transitions to it).
+async function arriveAtDestination(exit, fromSettlementId) {
+  // If this exit points at an already-known settlement, just go there.
+  if (exit.targetId && appState.world?.settlements?.[exit.targetId]) return exit.targetId;
+
+  // Campaign + Deluxe: generate a neighbouring region + settlement on the fly,
+  // keeping the world's identity (tone/threat/factions) but varying the locale.
+  if ((appState.ai?.tier ?? 'free') === 'deluxe' && appState.world?.blueprint) {
+    UI.appendEntry('system', t('travel.discovering', { name: exit.targetName }));
+    const built = await generateNeighbourRegion(exit);
+    if (built) return built.settlementId;
+  }
+
+  // Fallback — no lazy gen available: return to the origin settlement.
+  UI.appendEntry('gm', t('travel.deadEnd', { name: exit.targetName }));
+  return fromSettlementId;
+}
+
+async function generateNeighbourRegion(exit) {
+  const base = appState.world.blueprint;
+  const seed = Math.floor(Math.random() * 2147483647);
+  const fresh = buildWorldBlueprint(seed);
+  // Keep world identity; vary climate/settlement/dungeon/buildings/landmarks.
+  const bp = { ...fresh, tone: base.tone, worldArchetype: base.worldArchetype, threatType: base.threatType,
+               beatArc: base.beatArc, factionSlots: base.factionSlots, godDomains: base.godDomains };
+
+  try {
+    const { generateRegion, generateSettlement } = await import('./worldgen.js');
+    const parentDigest = appState.world?.digest ?? appState.world?.name ?? 'the known world';
+    const region = await generateRegion(parentDigest, bp);
+    if (!region) return null;
+    region.id ??= `region-${seed}`;
+    if (!region.digest) region.digest = `${region.name} — ${region.climate}.`;
+
+    const settlement = await generateSettlement(region.digest, region.id, bp);
+    if (!settlement) return null;
+    settlement.id ??= `settlement-${seed}`;
+    if (!settlement.digest) settlement.digest = `${settlement.name} — ${(settlement.npcs ?? []).map(n => n.name).join(', ')}.`;
+
+    const fromRegionId = appState.world.location.regionId;
+    const regions = {
+      ...appState.world.regions,
+      [region.id]: { ...region, settlements: [settlement.id], dungeons: [], adjacentRegions: region.adjacentHints ?? [], blueprint: bp },
+    };
+    // Link the origin region to the new one for the map.
+    if (regions[fromRegionId]) {
+      const adj = new Set([...(regions[fromRegionId].adjacentRegions ?? []), region.name]);
+      regions[fromRegionId] = { ...regions[fromRegionId], adjacentRegions: [...adj] };
+    }
+    const settlements = { ...appState.world.settlements, [settlement.id]: { ...settlement, regionId: region.id } };
+    setValue('world', { ...appState.world, regions, settlements,
+      location: { ...appState.world.location, regionId: region.id } });
+    tick(); saveToStorage();
+    return { regionId: region.id, settlementId: settlement.id };
+  } catch (e) {
+    console.warn('Neighbour region generation failed:', e.message);
+    return null;
+  }
 }
 
 // ─── Enter dungeon from settlement ───────────────────────────────────────────
@@ -1111,7 +1423,7 @@ export async function resumeGame() {
   // Resume into the right context
   const locType = appState.world?.location?.type;
   if (locType === 'settlement' && appState.world?.location?.settlementId) {
-    await settlementLoop(appState.world.location.settlementId);
+    await enterSettlement(appState.world.location.settlementId, true);
   } else {
     await playLoop();
   }
