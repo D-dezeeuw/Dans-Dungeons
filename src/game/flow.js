@@ -4,7 +4,7 @@
 // All AI calls go through loop.js (checkApiKey, generateTurnImage, processTurn).
 
 import { appState, setValue, tick, saveToStorage, clearSave, restoreState } from '../core/state.js';
-import { generateWorld, generateDungeon, createDungeonEntry, buildEnemy } from './world.js';
+import { generateDungeon, createDungeonEntry, buildEnemy } from './world.js';
 import { buildWorldBlueprint } from './worldseed.js';
 import { OVERWORLD_ENEMY_IDS } from './creatures.js';
 import { createCharacter } from './character.js';
@@ -13,7 +13,7 @@ import {
   goldOf, resolvePurchase, addToInventory, resolveRest, DEFAULT_REST_COST,
   questId, makeQuest, addQuest, canRevealSecret, pushDialogue, slug,
 } from './settlement.js';
-import { beginTravel, stepTravel, isTravelDone, pickEncounter } from './travel.js';
+import { beginTravel, stepTravel, isTravelDone, pickEncounter } from 'bag-of-holding-client';
 import { setStoryFlag, awardReputation, reputationStanding, progress as storyProgressNow } from './story.js';
 import { adjustPrice, isHostile, standing } from './factions.js';
 import { setQuestStatus, activeQuests } from './settlement.js';

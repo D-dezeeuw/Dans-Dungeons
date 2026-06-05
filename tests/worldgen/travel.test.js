@@ -4,10 +4,12 @@ import assert from 'node:assert/strict';
 // Phase 3 (3.9): unit-test the travel FSM — transitions, segment count, event
 // probability, fast-travel safety, and termination. travel.js is pure so we
 // import the REAL module.
+// Travel now lives in the client library; the app consumes it via the
+// 'bag-of-holding-client' alias (esbuild). Test the vendored copy directly.
 import {
   beginTravel, stepTravel, isTravelDone, pickEncounter, runTravel,
   TRAVEL_SEGMENTS_MIN, TRAVEL_SEGMENTS_MAX, ENCOUNTER_CHANCE, DISCOVERY_CHANCE, DISCOVERY_TYPES,
-} from '../../src/game/travel.js';
+} from '../../vendor/bag-of-holding-client/src/travel/fsm.js';
 
 // Deterministic RNG (same Mulberry32 the engine uses) for reproducible rolls.
 function mulberry32(seed) {
