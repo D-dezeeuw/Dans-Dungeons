@@ -309,34 +309,20 @@ async function startCampaign() {
   let seed, factions, beats, region, settlement;
 
   try {
-    const { generateWorldSeed, generateFactions, generateBeats, generateRegion, generateSettlement } = await import('./worldgen.js');
+    // One shared pipeline (library runPipeline) — world → {factions ‖ beats} →
+    // region → settlement, with digest threading, retries, and critical-abort.
+    const { runWorldgenPipeline } = await import('./worldgen.js');
+    const stepKey = { world: 'worldgenStep1', factions: 'worldgenStep2', beats: 'worldgenStep3', region: 'worldgenStep4', settlement: 'worldgenStep5' };
+    const out = await runWorldgenPipeline(blueprint, {
+      onProgress: (kind, info) => { if (kind === 'step' && stepKey[info.layer]) progress(stepKey[info.layer]); },
+    });
 
-    progress('worldgenStep1');
-    seed = await generateWorldSeed(blueprint);
-    if (!seed) throw new Error('World seed failed');
-    if (!seed.digest) seed.digest = `${seed.name} — ${seed.tone}. ${seed.redThread?.premise ?? ''}`;
-    progress('detail', `World: "${seed.name}" (${seed.tone}).`);
-
-    progress('worldgenStep2');
-    try { factions = (await generateFactions(seed.digest, blueprint))?.factions ?? []; } catch { factions = []; }
-    progress('detail', factions.length ? `Factions: ${factions.length}.` : 'Factions: skipped.');
-
-    progress('worldgenStep3');
-    try { beats = (await generateBeats(seed.digest, blueprint))?.beats ?? []; } catch { beats = []; }
-    progress('detail', beats.length ? `Red thread: ${beats.length} beats.` : 'Red thread: skipped.');
-
-    progress('worldgenStep4');
-    region = await generateRegion(seed.digest, blueprint);
-    if (!region) throw new Error('Region failed');
-    if (!region.digest) region.digest = `${region.name} — ${region.climate}.`;
-    progress('detail', `Region: "${region.name}".`);
-
-    progress('worldgenStep5');
-    settlement = await generateSettlement(region.digest, region.id, blueprint);
-    if (!settlement) throw new Error('Settlement failed');
-    if (!settlement.digest) settlement.digest = `${settlement.name} — ${(settlement.npcs ?? []).map(n => n.name).join(', ')}.`;
-    progress('detail', `Settlement: "${settlement.name}".`);
-
+    seed       = out.world;       // critical — runPipeline threw if it failed
+    factions   = out.factions?.factions ?? [];
+    beats      = out.beats?.beats ?? [];
+    region     = out.region;      // critical
+    settlement = out.settlement;  // critical
+    progress('detail', `World: "${seed.name}" (${seed.tone}). Region: "${region.name}". Settlement: "${settlement.name}".`);
   } catch (e) {
     UI.appendEntry('error', `World generation failed: ${e.message}. Falling back to Quick Dungeon.`);
     await startQuickDungeon();

@@ -12,7 +12,7 @@ import {
   factionsHints,
   regionHints,
   settlementHints,
-} from '../../src/game/blueprint-context.js';
+} from '../../vendor/bag-of-holding-client/src/worldgen/blueprint.js';
 
 // A representative blueprint (same shape buildWorldBlueprint() returns).
 const BP = {

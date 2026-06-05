@@ -6,7 +6,9 @@
 import { chatCompletion } from '../ai/client.js';
 import { WORLD_SEED_SCHEMA, REGION_SCHEMA, SETTLEMENT_SCHEMA, FACTIONS_SCHEMA, RED_THREAD_SCHEMA } from '../ai/schemas.js';
 import { t } from '../i18n/i18n.js';
-import { worldSeedConstraints, beatsHints, factionsHints, regionHints, settlementHints } from './blueprint-context.js';
+import {
+  worldSeedConstraints, beatsHints, factionsHints, regionHints, settlementHints, runPipeline,
+} from 'bag-of-holding-client';
 
 // ─── World seed (L00) ────────────────────────────────────────────────────────
 
@@ -91,4 +93,38 @@ export async function generateSettlement(parentDigest, regionId, blueprint) {
   }
   raw.regionId ??= regionId;
   return raw;
+}
+
+// ─── Full pipeline (shared by campaign start + world-bible export) ─────────────
+//
+// One declaration of the world → {factions ‖ beats} → region → settlement DAG,
+// run through the library's runPipeline (digest threading, parallel group,
+// per-layer retry, continue-on-fail, critical-abort). Replaces the two
+// previously-divergent hand-rolled pipelines. Returns
+// { world, factions, beats, region, settlement } (each a result or null).
+
+const WORLDGEN_LAYERS = [
+  { name: 'world', critical: true, retries: 1,
+    generate: (_pd, bp) => generateWorldSeed(bp),
+    digestOf: (s) => `${s.name} — ${s.tone}. ${s.redThread?.premise ?? ''}` },
+  { name: 'factions', group: 1, dependsOn: ['world'],
+    generate: async (pd, bp) => { const r = await generateFactions(pd.world, bp); return r?.factions?.length ? r : null; } },
+  { name: 'beats', group: 1, dependsOn: ['world'],
+    generate: async (pd, bp) => { const r = await generateBeats(pd.world, bp); return r?.beats?.length ? r : null; } },
+  { name: 'region', critical: true, dependsOn: ['world'], retries: 1,
+    generate: (pd, bp) => generateRegion(pd.world, bp),
+    digestOf: (r) => `${r.name} — ${r.climate}.` },
+  { name: 'settlement', critical: true, dependsOn: ['region'], retries: 1,
+    generate: (pd, bp, ctx) => generateSettlement(pd.region, ctx.results.region?.id, bp),
+    digestOf: (s) => `${s.name} — ${(s.npcs ?? []).map(n => n.name).join(', ')}.` },
+];
+
+// `critical` overrides which layers abort the pipeline on failure: campaign play
+// needs world+region+settlement (default); the world-bible export only needs the
+// world seed and renders whatever else succeeds.
+export function runWorldgenPipeline(blueprint, { onProgress = () => {}, critical } = {}) {
+  const layers = critical
+    ? WORLDGEN_LAYERS.map(l => ({ ...l, critical: critical.includes(l.name) }))
+    : WORLDGEN_LAYERS;
+  return runPipeline(layers, { blueprint, onProgress });
 }
