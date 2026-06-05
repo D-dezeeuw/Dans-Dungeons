@@ -138,12 +138,17 @@ export async function processTurn(playerInput, onNarrationChunk) {
   saveToStorage();
 
   // 7. Narrative engine (Phase 4): raise flags for this turn's events and let
-  //    the red thread advance if the narration fulfilled the current beat.
+  //    the red thread advance if the narration fulfilled the current beat. These
+  //    run after the step-6 save (they depend on the resolved narration), so the
+  //    second save persists any flag/beat change before the player can reload.
+  let storyChanged = false;
   if (killedNpc) {
     setStoryFlag('enemy-slain');
     if (killedNpc.isBoss) setStoryFlag(`boss-${killedNpc.creatureId ?? 'boss'}-slain`);
+    storyChanged = true;
   }
-  await maybeAdvanceBeat(narratorResp.narration);
+  if (await maybeAdvanceBeat(narratorResp.narration)) storyChanged = true;
+  if (storyChanged) saveToStorage();
 
   return { ...narratorResp, _debug: { classified, resolved, goblinResult } };
 }
@@ -153,11 +158,12 @@ export async function processTurn(playerInput, onNarrationChunk) {
 // carry beats, so quick dungeons short-circuit (activeBeat() === null).
 async function maybeAdvanceBeat(narration) {
   const beat = activeBeat();
-  if (!beat || !narration) return;
+  if (!beat || !narration) return false;
   try {
     const res = await checkBeatFulfilled(beat.dramaticPurpose, narration);
-    if (res?.fulfilled) completeBeatNow(beat.id);
+    if (res?.fulfilled) return completeBeatNow(beat.id);
   } catch { /* narration check is best-effort */ }
+  return false;
 }
 
 // ─── Down turn (deterministic, no AI) ────────────────────────────────────────
