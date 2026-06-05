@@ -559,6 +559,8 @@ async function converseWithNpc(settlementId, npcId) {
       const accept = await UI.pickFrom(t('settlement.questAcceptQ'), ['yes', 'no'], x => x === 'yes' ? t('common.yes') : t('common.no'), 0);
       if (accept === 'yes') {
         setValue('world', { ...appState.world, quests: addQuest(appState.world.quests, makeQuest(npc)) });
+        tick();          // commit + persist now — the player may leave before any exchange
+        saveToStorage();
         UI.appendEntry('system', t('settlement.questAccepted', { hook: npc.questHook }));
       } else {
         UI.appendEntry('system', t('settlement.questDeclined'));
@@ -594,10 +596,12 @@ async function converseWithNpc(settlementId, npcId) {
     history = pushDialogue(history, 'npc', resp.reply);
     npc = { ...npc, dialogueHistory: history, secretRevealed: npc.secretRevealed || revealed };
     commitNpc(settlementId, npc);
+    tick();          // merge before the next setValue('world') / read, else deltas clobber
 
     if (revealed) {
       UI.appendEntry('system', t('settlement.secretRevealed', { name: npc.name, secret: npc.secret }));
       setStoryFlag(`secret-${slug(npc.id ?? npc.name)}-revealed`);
+      tick();
     }
     saveToStorage();
   }
@@ -640,13 +644,16 @@ async function openShop(settlementId) {
       UI.appendEntry('system', t('settlement.cantAfford', { name: chosen.item.name, short: res.short }));
       continue;
     }
-    // Commit: deduct gold, add to carried inventory.
+    // Commit: deduct gold, add to carried inventory. tick() merges the delta
+    // into appState BEFORE the next loop reads gold and before saveToStorage()
+    // (which serialises appState, not the pending delta).
     const record = { ...appState.party.pc.record, gold: res.gold };
     setValue('party', {
       ...appState.party,
       pc:        { ...appState.party.pc, record },
       inventory: addToInventory(appState.party?.inventory, res.item),
     });
+    tick();
     saveToStorage();
     UI.appendEntry('gm', t('settlement.bought', { name: chosen.item.name, price: res.price, gold: res.gold }));
   }
@@ -670,6 +677,7 @@ async function doRest(settlementId) {
 
   const record = { ...pc.record, gold: res.gold, hpCurrent: res.hpCurrent, conditions: [], deathSaves: undefined };
   setValue('party', { ...appState.party, pc: { ...pc, record } });
+  tick();          // merge the delta into appState before saveToStorage()
   saveToStorage();
   UI.appendEntry('gm', cost > 0
     ? t('settlement.restDone', { gold: res.gold })
@@ -709,6 +717,12 @@ async function doTravel(exit, settlementId) {
 
   if (exit.targetType === 'dungeon') {
     await enterDungeon(exit, settlementId);
+    // Back in town — restore the location pointer so a save/resume routes to the
+    // settlement loop, not the (now-cleared) dungeon (enterDungeon set it to
+    // 'dungeon').
+    setValue('world', { ...appState.world, location: { ...appState.world.location, type: 'settlement', dungeonId: null } });
+    tick();
+    saveToStorage();
     UI.appendEntry('system', '');
     UI.appendEntry('system', t('settlement.returnSettlement', { name: settlement.name }));
     UI.appendEntry('system', '');
