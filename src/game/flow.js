@@ -14,6 +14,9 @@ import {
   questId, makeQuest, addQuest, canRevealSecret, pushDialogue, slug,
 } from './settlement.js';
 import { beginTravel, stepTravel, isTravelDone, pickEncounter } from './travel.js';
+import { setStoryFlag, awardReputation, reputationStanding, progress as storyProgressNow } from './story.js';
+import { adjustPrice, isHostile, standing } from './factions.js';
+import { setQuestStatus, activeQuests } from './settlement.js';
 import * as UI from '../ui/console.js';
 import { t, tRaw } from '../i18n/i18n.js';
 import { getSkills } from '../ui/chips.js';
@@ -213,7 +216,8 @@ async function handleMeta(raw) {
     return;
   }
   if (cmd === 'settings') { UI.appendEntry('system', t('setup.reRunSetup')); await setupKey(); return; }
-  if (cmd === 'map')  { renderRegionMap(); return; }
+  if (cmd === 'map')   { renderRegionMap(); return; }
+  if (cmd === 'story') { renderStoryView(); return; }
   if (cmd === 'help') { UI.appendEntry('system', t('meta.helpList')); return; }
   UI.appendEntry('system', t('meta.unknownCmd', { cmd: raw }));
 }
@@ -386,6 +390,8 @@ async function enterSettlement(settlementId, skipFirstRender = false) {
 function renderSettlement(settlement, settlementId) {
   setValue('world', { ...appState.world, location: { ...appState.world.location, type: 'settlement', settlementId, dungeonId: null } });
   tick();
+  // Phase 4.3: arriving in a region raises a visited flag (a beat prerequisite).
+  if (settlement.regionId) setStoryFlag(`visited-${settlement.regionId}`);
 
   UI.clear();
   UI.appendEntry('system', t('settlement.banner', { name: settlement.name }));
@@ -428,6 +434,7 @@ function settlementChips(settlement) {
   chips.push({ label: t('settlement.questsChip'),    value: t('settlement.questsCmd') });
   chips.push({ label: t('settlement.inventoryChip'), value: t('settlement.inventoryCmd') });
   chips.push({ label: t('settlement.mapChip'),       value: '/map' });
+  chips.push({ label: t('settlement.storyChip'),     value: '/story' });
   for (const exit of (settlement.exits ?? [])) {
     chips.push({ label: t('settlement.travelTo', { name: exit.targetName }), value: t('settlement.travelCmd', { name: exit.targetName }) });
   }
@@ -477,6 +484,55 @@ async function fastTravelTo(settlementId) {
   UI.appendEntry('system', t('travel.fastTravel', { name: dest.name }));
   UI.appendEntry('system', '');
   return settlementId;
+}
+
+// ─── Story progress view (Phase 4.9) ─────────────────────────────────────────
+
+// A 10-cell reputation bar from -100 (empty) to +100 (full).
+function repBar(rep) {
+  const filled = Math.max(0, Math.min(10, Math.round((rep + 100) / 20)));
+  return '█'.repeat(filled) + '·'.repeat(10 - filled);
+}
+
+function renderStoryView() {
+  UI.appendEntry('system', t('story.header'));
+
+  const p = storyProgressNow(); // { done, total, current }
+  if (p.total) {
+    UI.appendEntry('system', t('story.progress', { done: p.done, total: p.total }));
+    UI.appendEntry('system', p.current ? t('story.nextHint') : t('story.complete'));
+  } else {
+    UI.appendEntry('system', t('story.noThread'));
+  }
+
+  const repMap = appState.world?.factionReputation ?? {};
+  const facEntries = Object.entries(repMap);
+  if (facEntries.length) {
+    UI.appendEntry('system', '');
+    UI.appendEntry('system', t('story.factionsHeader'));
+    for (const [id, rep] of facEntries) {
+      const name = appState.world?.factions?.[id]?.name ?? id;
+      const stand = standing(rep);
+      UI.appendEntry('system', t('story.factionLine', { name, bar: repBar(rep), rep, standing: t(`story.standing.${stand}`) }));
+    }
+  }
+
+  const aq = activeQuests(appState.world?.quests ?? {});
+  if (aq.length) {
+    UI.appendEntry('system', '');
+    UI.appendEntry('system', t('story.questsHeader'));
+    for (const q of aq) {
+      UI.appendEntry('system', t('settlement.questLine', { desc: q.description, status: t('settlement.status.active'), npc: q.npcName }));
+    }
+  }
+
+  const flags = Object.keys(appState.world?.redThread?.flags ?? {}).filter(f => !f.startsWith('beat-done-'));
+  if (flags.length) {
+    UI.appendEntry('system', '');
+    UI.appendEntry('system', t('story.flagsHeader'));
+    UI.appendEntry('system', '  ' + flags.slice(-8).join('  ·  '));
+  }
+  UI.appendEntry('system', '');
 }
 
 // ─── Region map (Phase 3.6) ───────────────────────────────────────────────────
@@ -603,12 +659,6 @@ function commitNpc(settlementId, npc) {
   setValue('world', { ...appState.world, settlements });
 }
 
-function setStoryFlag(flag) {
-  const rt = appState.world?.redThread ?? { beats: [], currentIndex: 0, flags: {} };
-  if (rt.flags?.[flag]) return;
-  setValue('world', { ...appState.world, redThread: { ...rt, flags: { ...(rt.flags ?? {}), [flag]: true } } });
-}
-
 async function converseWithNpc(settlementId, npcId) {
   let npc = (appState.world.settlements[settlementId].npcs ?? []).find(n => n.id === npcId);
   if (!npc) return;
@@ -623,6 +673,8 @@ async function converseWithNpc(settlementId, npcId) {
       if (accept === 'yes') {
         setValue('world', { ...appState.world, quests: addQuest(appState.world.quests, makeQuest(npc)) });
         tick();          // commit + persist now — the player may leave before any exchange
+        // Phase 4.7: taking a faction's task earns a little goodwill.
+        if (npc.factionId) awardReputation(npc.factionId, 5);
         saveToStorage();
         UI.appendEntry('system', t('settlement.questAccepted', { hook: npc.questHook }));
       } else {
@@ -645,7 +697,8 @@ async function converseWithNpc(settlementId, npcId) {
     let resp;
     try {
       const { npcReply } = await import('../ai/dialogue.js');
-      resp = await npcReply(npc, line, npc.dialogueHistory ?? [], { mayRevealSecret: canRevealSecret(npc) });
+      const stand = npc.factionId ? reputationStanding(npc.factionId) : 'neutral';
+      resp = await npcReply(npc, line, npc.dialogueHistory ?? [], { mayRevealSecret: canRevealSecret(npc), reputation: stand });
     } catch {
       resp = { reply: t('settlement.npcSilent', { name: npc.name }), revealsSecret: false };
     }
@@ -678,11 +731,17 @@ async function openShop(settlementId) {
   if (!merchants.length) { UI.appendEntry('system', t('settlement.shopEmpty')); return; }
 
   while (true) {
-    // Aggregate wares as { npc, item } so prices/labels stay accurate.
+    // Aggregate wares, applying each merchant's faction standing to prices.
+    // Hostile-faction merchants refuse to trade with the player entirely.
     const wares = [];
     for (const m of (appState.world.settlements[settlementId].npcs ?? []).filter(n => n.inventory?.length)) {
-      for (const item of m.inventory) wares.push({ npc: m.name, item });
+      const stand = m.factionId ? reputationStanding(m.factionId) : 'neutral';
+      if (isHostile(stand)) continue;
+      for (const item of m.inventory) {
+        wares.push({ npc: m.name, item: { ...item, price: adjustPrice(item.price, stand) } });
+      }
     }
+    if (!wares.length) { UI.appendEntry('system', t('settlement.shopRefused')); return; }
     UI.appendEntry('system', t('settlement.shopBanner', { gold: goldOf(appState.party?.pc?.record) }));
     const chips = wares.map((w, i) => ({
       label: t('settlement.buyChip', { name: w.item.name, price: w.item.price }),
@@ -749,6 +808,24 @@ async function doRest(settlementId) {
 }
 
 // ─── Quest log + inventory (Phase 2) ─────────────────────────────────────────
+
+// Phase 4.3/4.7: clearing a dungeon completes the player's active quests, raises
+// quest-done flags (beat prerequisites), and rewards the quest-givers' factions.
+function resolveDungeonQuests() {
+  const quests = appState.world?.quests ?? {};
+  const active = activeQuests(quests);
+  if (!active.length) return;
+  let map = quests;
+  for (const q of active) map = setQuestStatus(map, q.id, 'completed');
+  setValue('world', { ...appState.world, quests: map });
+  tick();
+  for (const q of active) {
+    setStoryFlag(`quest-${q.id}-done`);
+    if (q.factionId) awardReputation(q.factionId, 15);
+    UI.appendEntry('system', t('settlement.questCompleted', { desc: q.description }));
+  }
+  saveToStorage();
+}
 
 function showQuests() {
   const quests = Object.values(appState.world?.quests ?? {});
@@ -1192,7 +1269,10 @@ export async function playLoop() {
         if (did && appState.world.dungeons?.[did]) {
           const dungeons = { ...appState.world.dungeons, [did]: { ...appState.world.dungeons[did], completed: true } };
           setValue('world', { ...appState.world, dungeons });
+          tick();
         }
+        if (did) setStoryFlag(`dungeon-${did}-complete`);
+        resolveDungeonQuests();   // Phase 4.3/4.7: complete quests + reward factions
         await doVictory();
         return; // return to settlementLoop caller
       }

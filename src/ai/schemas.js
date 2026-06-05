@@ -46,6 +46,18 @@ export const DIALOGUE_SCHEMA = {
   additionalProperties: false,
 };
 
+// Beat-completion check (Phase 4.4): did the latest narration fulfil the
+// current story beat's dramatic purpose?
+export const BEAT_CHECK_SCHEMA = {
+  type: 'object',
+  properties: {
+    fulfilled: { type: 'boolean' },
+    reason:    { type: 'string' },
+  },
+  required: ['fulfilled', 'reason'],
+  additionalProperties: false,
+};
+
 export const JOURNAL_SCHEMA = {
   type: 'object',
   properties: {

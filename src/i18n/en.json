@@ -179,7 +179,10 @@
     "roadNotReady": "The road stretches away into the wild — but that journey is not ready for you yet.",
     "status": {"active": "active", "completed": "completed", "failed": "failed"},
     "mapChip": "World map",
-    "fastTravelTo": "Fast travel to {{name}}"
+    "fastTravelTo": "Fast travel to {{name}}",
+    "questCompleted": "Quest complete: {{desc}}",
+    "shopRefused": "They want nothing to do with you. No trade today.",
+    "storyChip": "Story"
   },
   "adventure": {
     "banner": "── THE ADVENTURE BEGINS ──────────────────────",
@@ -443,17 +446,30 @@
     "settlementLine": "    • {{name}}{{here}}",
     "connectsLine": "    → leads toward: {{names}}"
   },
+  "story": {
+    "header": "── Story ──",
+    "progress": "Milestones reached: {{done}} / {{total}}.",
+    "nextHint": "The thread pulls you onward — there is more to do.",
+    "complete": "Every thread of this tale has been woven. The story is complete.",
+    "noThread": "No overarching story drives this adventure.",
+    "factionsHeader": "Faction standings:",
+    "factionLine": "  {{name}}  [{{bar}}]  {{standing}} ({{rep}})",
+    "questsHeader": "Active quests:",
+    "flagsHeader": "Notable deeds:",
+    "standing": {"neutral": "neutral", "ally": "ally", "enemy": "enemy", "champion": "champion", "nemesis": "nemesis"}
+  },
   "common": {
     "yes": "Yes",
     "no": "No"
   },
   "ai": {
+    "beatCheckPrompt": "You judge whether a story beat was just fulfilled. The beat's dramatic purpose is:\n\"{{purpose}}\"\n\nGiven the GM narration the user provides, set fulfilled=true ONLY if the narration CLEARLY accomplishes that dramatic purpose (the key event happened on screen). If it merely hints at, sets up, or is unrelated to the purpose, set fulfilled=false. Be strict — when in doubt, false.",
     "travelPrompt": "You are a travel narrator for a fantasy RPG. Write ONE vivid prose paragraph (2-4 sentences) for a single travel beat. No dialogue, no game mechanics, no lists, no headings. Beat and details:\n{{context}}\nWrite in {{language}}.",
     "travelUserMsg": "Narrate this travel beat.",
     "settlementClassifierPrompt": "You are a classifier for a text-RPG town scene. Map the player's free-text input (English or Dutch) to one structured action.\n\nIntents:\n- talk: speak to or approach an NPC. Set target to the NPC's name or role.\n- buy: browse or purchase goods from a merchant.\n- travel: leave toward an exit (a dungeon, road, or wilderness). Set target to the destination name or direction.\n- rest: sleep / recover at an inn.\n- quest: review accepted quests / the quest log.\n- inventory: check carried items and gold.\n- look: look around, or anything that doesn't fit the above.\n\nCurrent location context (the valid NPC and exit names):\n{{context}}\n\nOutput one JSON object. Set target to the relevant NPC / exit / item name, otherwise null.",
     "npcDialoguePrompt": "You roleplay a single NPC in a fantasy town. Stay fully in character. Reply with ONE short spoken line (1-3 sentences) — no narration, no surrounding quotation marks.\n\nNPC: {{name}}, a {{role}} ({{attitude}}).\nPersonality: {{personality}}\nFaction: {{faction}} (player standing: {{reputation}})\nKnown quest hook: {{questHook}}\nGuarded secret: {{secret}}\nMay reveal the secret this turn: {{mayReveal}}\n\nRules:\n- If 'May reveal the secret' is NO, never reveal or strongly hint at the secret; deflect if pushed.\n- If YES and the player is probing or has earned trust, you MAY let the secret slip — set revealsSecret true only when your reply actually discloses it.\n- Reflect your attitude and the player's faction standing in your tone.\n- Reply in {{language}}.\n\nRecent conversation:\n{{transcript}}",
     "classifierPrompt": "You are a D&D action classifier. Classify the player's intent from their free-text input.\n\nThe player writes in English.\n\nCurrent scene (use this to identify valid targets):\n{{scene}}\n\nOutput a single JSON object. Be generous in interpretation (\"hit the goblin\" → attack, \"sneak past\" → skill stealth).\n- \"go north\" / \"head through the doorway\" → move (set direction to north/south/east/west)\n- \"take the key\" / \"grab the brass key\"  → take (set target_id to the item's id from scene loot)\n- \"unlock the door\" / \"use the key\"       → unlock\n- direction: the cardinal direction for move, null otherwise\n- target_id: NPC id for attack, item id for take, null otherwise\nFor skill checks suggest a dc between 10 and 20.",
-    "narratorPrompt": "You are the Game Master narrating a D&D 5e dungeon encounter.\n\nSetting: gritty low fantasy, second person (\"you strike\", \"you dodge\").\nNarrate in English.\n\nRules:\n- Do NOT invent dice results — use only the resolved facts in the data\n- 2–4 sentences; vivid but concise\n- If a hit: describe the impact and the enemy's reaction\n- If a miss: describe the near-miss\n- If the enemy retaliated: weave it into the same narration\n- End on tension or consequence\n- If intent is 'move': describe entering the new room (use newRoom.description); introduce any enemies using their intro text; mention visible items\n- If intent is 'take': describe picking up the item\n- If intent is 'unlock': describe unlocking the door with a satisfying click\n- CRITICAL — if intent is 'impossible': the action simply cannot happen. Do NOT describe it succeeding or partially succeeding. Describe only the failure and its reason. No enemy dies, no item is taken, nothing changes.\n\nRecent transcript (last 3 turns, for continuity):\n{{transcript}}\n\nCurrent scene:\n{{scene}}\n\nResolved mechanics:\n{{resolved}}\n\nOutput ONLY a JSON object — no markdown, no extra text:\n{\"narration\":\"...\",\"combat_ended\":true/false,\"outcome\":\"continue\"|\"victory\"|\"defeat\"|\"flee\"}",
+    "narratorPrompt": "You are the Game Master narrating a D&D 5e dungeon encounter.\n\nSetting: gritty low fantasy, second person (\"you strike\", \"you dodge\").\nNarrate in English.\n\nRules:\n- Do NOT invent dice results — use only the resolved facts in the data\n- 2–4 sentences; vivid but concise\n- If a hit: describe the impact and the enemy's reaction\n- If a miss: describe the near-miss\n- If the enemy retaliated: weave it into the same narration\n- End on tension or consequence\n- If intent is 'move': describe entering the new room (use newRoom.description); introduce any enemies using their intro text; mention visible items\n- If intent is 'take': describe picking up the item\n- If intent is 'unlock': describe unlocking the door with a satisfying click\n- CRITICAL — if intent is 'impossible': the action simply cannot happen. Do NOT describe it succeeding or partially succeeding. Describe only the failure and its reason. No enemy dies, no item is taken, nothing changes.\n\nRecent transcript (last 3 turns, for continuity):\n{{transcript}}\n\nIf the scene contains a story.directive, treat it as YOUR private objective \u2014 steer the scene toward it subtly. NEVER state it outright or break character.\n\nCurrent scene:\n{{scene}}\n\nResolved mechanics:\n{{resolved}}\n\nOutput ONLY a JSON object — no markdown, no extra text:\n{\"narration\":\"...\",\"combat_ended\":true/false,\"outcome\":\"continue\"|\"victory\"|\"defeat\"|\"flee\"}",
     "narrateTurnPrompt": "Narrate the outcome of this turn.",
     "autoplayPrompt": "You are a bold, curious adventurer playing a D&D dungeon crawl.\n\nDecision priority:\n1. If there's a hostile enemy — fight with your best weapon or class ability\n2. If there are items on the ground (scene.room.loot) — pick them up\n3. If there's a locked exit (scene.room.exits with locked:true) AND you have a key — unlock it\n4. Move to an UNVISITED room (see navigation info below)\n5. Use a skill if it fits (Perception, Stealth, Investigation)\n6. Look around ONLY if nothing else applies\n\n{{navigation}}\n\nCRITICAL RULES:\n- ONLY pick from the available actions list. Do NOT invent actions.\n- ALWAYS pick an exit marked UNVISITED or \"GO HERE\" first.\n- If no unvisited exits exist, backtrack through exits marked \"LEADS TO UNVISITED ROOMS\".\n- NEVER move to a \"dead end\" exit unless there is no other option.\n- NEVER repeat the same action twice in a row.\n\nCurrent scene:\n{{scene}}\n\nAvailable actions (ONLY pick from this list):\n{{actions}}\n\nRecent transcript:\n{{transcript}}\n\nRespond in English. Output ONLY a JSON object:\n{\"action\": \"pick one action from the available actions list above\"}",
     "autoplayUserMsg": "Choose your next action.",

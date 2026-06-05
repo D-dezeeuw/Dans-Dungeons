@@ -9,11 +9,12 @@
 // never import AI layers directly either.
 
 import { appState, addValue, saveToStorage, tick } from '../core/state.js';
-import { classify }                          from '../ai/classify.js';
+import { classify, checkBeatFulfilled }       from '../ai/classify.js';
 import { narrate, generateSceneImage }       from '../ai/narrate.js';
 import { checkKey }                          from '../ai/client.js';
 import { resolveRules, goblinRetaliates, commitAll, appendTranscript,
          isPcDown, resolveDownTurn, commitDownTurn } from './resolver.js';
+import { buildStoryContext, setStoryFlag, activeBeat, completeBeatNow } from './story.js';
 import { t }                                 from '../i18n/i18n.js';
 
 // ─── Scene context (pure snapshot for AI) ────────────────────────────────────
@@ -70,6 +71,11 @@ export function buildScene() {
     if (digestPath.length) scene.worldContext = digestPath.join(' | ');
   }
 
+  // Phase 4: story context — current beat directive (GM-only), faction tensions,
+  // active quests, recent flags — so the narrator weaves the red thread in.
+  const story = buildStoryContext();
+  if (story) scene.story = story;
+
   return scene;
 }
 
@@ -93,6 +99,11 @@ export async function processTurn(playerInput, onNarrationChunk) {
 
   // 2. Resolve PC action (pure JS — reads pre-commit appState, no mutations).
   const resolved = resolveRules(classified);
+
+  // Capture a slain enemy BEFORE commit (so we can raise story flags after) —
+  // the npc object still carries isBoss / creatureId here.
+  const killedNpc = (resolved.intent === 'attack' && resolved.targetDead)
+    ? appState.world?.npcs?.[resolved.targetId] : null;
 
   // 3. Compute goblin retaliation BEFORE committing PC's attack.
   //    A killed goblin must not retaliate.
@@ -126,7 +137,33 @@ export async function processTurn(playerInput, onNarrationChunk) {
   tick();
   saveToStorage();
 
+  // 7. Narrative engine (Phase 4): raise flags for this turn's events and let
+  //    the red thread advance if the narration fulfilled the current beat. These
+  //    run after the step-6 save (they depend on the resolved narration), so the
+  //    second save persists any flag/beat change before the player can reload.
+  let storyChanged = false;
+  if (killedNpc) {
+    setStoryFlag('enemy-slain');
+    if (killedNpc.isBoss) setStoryFlag(`boss-${killedNpc.creatureId ?? 'boss'}-slain`);
+    storyChanged = true;
+  }
+  if (await maybeAdvanceBeat(narratorResp.narration)) storyChanged = true;
+  if (storyChanged) saveToStorage();
+
   return { ...narratorResp, _debug: { classified, resolved, goblinResult } };
+}
+
+// Phase 4.4: ask the tiny tier whether the latest narration fulfilled the
+// current beat's dramatic purpose; advance the thread if so. Only campaigns
+// carry beats, so quick dungeons short-circuit (activeBeat() === null).
+async function maybeAdvanceBeat(narration) {
+  const beat = activeBeat();
+  if (!beat || !narration) return false;
+  try {
+    const res = await checkBeatFulfilled(beat.dramaticPurpose, narration);
+    if (res?.fulfilled) return completeBeatNow(beat.id);
+  } catch { /* narration check is best-effort */ }
+  return false;
 }
 
 // ─── Down turn (deterministic, no AI) ────────────────────────────────────────
