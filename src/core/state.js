@@ -66,6 +66,9 @@ const DEFAULTS = {
     // L03 — Settlements
     settlements: {},
 
+    // Quest tracker (Phase 2) — { [questId]: { id, npcId, npcName, description, status } }
+    quests: {},
+
     // L04/L05 — Dungeons (each contains rooms + npcs)
     dungeons: {},
 

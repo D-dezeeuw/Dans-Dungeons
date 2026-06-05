@@ -17,6 +17,35 @@ export const CLASSIFIER_SCHEMA = {
   additionalProperties: false,
 };
 
+// Settlement-mode intent classifier (Phase 2). Maps free-text town input to a
+// structured action. `target` names an NPC, an exit, or an item depending on
+// the intent (the resolver matches it by name/id/role).
+export const SETTLEMENT_CLASSIFIER_SCHEMA = {
+  type: 'object',
+  properties: {
+    intent: {
+      type: 'string',
+      enum: ['talk', 'buy', 'travel', 'rest', 'look', 'quest', 'inventory', 'meta'],
+    },
+    target: { type: ['string', 'null'] },
+    reason: { type: 'string' },
+  },
+  required: ['intent', 'target', 'reason'],
+  additionalProperties: false,
+};
+
+// One NPC dialogue turn (Phase 2). `reply` is the in-character line; when the
+// player has earned it (enough probing), the model may set `revealsSecret`.
+export const DIALOGUE_SCHEMA = {
+  type: 'object',
+  properties: {
+    reply:         { type: 'string' },
+    revealsSecret: { type: 'boolean' },
+  },
+  required: ['reply', 'revealsSecret'],
+  additionalProperties: false,
+};
+
 export const JOURNAL_SCHEMA = {
   type: 'object',
   properties: {
