@@ -5,6 +5,7 @@
 
 import { SRD, createEngine } from './rules.js';
 import { t } from '../i18n/i18n.js';
+import { DEFAULT_START_GOLD } from './settlement.js';
 
 // One shared engine for all sheet derivation (the vendor default-singleton
 // shape; registries are bound inside `deriveSheet`).
@@ -106,6 +107,7 @@ export async function createCharacter(ui) {
     notes:       '',
     // Runtime HP tracking (not in DerivedSheet — host owns current HP)
     hpCurrent:   null,  // filled below after derivation
+    gold:        DEFAULT_START_GOLD,  // starting coin for trade / rest (Phase 2)
   };
 
   // Derive the sheet

@@ -8,6 +8,10 @@ import { generateWorld, generateDungeon, createDungeonEntry } from './world.js';
 import { buildWorldBlueprint } from './worldseed.js';
 import { createCharacter } from './character.js';
 import { processTurn, checkApiKey, generateTurnImage, buildScene } from './loop.js';
+import {
+  goldOf, resolvePurchase, addToInventory, resolveRest, DEFAULT_REST_COST,
+  questId, makeQuest, addQuest, canRevealSecret, pushDialogue, slug,
+} from './settlement.js';
 import * as UI from '../ui/console.js';
 import { t } from '../i18n/i18n.js';
 import { getSkills } from '../ui/chips.js';
@@ -389,26 +393,39 @@ async function enterSettlement(settlementId) {
     UI.appendEntry('system', '');
   }
 
+  UI.appendEntry('system', t('settlement.goldLine', { gold: goldOf(appState.party?.pc?.record) }));
+  UI.appendEntry('system', '');
+
   _speak(settlement.description ?? settlement.name);
   await settlementLoop(settlementId);
 }
 
+// Action chips for the town menu.
+function settlementChips(settlement) {
+  const chips = [];
+  for (const npc of (settlement.npcs ?? [])) {
+    chips.push({ label: t('settlement.talkTo', { name: npc.name }), value: t('settlement.talkCmd', { name: npc.name }) });
+  }
+  if ((settlement.npcs ?? []).some(n => n.inventory?.length)) {
+    chips.push({ label: t('settlement.shop'), value: t('settlement.shopCmd') });
+  }
+  chips.push({ label: t('settlement.rest'),          value: t('settlement.restCmd') });
+  chips.push({ label: t('settlement.questsChip'),    value: t('settlement.questsCmd') });
+  chips.push({ label: t('settlement.inventoryChip'), value: t('settlement.inventoryCmd') });
+  for (const exit of (settlement.exits ?? [])) {
+    chips.push({ label: t('settlement.travelTo', { name: exit.targetName }), value: t('settlement.travelCmd', { name: exit.targetName }) });
+  }
+  return chips;
+}
+
 async function settlementLoop(settlementId) {
-  const settlement = appState.world?.settlements?.[settlementId];
-  if (!settlement) return;
+  if (!appState.world?.settlements?.[settlementId]) return;
 
   while (true) {
     if (appState.session.phase !== 'play') break;
+    const settlement = appState.world.settlements[settlementId];
 
-    // Show settlement chips
-    const chips = [];
-    for (const npc of (settlement.npcs ?? [])) {
-      chips.push({ label: t('settlement.talkTo', { name: npc.name }), value: t('settlement.talkCmd', { name: npc.name }) });
-    }
-    for (const exit of (settlement.exits ?? [])) {
-      chips.push({ label: t('settlement.travelTo', { name: exit.targetName }), value: t('settlement.travelCmd', { name: exit.targetName }) });
-    }
-    UI.showActionChips(chips);
+    UI.showActionChips(settlementChips(settlement));
 
     const raw = await UI.prompt('');
     if (!raw.trim()) continue;
@@ -417,72 +434,302 @@ async function settlementLoop(settlementId) {
     UI.appendEntry('player', `> ${raw}`);
     UI.clearChips();
 
-    // Resolve settlement action
-    const action = resolveSettlementInput(raw, settlement);
-
-    if (action.type === 'talk') {
-      UI.appendEntry('gm', `${action.npc.name}: "${action.npc.greeting}"`);
-      if (action.npc.personality) UI.appendEntry('system', `(${action.npc.personality})`);
-      if (action.npc.questHook) {
-        UI.appendEntry('system', '');
-        UI.appendEntry('gm', t('settlement.questReceived', { hook: action.npc.questHook }));
-      }
-      if (action.npc.secret) {
-        // Narrator might weave secrets in later — for now show as a hint
-        UI.appendEntry('system', `You sense ${action.npc.name} is hiding something…`);
-      }
-      _speak(action.npc.greeting);
-      continue;
-    }
-
-    if (action.type === 'travel') {
-      UI.appendEntry('system', t('settlement.travelDungeon', { name: action.exit.targetName }));
-      UI.appendEntry('system', '');
-
-      if (action.exit.targetType === 'dungeon') {
-        await enterDungeon(action.exit, settlementId);
-        // After dungeon, return to settlement
-        UI.appendEntry('system', '');
-        UI.appendEntry('system', t('settlement.returnSettlement', { name: settlement.name }));
-        UI.appendEntry('system', '');
-        continue;
-      }
-      // Road/wilderness — future: lazy expand new region
-      UI.appendEntry('gm', 'The road stretches ahead, but your business here is not yet done.');
-      continue;
-    }
-
-    // Fallback: unrecognized input — just echo it
-    UI.appendEntry('system', 'You look around the settlement, unsure what to do.');
+    const action = await classifySettlementInput(raw, settlement);
+    await handleSettlementAction(action, settlementId);
   }
 }
 
-function resolveSettlementInput(raw, settlement) {
+// Compact world snapshot for the settlement classifier.
+function settlementContext(settlement) {
+  return {
+    settlement: settlement.name,
+    npcs:    (settlement.npcs ?? []).map(n => ({ name: n.name, role: n.role, sells: !!n.inventory?.length })),
+    exits:   (settlement.exits ?? []).map(e => ({ to: e.targetName, type: e.targetType })),
+    gold:    goldOf(appState.party?.pc?.record),
+  };
+}
+
+// Classify town input with the tiny-tier LLM, normalising to a concrete action.
+// Falls back to keyword matching when the AI is unavailable.
+async function classifySettlementInput(raw, settlement) {
+  try {
+    const { classifySettlement } = await import('../ai/dialogue.js');
+    const r = await classifySettlement(raw, settlementContext(settlement));
+    return normalizeSettlementAction(r, settlement);
+  } catch {
+    return fallbackSettlementAction(raw, settlement);
+  }
+}
+
+function findNpc(settlement, target) {
+  const npcs = settlement.npcs ?? [];
+  if (!target) return npcs[0] ?? null;
+  const tl = String(target).toLowerCase();
+  return npcs.find(n => n.id === target)
+      ?? npcs.find(n => n.name.toLowerCase().includes(tl) || tl.includes(n.name.toLowerCase()))
+      ?? npcs.find(n => n.role.toLowerCase() === tl)
+      ?? npcs[0] ?? null;
+}
+
+function findExit(settlement, target) {
+  const exits = settlement.exits ?? [];
+  if (!target) return exits[0] ?? null;
+  const tl = String(target).toLowerCase();
+  return exits.find(e => e.targetId === target)
+      ?? exits.find(e => e.targetName.toLowerCase().includes(tl) || tl.includes(e.targetName.toLowerCase()))
+      ?? exits.find(e => e.direction.toLowerCase() === tl)
+      ?? exits[0] ?? null;
+}
+
+function normalizeSettlementAction(r, settlement) {
+  const intent = r?.intent ?? 'look';
+  if (intent === 'talk')   return { type: 'talk',   npc:  findNpc(settlement, r?.target) };
+  if (intent === 'travel') return { type: 'travel', exit: findExit(settlement, r?.target) };
+  if (intent === 'buy')    return { type: 'buy' };
+  if (intent === 'rest')   return { type: 'rest' };
+  if (intent === 'quest')  return { type: 'quest' };
+  if (intent === 'inventory') return { type: 'inventory' };
+  return { type: 'look' };
+}
+
+// Keyword fallback (offline / AI failure). Mirrors the old resolver plus the
+// new verbs so the town stays playable without an LLM.
+function fallbackSettlementAction(raw, settlement) {
   const lower = raw.toLowerCase();
-
-  // Check for NPC talk
+  if (/(inventor|pack|carry|bezit|rugzak)/.test(lower)) return { type: 'inventory' };
+  if (/(quest|task|opdracht|missie)/.test(lower))       return { type: 'quest' };
+  if (/(rest|sleep|inn|rust|slaap|herberg)/.test(lower)) return { type: 'rest' };
+  if (/(buy|shop|trade|purchase|koop|winkel|handel)/.test(lower)) return { type: 'buy' };
   for (const npc of (settlement.npcs ?? [])) {
-    if (lower.includes(npc.name.toLowerCase()) || lower.includes(npc.role.toLowerCase())) {
-      return { type: 'talk', npc };
-    }
+    if (lower.includes(npc.name.toLowerCase()) || lower.includes(npc.role.toLowerCase())) return { type: 'talk', npc };
   }
-  if (lower.includes('talk') || lower.includes('praat') || lower.includes('spreek')) {
-    const npc = settlement.npcs?.[0];
-    if (npc) return { type: 'talk', npc };
-  }
-
-  // Check for travel
+  if (/(talk|speak|praat|spreek)/.test(lower)) return { type: 'talk', npc: settlement.npcs?.[0] ?? null };
   for (const exit of (settlement.exits ?? [])) {
-    if (lower.includes(exit.targetName.toLowerCase()) || lower.includes(exit.direction.toLowerCase())) {
-      return { type: 'travel', exit };
+    if (lower.includes(exit.targetName.toLowerCase()) || lower.includes(exit.direction.toLowerCase())) return { type: 'travel', exit };
+  }
+  if (/(travel|go|leave|reis|ga|vertrek)/.test(lower)) return { type: 'travel', exit: settlement.exits?.[0] ?? null };
+  return { type: 'look' };
+}
+
+async function handleSettlementAction(action, settlementId) {
+  const settlement = appState.world.settlements[settlementId];
+  switch (action.type) {
+    case 'talk':
+      if (action.npc) await converseWithNpc(settlementId, action.npc.id);
+      else UI.appendEntry('system', t('settlement.noOneHere'));
+      return;
+    case 'buy':       await openShop(settlementId); return;
+    case 'rest':      await doRest(settlementId); return;
+    case 'quest':     showQuests(); return;
+    case 'inventory': showInventory(); return;
+    case 'travel':
+      if (!action.exit) { UI.appendEntry('system', t('settlement.noPath')); return; }
+      await doTravel(action.exit, settlementId); return;
+    default:
+      UI.appendEntry('gm', t('settlement.lookResult', { name: settlement.name }));
+  }
+}
+
+// ─── NPC conversation (Phase 2) ───────────────────────────────────────────────
+
+// Persist an updated NPC object back into world.settlements[id].npcs.
+function commitNpc(settlementId, npc) {
+  const settlement = appState.world.settlements[settlementId];
+  const npcs = (settlement.npcs ?? []).map(n => n.id === npc.id ? npc : n);
+  const settlements = { ...appState.world.settlements, [settlementId]: { ...settlement, npcs } };
+  setValue('world', { ...appState.world, settlements });
+}
+
+function setStoryFlag(flag) {
+  const rt = appState.world?.redThread ?? { beats: [], currentIndex: 0, flags: {} };
+  if (rt.flags?.[flag]) return;
+  setValue('world', { ...appState.world, redThread: { ...rt, flags: { ...(rt.flags ?? {}), [flag]: true } } });
+}
+
+async function converseWithNpc(settlementId, npcId) {
+  let npc = (appState.world.settlements[settlementId].npcs ?? []).find(n => n.id === npcId);
+  if (!npc) return;
+
+  // First contact — greeting + optional quest offer.
+  if (!npc.dialogueHistory?.length) {
+    UI.appendEntry('gm', `${npc.name}: "${npc.greeting}"`);
+    _speak(npc.greeting);
+    if (npc.questHook && !appState.world.quests?.[questId(npc)]) {
+      UI.appendEntry('system', t('settlement.questOffer', { name: npc.name, hook: npc.questHook }));
+      const accept = await UI.pickFrom(t('settlement.questAcceptQ'), ['yes', 'no'], x => x === 'yes' ? t('common.yes') : t('common.no'), 0);
+      if (accept === 'yes') {
+        setValue('world', { ...appState.world, quests: addQuest(appState.world.quests, makeQuest(npc)) });
+        tick();          // commit + persist now — the player may leave before any exchange
+        saveToStorage();
+        UI.appendEntry('system', t('settlement.questAccepted', { hook: npc.questHook }));
+      } else {
+        UI.appendEntry('system', t('settlement.questDeclined'));
+      }
     }
   }
-  if (lower.includes('travel') || lower.includes('reis') || lower.includes('go') || lower.includes('ga')) {
-    const exit = settlement.exits?.[0];
-    if (exit) return { type: 'travel', exit };
-  }
 
-  return { type: 'unknown' };
+  // Conversation loop — one exchange at a time, memory persisted per NPC.
+  while (true) {
+    UI.showActionChips([{ label: t('settlement.leaveChip', { name: npc.name }), value: t('settlement.leaveCmd') }]);
+    const line = await UI.prompt('');
+    if (!line.trim()) break;
+    if (/^\s*(leave|bye|goodbye|stop|done|weg|dag|stoppen)\b/i.test(line) || line === t('settlement.leaveCmd')) break;
+
+    UI.appendEntry('player', `> ${line}`);
+    UI.clearChips();
+    UI.setThinking(true);
+
+    let resp;
+    try {
+      const { npcReply } = await import('../ai/dialogue.js');
+      resp = await npcReply(npc, line, npc.dialogueHistory ?? [], { mayRevealSecret: canRevealSecret(npc) });
+    } catch {
+      resp = { reply: t('settlement.npcSilent', { name: npc.name }), revealsSecret: false };
+    }
+    UI.setThinking(false);
+
+    UI.appendEntry('gm', `${npc.name}: "${resp.reply}"`);
+    _speak(resp.reply);
+
+    const revealed = !!resp.revealsSecret && canRevealSecret(npc);
+    let history = pushDialogue(npc.dialogueHistory, 'player', line);
+    history = pushDialogue(history, 'npc', resp.reply);
+    npc = { ...npc, dialogueHistory: history, secretRevealed: npc.secretRevealed || revealed };
+    commitNpc(settlementId, npc);
+    tick();          // merge before the next setValue('world') / read, else deltas clobber
+
+    if (revealed) {
+      UI.appendEntry('system', t('settlement.secretRevealed', { name: npc.name, secret: npc.secret }));
+      setStoryFlag(`secret-${slug(npc.id ?? npc.name)}-revealed`);
+      tick();
+    }
+    saveToStorage();
+  }
+}
+
+// ─── Trade (Phase 2) ──────────────────────────────────────────────────────────
+
+async function openShop(settlementId) {
+  const settlement = appState.world.settlements[settlementId];
+  const merchants = (settlement.npcs ?? []).filter(n => n.inventory?.length);
+  if (!merchants.length) { UI.appendEntry('system', t('settlement.shopEmpty')); return; }
+
+  while (true) {
+    // Aggregate wares as { npc, item } so prices/labels stay accurate.
+    const wares = [];
+    for (const m of (appState.world.settlements[settlementId].npcs ?? []).filter(n => n.inventory?.length)) {
+      for (const item of m.inventory) wares.push({ npc: m.name, item });
+    }
+    UI.appendEntry('system', t('settlement.shopBanner', { gold: goldOf(appState.party?.pc?.record) }));
+    const chips = wares.map((w, i) => ({
+      label: t('settlement.buyChip', { name: w.item.name, price: w.item.price }),
+      value: `buy:${i}`,
+    }));
+    chips.push({ label: t('settlement.leaveShop'), value: t('settlement.leaveShopCmd') });
+    UI.showActionChips(chips);
+
+    const pick = await UI.prompt('');
+    UI.clearChips();
+    if (!pick.trim()) break;
+    const m = pick.match(/^buy:(\d+)$/);
+    let chosen = null;
+    if (m) chosen = wares[Number(m[1])];
+    else if (/(leave|done|exit|weg|klaar)/i.test(pick) || pick === t('settlement.leaveShopCmd')) break;
+    else chosen = wares.find(w => pick.toLowerCase().includes(w.item.name.toLowerCase()));
+
+    if (!chosen) { UI.appendEntry('system', t('settlement.noSuchItem')); continue; }
+
+    const res = resolvePurchase(appState.party?.pc?.record, chosen.item);
+    if (!res.ok) {
+      UI.appendEntry('system', t('settlement.cantAfford', { name: chosen.item.name, short: res.short }));
+      continue;
+    }
+    // Commit: deduct gold, add to carried inventory. tick() merges the delta
+    // into appState BEFORE the next loop reads gold and before saveToStorage()
+    // (which serialises appState, not the pending delta).
+    const record = { ...appState.party.pc.record, gold: res.gold };
+    setValue('party', {
+      ...appState.party,
+      pc:        { ...appState.party.pc, record },
+      inventory: addToInventory(appState.party?.inventory, res.item),
+    });
+    tick();
+    saveToStorage();
+    UI.appendEntry('gm', t('settlement.bought', { name: chosen.item.name, price: res.price, gold: res.gold }));
+  }
+}
+
+// ─── Rest (Phase 2) ───────────────────────────────────────────────────────────
+
+async function doRest(settlementId) {
+  const settlement = appState.world.settlements[settlementId];
+  const pc = appState.party?.pc;
+  if (!pc) return;
+
+  // Inn price comes from an innkeeper's inventory if present, else a default;
+  // no innkeeper at all → free rest.
+  const innkeeper = (settlement.npcs ?? []).find(n => n.role === 'innkeeper');
+  const innItem   = innkeeper?.inventory?.find(i => /(room|bed|night|inn|kamer|bed)/i.test(i.name));
+  const cost      = innkeeper ? (innItem?.price ?? DEFAULT_REST_COST) : 0;
+
+  const res = resolveRest(pc.record, pc.sheet.hp.max, cost);
+  if (!res.ok) { UI.appendEntry('system', t('settlement.cantAffordRest', { short: res.short })); return; }
+
+  const record = { ...pc.record, gold: res.gold, hpCurrent: res.hpCurrent, conditions: [], deathSaves: undefined };
+  setValue('party', { ...appState.party, pc: { ...pc, record } });
+  tick();          // merge the delta into appState before saveToStorage()
+  saveToStorage();
+  UI.appendEntry('gm', cost > 0
+    ? t('settlement.restDone', { gold: res.gold })
+    : t('settlement.restFree'));
+  _speak(cost > 0 ? t('settlement.restDone', { gold: res.gold }) : t('settlement.restFree'));
+}
+
+// ─── Quest log + inventory (Phase 2) ─────────────────────────────────────────
+
+function showQuests() {
+  const quests = Object.values(appState.world?.quests ?? {});
+  if (!quests.length) { UI.appendEntry('system', t('settlement.questsEmpty')); return; }
+  UI.appendEntry('system', t('settlement.questsHeader'));
+  for (const q of quests) {
+    UI.appendEntry('system', t('settlement.questLine', { desc: q.description, status: t(`settlement.status.${q.status}`), npc: q.npcName }));
+  }
+}
+
+function showInventory() {
+  const pc = appState.party?.pc;
+  const items = appState.party?.inventory ?? [];
+  UI.appendEntry('system', t('settlement.goldLine', { gold: goldOf(pc?.record) }));
+  if (!items.length) { UI.appendEntry('system', t('settlement.inventoryEmpty')); return; }
+  UI.appendEntry('system', t('settlement.inventoryHeader'));
+  for (const it of items) {
+    const qty = (it.quantity ?? 1) > 1 ? ` ×${it.quantity}` : '';
+    UI.appendEntry('system', t('settlement.invLine', { name: it.name, qty }));
+  }
+}
+
+// ─── Travel from settlement (dungeon now; overworld in Phase 3) ───────────────
+
+async function doTravel(exit, settlementId) {
+  const settlement = appState.world.settlements[settlementId];
+  UI.appendEntry('system', t('settlement.travelDungeon', { name: exit.targetName }));
+  UI.appendEntry('system', '');
+
+  if (exit.targetType === 'dungeon') {
+    await enterDungeon(exit, settlementId);
+    // Back in town — restore the location pointer so a save/resume routes to the
+    // settlement loop, not the (now-cleared) dungeon (enterDungeon set it to
+    // 'dungeon').
+    setValue('world', { ...appState.world, location: { ...appState.world.location, type: 'settlement', dungeonId: null } });
+    tick();
+    saveToStorage();
+    UI.appendEntry('system', '');
+    UI.appendEntry('system', t('settlement.returnSettlement', { name: settlement.name }));
+    UI.appendEntry('system', '');
+    return;
+  }
+  // Road / wilderness — overworld travel arrives in Phase 3.
+  UI.appendEntry('gm', t('settlement.roadNotReady'));
 }
 
 // ─── Enter dungeon from settlement ───────────────────────────────────────────
