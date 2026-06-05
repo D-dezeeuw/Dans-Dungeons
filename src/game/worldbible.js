@@ -67,17 +67,6 @@ export async function generateWorldBible(onProgress) {
 
   onProgress('detail', factions.length ? `Factions: ${factions.length} — ${factions.map(f => f.name).join(', ')}.` : 'Factions: skipped.');
   onProgress('detail', beats.length ? `Red thread: ${beats.length} beats. "${truncate(beats[0]?.dramaticPurpose, 120)}"` : 'Red thread: skipped.');
-  try {
-    const result = await generateBeats(seed.digest);
-    beats = result?.beats ?? [];
-  } catch (e) {
-    console.warn('Beat generation failed, continuing without:', e.message);
-  }
-  if (beats.length) {
-    onProgress('detail', `Red thread: ${beats.length} beats. "${truncate(beats[0]?.dramaticPurpose, 120)}"`);
-  } else {
-    onProgress('detail', 'Red thread: skipped (generation failed).');
-  }
 
   // Step 4: Region (retry once, continue without on failure)
   onProgress('worldgenStep4');
@@ -116,9 +105,10 @@ export async function generateWorldBible(onProgress) {
   try {
     const dungeonExit = (settlement?.exits ?? []).find(e => e.targetType === 'dungeon');
     dungeon = createDungeonEntry({
-      id:       dungeonExit?.targetId ?? `dungeon-${Date.now()}`,
-      name:     dungeonExit?.targetName ?? region?.dungeonName ?? 'The Dungeon',
-      regionId: region?.id ?? null,
+      id:        dungeonExit?.targetId ?? `dungeon-${Date.now()}`,
+      name:      dungeonExit?.targetName ?? region?.dungeonName ?? 'The Dungeon',
+      regionId:  region?.id ?? null,
+      blueprint,
     });
     const roomCount = Object.keys(dungeon.rooms ?? {}).length;
     const enemyCount = Object.keys(dungeon.npcs ?? {}).length;

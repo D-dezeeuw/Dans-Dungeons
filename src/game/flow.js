@@ -287,33 +287,41 @@ async function startCampaign() {
     else UI.appendEntry('system', t(`ai.${key}`));
   };
 
+  // Build the pre-seeded blueprint FIRST so every AI generator receives the same
+  // creative constraints (tone, climate, threat, factions, dungeon theme). Without
+  // this the campaign got generic, unconstrained AI output — see worldbible.js,
+  // which already does this correctly.
+  const blueprintSeed = Math.floor(Math.random() * 2147483647);
+  const blueprint = buildWorldBlueprint(blueprintSeed);
+  progress('detail', `Blueprint: ${blueprint.tone} ${blueprint.worldArchetype}, ${blueprint.threatType}, ${blueprint.climate}.`);
+
   let seed, factions, beats, region, settlement;
 
   try {
     const { generateWorldSeed, generateFactions, generateBeats, generateRegion, generateSettlement } = await import('./worldgen.js');
 
     progress('worldgenStep1');
-    seed = await generateWorldSeed();
+    seed = await generateWorldSeed(blueprint);
     if (!seed) throw new Error('World seed failed');
     if (!seed.digest) seed.digest = `${seed.name} — ${seed.tone}. ${seed.redThread?.premise ?? ''}`;
     progress('detail', `World: "${seed.name}" (${seed.tone}).`);
 
     progress('worldgenStep2');
-    try { factions = (await generateFactions(seed.digest))?.factions ?? []; } catch { factions = []; }
+    try { factions = (await generateFactions(seed.digest, blueprint))?.factions ?? []; } catch { factions = []; }
     progress('detail', factions.length ? `Factions: ${factions.length}.` : 'Factions: skipped.');
 
     progress('worldgenStep3');
-    try { beats = (await generateBeats(seed.digest))?.beats ?? []; } catch { beats = []; }
+    try { beats = (await generateBeats(seed.digest, blueprint))?.beats ?? []; } catch { beats = []; }
     progress('detail', beats.length ? `Red thread: ${beats.length} beats.` : 'Red thread: skipped.');
 
     progress('worldgenStep4');
-    region = await generateRegion(seed.digest);
+    region = await generateRegion(seed.digest, blueprint);
     if (!region) throw new Error('Region failed');
     if (!region.digest) region.digest = `${region.name} — ${region.climate}.`;
     progress('detail', `Region: "${region.name}".`);
 
     progress('worldgenStep5');
-    settlement = await generateSettlement(region.digest, region.id);
+    settlement = await generateSettlement(region.digest, region.id, blueprint);
     if (!settlement) throw new Error('Settlement failed');
     if (!settlement.digest) settlement.digest = `${settlement.name} — ${(settlement.npcs ?? []).map(n => n.name).join(', ')}.`;
     progress('detail', `Settlement: "${settlement.name}".`);
@@ -327,6 +335,7 @@ async function startCampaign() {
   // Store world state
   const worldState = {
     ...appState.world,
+    blueprint,
     seed:   seed.name,
     name:   seed.name,
     tone:   seed.tone,
@@ -484,9 +493,10 @@ async function enterDungeon(exit, settlementId) {
   // Generate dungeon if not already in world state
   if (!appState.world?.dungeons?.[dungeonId]) {
     const dungeon = createDungeonEntry({
-      id:       dungeonId,
-      name:     exit.targetName,
-      regionId: appState.world?.location?.regionId ?? null,
+      id:        dungeonId,
+      name:      exit.targetName,
+      regionId:  appState.world?.location?.regionId ?? null,
+      blueprint: appState.world?.blueprint ?? null,
     });
     const dungeons = { ...(appState.world?.dungeons ?? {}), [dungeonId]: dungeon };
     setValue('world', { ...appState.world, dungeons });
