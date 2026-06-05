@@ -8,7 +8,7 @@
 // flow.js calls checkApiKey() and generateTurnImage() here so those modules
 // never import AI layers directly either.
 
-import { appState, addValue, saveToStorage } from '../core/state.js';
+import { appState, addValue, saveToStorage, tick } from '../core/state.js';
 import { classify }                          from '../ai/classify.js';
 import { narrate, generateSceneImage }       from '../ai/narrate.js';
 import { checkKey }                          from '../ai/client.js';
@@ -121,7 +121,9 @@ export async function processTurn(playerInput, onNarrationChunk) {
   appendTranscript(playerInput, narratorResp.narration);
   addValue('session.turnCount', 1);
 
-  // 6. Autosave.
+  // 6. Autosave. tick() merges this turn's deltas into appState first, so the
+  //    save reflects the turn just resolved (not the previous one).
+  tick();
   saveToStorage();
 
   return { ...narratorResp, _debug: { classified, resolved, goblinResult } };
@@ -151,6 +153,7 @@ function processDownTurn(playerInput) {
   commitDownTurn(down);
   appendTranscript(playerInput, narration);
   addValue('session.turnCount', 1);
+  tick();
   saveToStorage();
 
   return { narration, _debug: { down } };
