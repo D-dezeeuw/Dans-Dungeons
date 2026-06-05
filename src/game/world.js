@@ -1,53 +1,15 @@
-// src/game/world.js
-//
-// Procedural dungeon generator. Every call to generateWorld() returns a fresh
-// dungeon with 7-12 rooms, branching paths, multiple enemies, and a key-lock
-// puzzle. The topology varies each run.
-//
-// Algorithm:
-//   1. Generate a spine of 4-6 rooms (start → ... → vault)
-//   2. Attach 2-4 branch rooms off the spine
-//   3. Place rooms on a 2D grid, derive cardinal-direction exits
-//   4. Pick a lock gate on the spine; place the key in a pre-gate branch
-//   5. Place 1-3 enemies in non-start, non-vault rooms
-//   6. Scatter loot in branch rooms
-//   7. Dress rooms with locale-driven descriptions
+// src/game/world.js — dungeon generation: the ALGORITHM lives in the client
+// library (@zeeuw/bag-of-holding-client/dungeon); this module injects the app's
+// content — locale room/loot descriptors (i18n) and engine stat blocks
+// (bestiary) — and keeps the dungeon-entry + encounter-enemy wrappers.
 
-import { t, tRaw } from '../i18n/i18n.js';
+import { tRaw } from '../i18n/i18n.js';
 import { Dice } from './rules.js';
 import { statBlockFor, BESTIARY, DEFAULT_ENEMY_IDS } from './bestiary.js';
 import { DUNGEON_OVERLAYS, DOMAIN_TREASURES, DOMAIN_KEYS } from './worldseed.js';
-
-// ─── Seeded RNG helpers ──────────────────────────────────────────────────────
-// All randomness flows through _rng so dungeons are reproducible from a seed.
-
-let _rng = Math.random;
-
-export function setDungeonRng(rng) { _rng = rng; }
-
-const OPPOSITE = { north: 'south', south: 'north', east: 'west', west: 'east' };
-
-function pick(arr) { return arr[Math.floor(_rng() * arr.length)]; }
-function randInt(min, max) { return min + Math.floor(_rng() * (max - min + 1)); }
-function shuffle(arr) {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(_rng() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-}
-
-function interp(str, params) {
-  let out = str;
-  for (const [k, v] of Object.entries(params)) out = out.replaceAll(`{{${k}}}`, v);
-  return out;
-}
+import { generateDungeon as libGenerateDungeon } from 'bag-of-holding-client';
 
 // ─── Creature presentation (name + intro, localized) ─────────────────────────
-// Mechanical stats live in bestiary.js; the player-facing display name and the
-// "you enter and the creature notices you" intro come from i18n, keyed by
-// creature id, with a generic fallback so any roster creature still reads well.
 
 function enemyName(id) {
   const names = tRaw('world.enemyNames') ?? {};
@@ -57,32 +19,46 @@ function enemyName(id) {
 function enemyIntro(id, name, style) {
   const intros = tRaw('world.enemyIntros') ?? {};
   const tmpl = intros[id] ?? tRaw('world.enemyIntroGeneric') ?? '{{name}} turns toward you, hostile and ready.';
-  return interp(tmpl, { style, name });
+  return tmpl.replaceAll('{{style}}', style).replaceAll('{{name}}', name);
 }
 
-function crOf(id) { return BESTIARY[id]?.cr ?? 0; }
-
-// Build one combat NPC from a creature id.
-function makeEnemy(npcId, roomIdx, id, style, extra = {}) {
-  const name = enemyName(id);
+// The locale-driven content the dungeon algorithm needs (room descriptions, loot
+// tables, themed treasures/keys, creature presentation).
+function dungeonContent() {
+  const roomTypes = ['entrance', 'hall', 'corridor', 'chamber', 'storage', 'quarters', 'shrine', 'vault'];
+  const roomPools = {};
+  for (const type of roomTypes) roomPools[type] = tRaw(`world.rooms.${type}`) ?? tRaw('world.rooms.chamber');
   return {
-    id:         npcId,
-    roomId:     `room-${roomIdx}`,
-    name,
-    creatureId: id,
-    ...statBlockFor(id),
-    conditions: [],
-    attitude:   'hostile',
-    alive:      true,
-    intro:      enemyIntro(id, name, style),
-    ...extra,
+    houseStyles:     tRaw('world.houseStyles'),
+    roomPools,
+    treasures:       tRaw('world.treasures'),
+    keys:            tRaw('world.keys'),
+    loot:            tRaw('world.loot') ?? [],
+    domainTreasures: DOMAIN_TREASURES,
+    domainKeys:      DOMAIN_KEYS,
+    enemyName,
+    enemyIntro,
   };
 }
 
-// Build a standalone combat NPC for a literal roomId (used by overworld travel
-// encounters in flow.js, which run combat outside the dungeon grid).
+// ─── Dungeon generator ────────────────────────────────────────────────────────
+// Returns { rooms, npcs, currentRoom, exitRoomId } for embedding in world.dungeons.
+
+export function generateDungeon(seed, blueprint) {
+  return libGenerateDungeon(seed, {
+    blueprint,
+    rng:             seed != null ? Dice.seededRng(seed) : undefined,
+    statBlockFor,
+    crOf:            (id) => BESTIARY[id]?.cr ?? 0,
+    overlays:        DUNGEON_OVERLAYS,
+    defaultEnemyIds: DEFAULT_ENEMY_IDS,
+    content:         dungeonContent(),
+  });
+}
+
+// Build a standalone combat NPC for a literal roomId (overworld travel encounters).
 export function buildEnemy(creatureId, { npcId = 'enc-1', roomId = 'encounter', style } = {}) {
-  const s    = style ?? pick(tRaw('world.houseStyles'));
+  const s    = style ?? (tRaw('world.houseStyles')?.[0] ?? 'ancient hold');
   const name = enemyName(creatureId);
   return {
     id:         npcId,
@@ -97,281 +73,6 @@ export function buildEnemy(creatureId, { npcId = 'enc-1', roomId = 'encounter', 
   };
 }
 
-// ─── Grid placement ──────────────────────────────────────────────────────────
-// Each room gets a (col, row) position. Connections between adjacent grid cells
-// map to cardinal directions.
-
-function dirBetween(from, to) {
-  const dc = to.col - from.col;
-  const dr = to.row - from.row;
-  if (dc === 1 && dr === 0) return 'east';
-  if (dc === -1 && dr === 0) return 'west';
-  if (dc === 0 && dr === -1) return 'north';
-  if (dc === 0 && dr === 1) return 'south';
-  return null;
-}
-
-function neighbourOffsets() {
-  return shuffle([
-    { dc: 1, dr: 0 },
-    { dc: -1, dr: 0 },
-    { dc: 0, dr: -1 },
-    { dc: 0, dr: 1 },
-  ]);
-}
-
-// Place a chain of rooms on a grid using a random walk.
-function placeOnGrid(count) {
-  const grid = new Map(); // "col,row" → roomIndex
-  const positions = [];   // roomIndex → { col, row }
-
-  let col = 0, row = 0;
-  grid.set(`${col},${row}`, 0);
-  positions.push({ col, row });
-
-  for (let i = 1; i < count; i++) {
-    const offsets = neighbourOffsets();
-    let placed = false;
-    for (const { dc, dr } of offsets) {
-      const nc = col + dc, nr = row + dr;
-      if (!grid.has(`${nc},${nr}`)) {
-        grid.set(`${nc},${nr}`, i);
-        positions.push({ col: nc, row: nr });
-        col = nc;
-        row = nr;
-        placed = true;
-        break;
-      }
-    }
-    if (!placed) {
-      // Backtrack: find any placed room with a free neighbour.
-      for (let j = positions.length - 1; j >= 0; j--) {
-        const p = positions[j];
-        for (const { dc, dr } of neighbourOffsets()) {
-          const nc = p.col + dc, nr = p.row + dr;
-          if (!grid.has(`${nc},${nr}`)) {
-            grid.set(`${nc},${nr}`, i);
-            positions.push({ col: nc, row: nr });
-            col = nc;
-            row = nr;
-            placed = true;
-            break;
-          }
-        }
-        if (placed) break;
-      }
-    }
-  }
-
-  return { grid, positions };
-}
-
-// Try to attach a branch room adjacent to a given room on the grid.
-function attachBranch(parentIdx, positions, grid) {
-  const p = positions[parentIdx];
-  for (const { dc, dr } of neighbourOffsets()) {
-    const nc = p.col + dc, nr = p.row + dr;
-    if (!grid.has(`${nc},${nr}`)) {
-      const idx = positions.length;
-      grid.set(`${nc},${nr}`, idx);
-      positions.push({ col: nc, row: nr });
-      return idx;
-    }
-  }
-  return -1; // no free neighbour
-}
-
-// ─── Room types ──────────────────────────────────────────────────────────────
-
-const MID_TYPES = ['hall', 'corridor', 'chamber', 'storage', 'quarters', 'shrine'];
-
-function assignRoomType(idx, spineLen, totalRooms, isSpine) {
-  if (idx === 0) return 'entrance';
-  if (idx === spineLen - 1 && isSpine) return 'vault';
-  return pick(MID_TYPES);
-}
-
-// ─── Dungeon generator (L04/L05) ──────────────────────────────────────────────
-// Returns { rooms, npcs, currentRoom, exitRoomId } for embedding in world.dungeons.
-
-export function generateDungeon(seed, blueprint) {
-  if (seed != null) _rng = Dice.seededRng(seed);
-  const style = pick(tRaw('world.houseStyles'));
-
-  // Theme overlay from blueprint (if provided).
-  const overlay = blueprint?.dungeonTheme ? (DUNGEON_OVERLAYS[blueprint.dungeonTheme] ?? null) : null;
-  const atmosphere = overlay?.atmosphere ?? '';
-  const primaryDomain = blueprint?.godDomains?.[0]?.domain ?? null;
-
-  // 1. Spine: 4-6 rooms
-  const spineLen  = randInt(4, 6);
-  const { grid, positions } = placeOnGrid(spineLen);
-  const spineIds  = Array.from({ length: spineLen }, (_, i) => i);
-
-  // 2. Branches: attach 2-4 side rooms to random spine rooms (not start/vault)
-  const branchCount  = randInt(2, 4);
-  const branchIds    = [];
-  const branchParent = {}; // branchIdx → spineIdx it's attached to
-  const candidates   = spineIds.slice(1, -1); // skip start and vault
-  for (let b = 0; b < branchCount; b++) {
-    const parent = pick(candidates.length ? candidates : spineIds.slice(1));
-    const idx = attachBranch(parent, positions, grid);
-    if (idx >= 0) {
-      branchIds.push(idx);
-      branchParent[idx] = parent;
-    }
-  }
-
-  const totalRooms = positions.length;
-
-  // 3. Build adjacency from grid positions
-  const adjacency = Array.from({ length: totalRooms }, () => []);
-  for (let i = 0; i < totalRooms; i++) {
-    for (let j = i + 1; j < totalRooms; j++) {
-      const dir = dirBetween(positions[i], positions[j]);
-      if (dir) {
-        adjacency[i].push({ target: j, dir });
-        adjacency[j].push({ target: i, dir: OPPOSITE[dir] });
-      }
-    }
-  }
-
-  // 4. Assign room types and build room objects
-  const roomTypes = [];
-  for (let i = 0; i < totalRooms; i++) {
-    const isSpine = spineIds.includes(i);
-    roomTypes[i] = assignRoomType(i, spineLen, totalRooms, isSpine);
-  }
-
-  // Themed treasure + key from god domain (if blueprint), else generic.
-  const treasure = primaryDomain && DOMAIN_TREASURES[primaryDomain]
-    ? { ...DOMAIN_TREASURES[primaryDomain], id: 'treasure', type: 'treasure', value: 250, taken: false }
-    : { ...pick(tRaw('world.treasures')), id: 'treasure', type: 'treasure', value: 250, taken: false };
-  const keyItem = primaryDomain && DOMAIN_KEYS[primaryDomain]
-    ? { ...DOMAIN_KEYS[primaryDomain], id: 'found-key', taken: false }
-    : { ...pick(tRaw('world.keys')), id: 'found-key', taken: false };
-
-  const rooms = {};
-  for (let i = 0; i < totalRooms; i++) {
-    const id   = `room-${i}`;
-    const type = roomTypes[i];
-    const pool = tRaw(`world.rooms.${type}`) ?? tRaw('world.rooms.chamber');
-    const def  = pick(pool);
-
-    const descParams = { style };
-    if (type === 'vault') descParams.treasure = treasure.name;
-
-    // Append theme atmosphere to non-entrance, non-vault rooms.
-    const baseDesc = interp(def.desc, descParams);
-    const themedDesc = (atmosphere && type !== 'entrance' && type !== 'vault')
-      ? `${baseDesc} ${atmosphere}`
-      : baseDesc;
-
-    rooms[id] = {
-      id,
-      name:        def.name,
-      description: themedDesc,
-      exits:       adjacency[i].map(a => ({
-        dir:    a.dir,
-        roomId: `room-${a.target}`,
-        locked: false,
-      })),
-      loot: [],
-    };
-  }
-
-  // 5. Lock gate: pick a spine room (not first, not last) and lock its exit toward the next spine room
-  const gateSpineIdx = randInt(1, spineLen - 2); // index within spine
-  const gateRoomId   = `room-${spineIds[gateSpineIdx]}`;
-  const nextSpineId  = `room-${spineIds[gateSpineIdx + 1]}`;
-  const gateRoom     = rooms[gateRoomId];
-  const gateExit     = gateRoom.exits.find(e => e.roomId === nextSpineId);
-  if (gateExit) {
-    gateExit.locked = true;
-    gateExit.keyId  = 'found-key';
-  }
-
-  // Place key in a branch room reachable before the gate, or in an early spine room
-  let keyPlaced = false;
-  // Prefer branch rooms attached to spine rooms before the gate
-  for (const bIdx of branchIds) {
-    const parentSpineOrder = spineIds.indexOf(branchParent[bIdx]);
-    if (parentSpineOrder >= 0 && parentSpineOrder <= gateSpineIdx) {
-      rooms[`room-${bIdx}`].loot.push({ id: 'found-key', name: keyItem.name, description: keyItem.desc, taken: false });
-      keyPlaced = true;
-      break;
-    }
-  }
-  // Fallback: place in an early spine room (before the gate, not start)
-  if (!keyPlaced) {
-    const earlySpine = spineIds.slice(1, gateSpineIdx + 1);
-    const keyRoomIdx = pick(earlySpine);
-    rooms[`room-${keyRoomIdx}`].loot.push({ id: 'found-key', name: keyItem.name, description: keyItem.desc, taken: false });
-  }
-
-  // Place treasure in vault
-  const vaultId = `room-${spineLen - 1}`;
-  rooms[vaultId].loot.push(treasure);
-
-  // 6. Place enemies, scaled by depth.
-  //    The theme pool (creature ids, ascending challenge) comes from the
-  //    blueprint overlay; otherwise the default six. Sorted by CR so the last
-  //    entry is the toughest. Rooms closer to the vault (higher spine order) get
-  //    higher-CR creatures; the vault itself gets a boss.
-  const poolIds = (overlay?.enemies?.length ? overlay.enemies : DEFAULT_ENEMY_IDS)
-    .filter(id => BESTIARY[id]);
-  const sortedPool = [...(poolIds.length ? poolIds : DEFAULT_ENEMY_IDS)]
-    .sort((a, b) => crOf(a) - crOf(b));
-
-  const bossId = sortedPool[sortedPool.length - 1];
-  // Regular spawns draw from everything below the boss so the vault stays the
-  // toughest fight even when a deep room rolls the strongest non-boss creature.
-  const spawnPool = sortedPool.length > 1 ? sortedPool.slice(0, -1) : sortedPool;
-
-  // Depth fraction (0 = entrance, 1 = vault) for a room index. Branch rooms
-  // inherit the spine order of the room they hang off.
-  const depthFraction = (roomIdx) => {
-    const spineOrder = roomIdx < spineLen ? roomIdx : (branchParent[roomIdx] ?? 1);
-    return spineLen > 1 ? spineOrder / (spineLen - 1) : 0;
-  };
-
-  const npcs = {};
-
-  // Vault boss — highest-CR creature in the pool, tagged isBoss.
-  npcs['boss'] = makeEnemy('boss', spineLen - 1, bossId, style, { isBoss: true });
-
-  // 1-3 regular enemies in non-start, non-vault rooms, depth-scaled.
-  const enemyCount = randInt(1, Math.min(3, totalRooms - 2));
-  const enemyCandidates = shuffle(
-    Array.from({ length: totalRooms }, (_, i) => i).filter(i => i !== 0 && i !== spineLen - 1)
-  ).slice(0, enemyCount);
-
-  for (let e = 0; e < enemyCandidates.length; e++) {
-    const roomIdx = enemyCandidates[e];
-    const frac    = depthFraction(roomIdx);
-    const idx     = Math.min(spawnPool.length - 1, Math.max(0, Math.round(frac * (spawnPool.length - 1))));
-    const id      = spawnPool[idx];
-    npcs[`enemy-${e + 1}`] = makeEnemy(`enemy-${e + 1}`, roomIdx, id, style);
-  }
-
-  // 7. Scatter optional loot in branch rooms that don't have the key
-  const lootPool = tRaw('world.loot') ?? [];
-  for (const bIdx of branchIds) {
-    const room = rooms[`room-${bIdx}`];
-    if (room.loot.length === 0 && lootPool.length > 0) {
-      const item = pick(lootPool);
-      room.loot.push({ id: `loot-${bIdx}`, name: item.name, description: item.desc, taken: false });
-    }
-  }
-
-  return {
-    currentRoom: 'room-0',
-    exitRoomId:  vaultId,
-    rooms,
-    npcs,
-  };
-}
-
 // ─── Dungeon entry wrapper ────────────────────────────────────────────────────
 // Wraps raw generateDungeon() output with metadata for world.dungeons storage.
 
@@ -379,13 +80,10 @@ const DUNGEON_THEMES = ['undead', 'goblin', 'cult', 'beast', 'arcane', 'ruin'];
 
 export function createDungeonEntry({ id, name, regionId, seed: entrySeed, blueprint = null }) {
   const dungeonSeed = entrySeed ?? Math.floor(Math.random() * 2147483647);
-  // Pass the blueprint through so the dungeon gets a themed overlay (atmosphere,
-  // theme-appropriate enemies, domain treasure/key) instead of generic content.
   const dungeon     = generateDungeon(dungeonSeed, blueprint);
   const roomCount   = Object.keys(dungeon.rooms).length;
   const enemyNames  = Object.values(dungeon.npcs).map(n => n.name);
-  // Prefer the blueprint's dungeon theme; fall back to a random short label.
-  const theme       = blueprint?.dungeonTheme ?? pick(DUNGEON_THEMES);
+  const theme       = blueprint?.dungeonTheme ?? DUNGEON_THEMES[Math.floor(Math.random() * DUNGEON_THEMES.length)];
 
   return {
     id:          id ?? `dungeon-${dungeonSeed}`,
@@ -398,10 +96,4 @@ export function createDungeonEntry({ id, name, regionId, seed: entrySeed, bluepr
     seed:        dungeonSeed,
     ...dungeon,
   };
-}
-
-// Legacy wrapper — returns the flat world shape that flow.js currently expects.
-// Once flow.js is updated for the layered model, this can be removed.
-export function generateWorld() {
-  return generateDungeon();
 }

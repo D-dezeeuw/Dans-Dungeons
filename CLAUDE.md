@@ -173,6 +173,10 @@ Lucide SVG icons (MIT) vendored in `vendor/icons/`. `src/ui/icons.js` exports in
 
 D&D rules engine at `../bag-of-holding/`. Imported via `src/game/rules.js` shim. Provides: dice, checks, combat, conditions, XP, character derivation, class/species/background SRD data.
 
+### Sibling repo: `bag-of-holding-client`
+
+Browser host toolkit at `../bag-of-holding-client/` (vendored at `vendor/bag-of-holding-client/`, esbuild alias `'bag-of-holding-client'`). The host machinery the rules engine deliberately omits — now owns the **LLM client** (`src/ai/client.js` is a thin appState→config adapter over it), the **seeded blueprint factory + `runWorldgenPipeline` orchestration** (worldseed/worldgen consume it; `startCampaign` + `generateWorldBible` share one `runPipeline`), the **dungeon-graph generator** (`world.js` injects i18n descriptors + bestiary stats), and the **travel FSM** (`flow.js` imports it). Config-injected, zero deps, `node --test`-able. See `docs/ideas/14-client.md`.
+
 ### Persistence
 
 Saves in `localStorage` (key: `dans-dungeons`). Full state exported as `.dnd.json`. Journal cache in `dg-journal-cache`. Locale in `dg-locale`.
