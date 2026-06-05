@@ -319,12 +319,15 @@ export function generateDungeon(seed, blueprint) {
 
 const DUNGEON_THEMES = ['undead', 'goblin', 'cult', 'beast', 'arcane', 'ruin'];
 
-export function createDungeonEntry({ id, name, regionId, seed: entrySeed }) {
+export function createDungeonEntry({ id, name, regionId, seed: entrySeed, blueprint = null }) {
   const dungeonSeed = entrySeed ?? Math.floor(Math.random() * 2147483647);
-  const dungeon     = generateDungeon(dungeonSeed);
+  // Pass the blueprint through so the dungeon gets a themed overlay (atmosphere,
+  // theme-appropriate enemies, domain treasure/key) instead of generic content.
+  const dungeon     = generateDungeon(dungeonSeed, blueprint);
   const roomCount   = Object.keys(dungeon.rooms).length;
   const enemyNames  = Object.values(dungeon.npcs).map(n => n.name);
-  const theme       = pick(DUNGEON_THEMES);
+  // Prefer the blueprint's dungeon theme; fall back to a random short label.
+  const theme       = blueprint?.dungeonTheme ?? pick(DUNGEON_THEMES);
 
   return {
     id:          id ?? `dungeon-${dungeonSeed}`,
