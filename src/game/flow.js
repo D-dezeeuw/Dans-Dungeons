@@ -621,7 +621,11 @@ export async function playLoop() {
     if (appState.session.phase !== 'play') break;
 
     const inExitRoom = appState.world?.currentRoom === appState.world?.exitRoomId;
-    if (inExitRoom) {
+    // The vault holds a boss — victory only triggers once it (and any other
+    // hostile in the vault) is dead, so the player can't walk past the fight.
+    const vaultGuarded = inExitRoom && Object.values(appState.world?.npcs ?? {})
+      .some(n => n.roomId === appState.world?.exitRoomId && n.alive && n.attitude === 'hostile');
+    if (inExitRoom && !vaultGuarded) {
       // Campaign mode: return to settlement. Quick dungeon: victory screen.
       if (appState.world?.location?.type === 'dungeon' && appState.world?.location?.settlementId) {
         // Mark dungeon complete

@@ -15,7 +15,7 @@
 
 import { t, tRaw } from '../i18n/i18n.js';
 import { Dice } from './rules.js';
-import { statBlockFor } from './bestiary.js';
+import { statBlockFor, BESTIARY, DEFAULT_ENEMY_IDS } from './bestiary.js';
 import { DUNGEON_OVERLAYS, DOMAIN_TREASURES, DOMAIN_KEYS } from './worldseed.js';
 
 // ─── Seeded RNG helpers ──────────────────────────────────────────────────────
@@ -42,6 +42,41 @@ function interp(str, params) {
   let out = str;
   for (const [k, v] of Object.entries(params)) out = out.replaceAll(`{{${k}}}`, v);
   return out;
+}
+
+// ─── Creature presentation (name + intro, localized) ─────────────────────────
+// Mechanical stats live in bestiary.js; the player-facing display name and the
+// "you enter and the creature notices you" intro come from i18n, keyed by
+// creature id, with a generic fallback so any roster creature still reads well.
+
+function enemyName(id) {
+  const names = tRaw('world.enemyNames') ?? {};
+  return names[id] ?? BESTIARY[id]?.name ?? id;
+}
+
+function enemyIntro(id, name, style) {
+  const intros = tRaw('world.enemyIntros') ?? {};
+  const tmpl = intros[id] ?? tRaw('world.enemyIntroGeneric') ?? '{{name}} turns toward you, hostile and ready.';
+  return interp(tmpl, { style, name });
+}
+
+function crOf(id) { return BESTIARY[id]?.cr ?? 0; }
+
+// Build one combat NPC from a creature id.
+function makeEnemy(npcId, roomIdx, id, style, extra = {}) {
+  const name = enemyName(id);
+  return {
+    id:         npcId,
+    roomId:     `room-${roomIdx}`,
+    name,
+    creatureId: id,
+    ...statBlockFor(id),
+    conditions: [],
+    attitude:   'hostile',
+    alive:      true,
+    intro:      enemyIntro(id, name, style),
+    ...extra,
+  };
 }
 
 // ─── Grid placement ──────────────────────────────────────────────────────────
@@ -260,40 +295,45 @@ export function generateDungeon(seed, blueprint) {
   const vaultId = `room-${spineLen - 1}`;
   rooms[vaultId].loot.push(treasure);
 
-  // 6. Place enemies (1-3) in non-start, non-vault rooms.
-  //    Filter by theme overlay if blueprint provided.
-  const allEnemyDefs = tRaw('world.enemies');
+  // 6. Place enemies, scaled by depth.
+  //    The theme pool (creature ids, ascending challenge) comes from the
+  //    blueprint overlay; otherwise the default six. Sorted by CR so the last
+  //    entry is the toughest. Rooms closer to the vault (higher spine order) get
+  //    higher-CR creatures; the vault itself gets a boss.
+  const poolIds = (overlay?.enemies?.length ? overlay.enemies : DEFAULT_ENEMY_IDS)
+    .filter(id => BESTIARY[id]);
+  const sortedPool = [...(poolIds.length ? poolIds : DEFAULT_ENEMY_IDS)]
+    .sort((a, b) => crOf(a) - crOf(b));
 
-  let enemyDefs;
-  if (overlay?.enemies?.length) {
-    // Filter to theme-appropriate enemies.
-    enemyDefs = allEnemyDefs.filter(d => overlay.enemies.includes(d.name));
-  } else {
-    enemyDefs = allEnemyDefs;
-  }
-  if (!enemyDefs.length) enemyDefs = allEnemyDefs;
+  const bossId = sortedPool[sortedPool.length - 1];
+  // Regular spawns draw from everything below the boss so the vault stays the
+  // toughest fight even when a deep room rolls the strongest non-boss creature.
+  const spawnPool = sortedPool.length > 1 ? sortedPool.slice(0, -1) : sortedPool;
 
+  // Depth fraction (0 = entrance, 1 = vault) for a room index. Branch rooms
+  // inherit the spine order of the room they hang off.
+  const depthFraction = (roomIdx) => {
+    const spineOrder = roomIdx < spineLen ? roomIdx : (branchParent[roomIdx] ?? 1);
+    return spineLen > 1 ? spineOrder / (spineLen - 1) : 0;
+  };
+
+  const npcs = {};
+
+  // Vault boss — highest-CR creature in the pool, tagged isBoss.
+  npcs['boss'] = makeEnemy('boss', spineLen - 1, bossId, style, { isBoss: true });
+
+  // 1-3 regular enemies in non-start, non-vault rooms, depth-scaled.
   const enemyCount = randInt(1, Math.min(3, totalRooms - 2));
   const enemyCandidates = shuffle(
     Array.from({ length: totalRooms }, (_, i) => i).filter(i => i !== 0 && i !== spineLen - 1)
   ).slice(0, enemyCount);
 
-  const npcs = {};
   for (let e = 0; e < enemyCandidates.length; e++) {
-    const roomIdx  = enemyCandidates[e];
-    const eIdx     = e % enemyDefs.length;
-    const def      = enemyDefs[eIdx];
-    const npcId    = `enemy-${e + 1}`;
-    npcs[npcId] = {
-      id:          npcId,
-      roomId:      `room-${roomIdx}`,
-      name:        def.name,
-      ...statBlockFor(def.monsterId),
-      conditions:  [],
-      attitude:    'hostile',
-      alive:       true,
-      intro:       interp(def.intro, { style }),
-    };
+    const roomIdx = enemyCandidates[e];
+    const frac    = depthFraction(roomIdx);
+    const idx     = Math.min(spawnPool.length - 1, Math.max(0, Math.round(frac * (spawnPool.length - 1))));
+    const id      = spawnPool[idx];
+    npcs[`enemy-${e + 1}`] = makeEnemy(`enemy-${e + 1}`, roomIdx, id, style);
   }
 
   // 7. Scatter optional loot in branch rooms that don't have the key

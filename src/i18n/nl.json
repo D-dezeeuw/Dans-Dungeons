@@ -286,7 +286,10 @@
       { "name": "zilveren ring", "desc": "Een eenvoudige zilveren ring met kleine runen gegraveerd aan de binnenkant." },
       { "name": "oud dagboek", "desc": "Een in leer gebonden dagboek vol gejaagd handschrift. De laatste vermelding is onafgemaakt." },
       { "name": "handvol munten", "desc": "Een verzameling koperen en zilveren munten, misschien tien in totaal." }
-    ]
+    ],
+    "enemyNames": {"skeleton": "Wachtskelet", "zombie": "Strompelend Lijk", "spider": "Kruipende Spin", "giant-rat": "Reuzenrat", "cave-spider": "Grotspin", "cultist": "Wilde Sekteling", "goblin": "Goblin", "kobold": "Kobold", "wolf": "Wolf", "ghoul": "Ghoul", "specter": "Schim", "wight": "Grafgeest", "giant-spider": "Reuzenspin", "shadow": "Schaduw", "bandit": "Bandiet", "ogre": "Oger", "imp": "Imp", "owlbear": "Uilbeer", "dire-wolf": "Schrikwolf", "hell-hound": "Helhond"},
+    "enemyIntroGeneric": "{{name}} draait zich naar je toe, vijandig en klaar om te vechten.",
+    "enemyIntros": {"giant-rat": "Een rat zo groot als een terriër schiet uit het puin omhoog, nekharen overeind en gele tanden ontbloot.", "cave-spider": "Zijden draden vangen het licht, een tel voordat je de spin ziet — opgezwollen, zwartpotig en snel.", "cultist": "Een gehulde gestalte draait zich naar je toe, waanzin in de ogen, een lange dolk op je keel gericht.", "skeleton": "Botten ratelen als een skelet overeind komt, holle oogkassen op je gericht terwijl een verroest zwaard rijst.", "zombie": "Een lijk in verroest harnas sleept zich overeind, kaak loshangend, een natte kreun ontsnapt eraan.", "goblin": "Een goblin grist een gedeukt kromzwaard en ontbloot zijn tanden. \"Deze plek is van mij, grootvolk!\"", "wolf": "Een wolf sluipt uit de schaduw, lippen teruggetrokken van zijn hoektanden, een laag gegrom in zijn borst.", "ghoul": "Een ghoul krabbelt overeind op te lange ledematen, zwartgeblakerde klauwen trillend, stinkend naar het graf.", "specter": "De lucht wordt koud als een schim samenkomt, zijn holle gejammer trekt aan de warmte in je bloed."}
   },
   "chips": {
     "goDir": "Ik ga naar het {{dir}}",

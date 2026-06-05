@@ -7,6 +7,7 @@
 // Same seed → same blueprint → reproducible worlds.
 
 import { Dice } from './rules.js';
+import { DUNGEON_OVERLAYS } from './dungeon-overlays.js';
 
 // ─── RNG helpers ─────────────────────────────────────────────────────────────
 
@@ -208,34 +209,11 @@ export function buildWorldBlueprint(seed) {
 }
 
 // ─── Dungeon theme overlays (24) ─────────────────────────────────────────────
-// Each theme maps to an atmosphere sentence + preferred enemy names.
+// The theme → creature-pool data lives in the pure dungeon-overlays.js module
+// (importable in the node test runner). Re-exported here so existing importers
+// (world.js, the _lists test export) keep working unchanged.
 
-export const DUNGEON_OVERLAYS = {
-  'undead crypt':          { atmosphere: 'The air reeks of embalming salts and grave earth.',                    enemies: ['Guard Skeleton', 'Shambling Corpse'] },
-  'goblin warren':         { atmosphere: 'Crude markings cover the walls. Something gnaws in the dark.',        enemies: ['Grizzik the Goblin', 'Giant Rat'] },
-  'cult sanctum':          { atmosphere: 'Candle wax pools on every surface. Chanting echoes from deeper within.', enemies: ['Feral Cultist', 'Guard Skeleton'] },
-  'beast lair':            { atmosphere: 'Claw marks gouge the stone. The stench of animal musk is overwhelming.', enemies: ['Giant Rat', 'Cave Spider'] },
-  'arcane ruin':           { atmosphere: 'Faint runes pulse along the walls. The air crackles with residual magic.', enemies: ['Feral Cultist', 'Guard Skeleton'] },
-  'flooded cavern':        { atmosphere: 'Water drips from the ceiling. The floor is slick and treacherous.',     enemies: ['Giant Rat', 'Cave Spider'] },
-  'haunted manor':         { atmosphere: 'Dust motes drift through pale light. A door creaks on its own.',       enemies: ['Shambling Corpse', 'Cave Spider'] },
-  'abandoned mine':        { atmosphere: 'Rotting timber props sag under the weight of earth. Pickaxes rust in corners.', enemies: ['Giant Rat', 'Grizzik the Goblin'] },
-  'dragon hoard':          { atmosphere: 'Scorch marks blacken the walls. The heat is unnatural.',               enemies: ['Guard Skeleton', 'Feral Cultist'] },
-  'vampire castle':        { atmosphere: 'Velvet drapes hang in tatters. The scent of old blood lingers.',       enemies: ['Shambling Corpse', 'Feral Cultist'] },
-  'elemental nexus':       { atmosphere: 'Sparks of raw energy arc between the walls. The ground hums.',         enemies: ['Guard Skeleton', 'Cave Spider'] },
-  'fungal depths':         { atmosphere: 'Bioluminescent mushrooms cast an eerie glow. Spores drift lazily.',    enemies: ['Giant Rat', 'Cave Spider'] },
-  'clockwork vault':       { atmosphere: 'Gears click and whir behind the walls. The floor vibrates rhythmically.', enemies: ['Guard Skeleton', 'Shambling Corpse'] },
-  'planar rift':           { atmosphere: 'Reality shimmers at the edges. Colours that shouldn\'t exist bleed through.', enemies: ['Feral Cultist', 'Cave Spider'] },
-  'sunken temple':         { atmosphere: 'Waterlogged stone and barnacle-crusted pillars. Fish bones crunch underfoot.', enemies: ['Shambling Corpse', 'Giant Rat'] },
-  'frozen tomb':           { atmosphere: 'Ice coats every surface. Your breath crystallizes instantly.',          enemies: ['Guard Skeleton', 'Shambling Corpse'] },
-  'spider nest':           { atmosphere: 'Silk threads catch the light everywhere. Husks of drained prey line the walls.', enemies: ['Cave Spider', 'Giant Rat'] },
-  'bandit fortress':       { atmosphere: 'Crude barricades and stolen goods are piled in every corner.',         enemies: ['Grizzik the Goblin', 'Feral Cultist'] },
-  'fey glade gone wrong':  { atmosphere: 'Flowers bloom in impossible colours. The laughter you hear isn\'t human.', enemies: ['Cave Spider', 'Feral Cultist'] },
-  'demonic hellgate':      { atmosphere: 'The stone is warm to the touch. Symbols of binding cover every surface.', enemies: ['Feral Cultist', 'Shambling Corpse'] },
-  'ancient library':       { atmosphere: 'Shelves of rotting tomes stretch into shadow. Pages flutter with no wind.', enemies: ['Guard Skeleton', 'Feral Cultist'] },
-  'petrified giant':       { atmosphere: 'The walls are organic — veins of stone pulse faintly. You\'re inside something.', enemies: ['Cave Spider', 'Giant Rat'] },
-  'living dungeon':        { atmosphere: 'The corridors shift when you\'re not looking. The dungeon is alive.',  enemies: ['Shambling Corpse', 'Cave Spider'] },
-  'dream prison':          { atmosphere: 'The geometry is wrong. Stairs lead sideways. Gravity is a suggestion.', enemies: ['Feral Cultist', 'Guard Skeleton'] },
-};
+export { DUNGEON_OVERLAYS };
 
 // ─── Domain-themed treasures (20 domains) ────────────────────────────────────
 
