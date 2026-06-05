@@ -17,8 +17,9 @@ await esbuild.build({
   outfile,
   // Map bare specifiers to local vendor files
   alias: {
-    'spektrum':       './vendor/spektrum.js',
-    'bag-of-holding': './vendor/bag-of-holding/index.js',
+    'spektrum':              './vendor/spektrum.js',
+    'bag-of-holding':        './vendor/bag-of-holding/index.js',
+    'bag-of-holding-client': './vendor/bag-of-holding-client/index.js',
   },
   // Inline the version as a global constant
   define: {
