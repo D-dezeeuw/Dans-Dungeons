@@ -1193,7 +1193,7 @@ export async function beginAdventure() {
   const openingEntry = { turn: 0, narration: room.description, imageSrc: null };
   journalLog.push(openingEntry);
   if (appState.settings?.sceneImage) requestSceneImage(room.description, openingEntry);
-  if (appState.settings?.actionBar)  UI.updateActionBar(room.exits ?? [], pc.record, pc.sheet, {});
+  if (appState.settings?.actionBar)  UI.updateActionBar(room.exits ?? []);
   _speak(room.description);
 
   await playLoop();
@@ -1281,7 +1281,7 @@ export async function playLoop() {
       UI.showCharacterChips(appState.party?.pc?.record, appState.party?.pc?.sheet);
       UI.showSkillChips(appState.session?.skillCooldowns ?? {});
       if (appState.settings?.actionBar) {
-        UI.updateActionBar(room?.exits ?? [], appState.party?.pc?.record, appState.party?.pc?.sheet, appState.session?.skillCooldowns ?? {});
+        UI.updateActionBar(room?.exits ?? []);
       }
       if (pendingRetry) {
         UI.insertActionChip('Retry', pendingRetry);

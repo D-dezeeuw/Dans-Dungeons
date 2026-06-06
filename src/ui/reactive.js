@@ -5,6 +5,8 @@
 
 import { computed } from '../core/state.js';
 import { escHtml } from '../core/utils.js';
+import { getSkills, classAbilities } from './chips.js';
+import { t } from '../i18n/i18n.js';
 
 export function registerReactiveSidebar() {
   computed('ui.costDisplay', ['ai.totalTokens', 'ai.totalCostUsd'], (s) => {
@@ -50,6 +52,45 @@ export function registerReactiveSidebar() {
   // index.html (Spektrum ≥1.0.2 routes `:innerHTML` through bindAttrs). Both
   // strings are built from escHtml-escaped values, satisfying the binding's
   // trust requirement (never bind untrusted/unescaped HTML through :innerHTML).
+
+  // ── Action-bar word clouds (data-each) ──────────────────────────────────────
+  // The class-ability and skill word clouds render via `data-each` bound to
+  // these arrays (see #ab-abilities-list / #ab-skills-list in index.html). Each
+  // item is { label, tip, cls }: `{{word.label}}` text, `:data-tip` tooltip,
+  // `:class` availability. Reactive in the character + cooldowns, so they stay
+  // current without an imperative redraw call. Labels/tooltips are locale-
+  // derived; an in-game locale switch reloads the page, so priming on boot is
+  // sufficient (no locale dep needed here).
+  computed('ui.classWords', ['party.pc'], (s) => {
+    const pc = s.party?.pc;
+    if (!pc?.record || !pc?.sheet) return [];
+    const attacks = (pc.sheet.attacks ?? []).map(atk => ({
+      label: atk.name,
+      tip:   `${t('actionbar.attackTip')}\n+${atk.attackBonus} to hit · ${atk.damageDice} damage`,
+      cls:   'ab-word ab-available',
+    }));
+    const abilities = classAbilities(pc.record, pc.sheet).map(a => ({
+      label: a.label,
+      tip:   a.note,
+      cls:   'ab-word ab-available',
+    }));
+    return [...attacks, ...abilities];
+  });
+
+  computed('ui.skillWords', ['party.pc', 'session.skillCooldowns'], (s) => {
+    const cooldowns = s.session?.skillCooldowns ?? {};
+    return getSkills().map(skill => {
+      const remaining = cooldowns[skill.id] ?? 0;
+      const onCd      = remaining > 0;
+      return {
+        label: skill.label + (onCd ? ` (${remaining})` : ''),
+        tip:   onCd
+          ? `${skill.label} · ${skill.ab}\n${skill.desc}\n\n${t('actionbar.cooldown', { n: remaining, s: remaining > 1 ? 'en' : '' })}`
+          : `${skill.label} · ${skill.ab}\n${skill.desc}`,
+        cls:   'ab-word ' + (onCd ? 'ab-unavailable' : 'ab-available'),
+      };
+    });
+  });
 
   // Tier state — drives Deluxe section visibility.
   computed('ui.isFree',    ['ai.tier'], s => (s.ai?.tier ?? 'free') === 'free');

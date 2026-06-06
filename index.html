@@ -283,12 +283,12 @@ html.styles-loaded #brand-bar {
         <div class="ab-divider"></div>
         <div class="ab-zone ab-abilities-zone" role="group" aria-labelledby="ab-label-class">
           <div class="ab-zone-label" id="ab-label-class">Class</div>
-          <div id="ab-abilities-list"></div>
+          <div id="ab-abilities-list" data-each="ui.classWords" data-as="word"><span :class="word.cls" :data-tip="word.tip">{{word.label}}</span></div>
         </div>
         <div class="ab-divider"></div>
         <div class="ab-zone ab-skills-zone" role="group" aria-labelledby="ab-label-skills">
           <div class="ab-zone-label" id="ab-label-skills">Skills</div>
-          <div id="ab-skills-list"></div>
+          <div id="ab-skills-list" data-each="ui.skillWords" data-as="word"><span :class="word.cls" :data-tip="word.tip">{{word.label}}</span></div>
         </div>
       </div>
       <div id="debug-bar" data-cloak data-if="ui.debugBarVisible" aria-label="Last turn debug info">
