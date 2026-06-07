@@ -845,6 +845,7 @@ async function doTravel(exit, settlementId) {
     // settlement loop, not the (now-cleared) dungeon (enterDungeon set it to
     // 'dungeon').
     setValue('world', { ...appState.world, location: { ...appState.world.location, type: 'settlement', dungeonId: null } });
+    clearTurnMarks();   // back in town — drop dungeon marks so the undo button hides on return
     commit();
     UI.appendEntry('system', '');
     UI.appendEntry('system', t('settlement.returnSettlement', { name: settlement.name }));
@@ -1451,6 +1452,7 @@ async function doDefeat() {
 }
 
 async function awaitRestart() {
+  clearTurnMarks();   // end state reached — undo must not resurrect a slain boss / discard the run
   UI.showActionChips([{ label: t('loop.restart'), value: '/restart' }]);
   while (true) {
     const input = await UI.prompt('');

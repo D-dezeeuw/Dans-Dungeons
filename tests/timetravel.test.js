@@ -102,6 +102,7 @@ function makeUndo(sp) {
     beginTurn: () => sp.appState.world?.location?.type === 'encounter'
       ? null : { index: sp.history.length, sig: sig() },
     finalizeTurn: (m) => { if (m) marks.push(m); },           // only after a committed turn
+    clear: () => { marks.length = 0; },                        // end state / context transition
     undo: () => {
       if (!marks.length) return false;
       if (marks[marks.length - 1].sig !== sig()) { marks.length = 0; return false; } // stale context
@@ -151,6 +152,21 @@ describe('undo context-scoping + deferred mark (mirrors src/game/undo.js)', () =
     assert.equal(u.beginTurn(), null);
     u.finalizeTurn(u.beginTurn());
     assert.equal(u.marks.length, 0);
+  });
+
+  it('after an end state clears marks, undo is a no-op (cannot resurrect a finished run)', () => {
+    const sp = createSpektrum();
+    sp.setValue('world.location', { type: 'dungeon', dungeonId: 'd1' });
+    sp.setValue('session.phase', 'play');
+    sp.tick();
+    const u = makeUndo(sp);
+    const m = u.beginTurn();
+    sp.setValue('session.phase', 'game-over');   // the killing-blow turn
+    sp.tick();
+    u.finalizeTurn(m);
+    u.clear();                                    // awaitRestart() / end state drops the marks
+    assert.equal(u.undo(), false);
+    assert.equal(sp.appState.session.phase, 'game-over'); // run NOT rewound to 'play'
   });
 
   it('undoes a room move within one dungeon (same context)', () => {
