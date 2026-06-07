@@ -9,6 +9,7 @@ import { appState, addValue } from '../core/state.js';
 import { checkKey as libCheckKey, call as libCall, chatStream,
          repairJson as libRepair, chatCompletion as libChat } from 'bag-of-holding-client';
 import { DEFAULT_MODELS, FREE_FALLBACKS } from './tiers.js';
+import { normalizeLlmOpts } from './normopts.js';
 
 const APP_TITLE = "Dan's Dungeons";
 
@@ -34,8 +35,10 @@ const cfg = aiConfig;
 
 // ─── Historical surface (kept stable for the other ai/* + game modules) ───────
 
+// `normalizeLlmOpts` maps the app's documented snake_case `max_tokens` override
+// to the library's camelCase `maxTokens`, so per-call caps actually take effect.
 export function checkKey()                  { return libCheckKey(cfg()); }
-export function _call(opts)                 { return libCall(cfg(), opts); }
-export function _callStream(opts, onChunk)  { return chatStream(cfg(), opts, onChunk, { field: 'narration' }); }
-export function repairJson(raw, baseOpts, messages) { return libRepair(cfg(), raw, { ...baseOpts, messages }); }
-export function chatCompletion(opts)        { return libChat(cfg(), opts); }
+export function _call(opts)                 { return libCall(cfg(), normalizeLlmOpts(opts)); }
+export function _callStream(opts, onChunk)  { return chatStream(cfg(), normalizeLlmOpts(opts), onChunk, { field: 'narration' }); }
+export function repairJson(raw, baseOpts, messages) { return libRepair(cfg(), raw, normalizeLlmOpts({ ...baseOpts, messages })); }
+export function chatCompletion(opts)        { return libChat(cfg(), normalizeLlmOpts(opts)); }
