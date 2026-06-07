@@ -8,13 +8,14 @@
 // flow.js calls checkApiKey() and generateTurnImage() here so those modules
 // never import AI layers directly either.
 
-import { appState, addValue, saveToStorage, tick } from '../core/state.js';
+import { appState, addValue, saveToStorage, tick, commit } from '../core/state.js';
 import { classify, checkBeatFulfilled }       from '../ai/classify.js';
 import { narrate, generateSceneImage }       from '../ai/narrate.js';
 import { checkKey }                          from '../ai/client.js';
 import { resolveRules, goblinRetaliates, commitAll, appendTranscript,
          isPcDown, resolveDownTurn, commitDownTurn } from './resolver.js';
 import { buildStoryContext, setStoryFlag, activeBeat, completeBeatNow } from './story.js';
+import { markTurn }                          from './undo.js';
 import { t }                                 from '../i18n/i18n.js';
 
 // ─── Scene context (pure snapshot for AI) ────────────────────────────────────
@@ -87,6 +88,10 @@ export async function generateTurnImage(prompt)  { return generateSceneImage(pro
 // ─── Main turn ────────────────────────────────────────────────────────────────
 
 export async function processTurn(playerInput, onNarrationChunk) {
+  // Bracket the turn for single-step undo (before any state writes). Covers
+  // both the normal and downed branches below.
+  markTurn(`turn:${appState.session?.turnCount ?? 0}`);
+
   // If the PC is downed, this turn is a death save — resolved deterministically
   // (vendor death-save rules) with no AI call.
   if (isPcDown()) return processDownTurn(playerInput);
@@ -134,8 +139,7 @@ export async function processTurn(playerInput, onNarrationChunk) {
 
   // 6. Autosave. tick() merges this turn's deltas into appState first, so the
   //    save reflects the turn just resolved (not the previous one).
-  tick();
-  saveToStorage();
+  commit();
 
   // 7. Narrative engine (Phase 4): raise flags for this turn's events and let
   //    the red thread advance if the narration fulfilled the current beat. These
@@ -190,8 +194,7 @@ function processDownTurn(playerInput) {
   commitDownTurn(down);
   appendTranscript(playerInput, narration);
   addValue('session.turnCount', 1);
-  tick();
-  saveToStorage();
+  commit();
 
   return { narration, _debug: { down } };
 }

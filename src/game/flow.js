@@ -3,12 +3,13 @@
 // Owns: new game, resume, play loop, end states, key setup, scene images.
 // All AI calls go through loop.js (checkApiKey, generateTurnImage, processTurn).
 
-import { appState, setValue, tick, saveToStorage, clearSave, restoreState } from '../core/state.js';
+import { appState, setValue, tick, saveToStorage, clearSave, restoreState, commit } from '../core/state.js';
 import { generateDungeon, createDungeonEntry, buildEnemy } from './world.js';
 import { buildWorldBlueprint } from './worldseed.js';
 import { OVERWORLD_ENEMY_IDS } from './creatures.js';
 import { createCharacter } from './character.js';
 import { processTurn, checkApiKey, generateTurnImage, buildScene } from './loop.js';
+import { clearTurnMarks } from './undo.js';
 import {
   goldOf, resolvePurchase, addToInventory, resolveRest, DEFAULT_REST_COST,
   questId, makeQuest, addQuest, canRevealSecret, pushDialogue, slug,
@@ -85,11 +86,10 @@ function applyTier(tier) {
     setValue('settings.tts', true);
     setValue('settings.stt', true);
   }
-  tick();
-  saveToStorage();
+  commit();
 }
 
-export async function setupKey() {
+async function setupKey() {
   UI.clear();
   UI.appendEntry('gm',     t('setup.gameName'));
   UI.appendEntry('system', '');
@@ -173,8 +173,7 @@ async function reAuthKey() {
   const key = await UI.prompt(t('setup.pasteValid'));
   if (key.trim()) {
     setValue('ai.key', key.trim());
-    tick();
-    saveToStorage();
+    commit();
     UI.appendEntry('system', t('setup.keyUpdated'));
   } else {
     setValue('ai.key', _cfg());
@@ -238,6 +237,7 @@ export async function startNewGame() {
     );
   }
 
+  clearTurnMarks();   // a fresh game must not be undoable into the prior game's history
   setValue('party',  { pc: null, inventory: [] });
   setValue('flags',       {});
   setValue('transcript',  []);
@@ -278,8 +278,7 @@ async function startQuickDungeon() {
   const world = generateDungeon(seed, blueprint);
   setValue('world', world);
   setValue('session.phase', 'play');
-  tick();
-  saveToStorage();
+  commit();
 
   // Show the dungeon theme in transcript for flavor.
   UI.appendEntry('system', `Theme: ${blueprint.dungeonTheme}. Tone: ${blueprint.tone}.`);
@@ -348,8 +347,7 @@ async function startCampaign() {
   setValue('world', worldState);
 
   setValue('session.phase', 'play');
-  tick();
-  saveToStorage();
+  commit();
 
   await enterSettlement(settlement.id);
 }
@@ -761,8 +759,7 @@ async function openShop(settlementId) {
       pc:        { ...appState.party.pc, record },
       inventory: addToInventory(appState.party?.inventory, res.item),
     });
-    tick();
-    saveToStorage();
+    commit();
     UI.appendEntry('gm', t('settlement.bought', { name: chosen.item.name, price: res.price, gold: res.gold }));
   }
 }
@@ -847,8 +844,7 @@ async function doTravel(exit, settlementId) {
     // settlement loop, not the (now-cleared) dungeon (enterDungeon set it to
     // 'dungeon').
     setValue('world', { ...appState.world, location: { ...appState.world.location, type: 'settlement', dungeonId: null } });
-    tick();
-    saveToStorage();
+    commit();
     UI.appendEntry('system', '');
     UI.appendEntry('system', t('settlement.returnSettlement', { name: settlement.name }));
     UI.appendEntry('system', '');
@@ -993,8 +989,7 @@ async function runEncounter(enemyId) {
   UI.clearChips();
   // Restore the pre-encounter world fields.
   setValue('world', { ...appState.world, ...snap });
-  tick();
-  saveToStorage();
+  commit();
 
   if (outcome === 'win')      UI.appendEntry('system', t('travel.encounterWin'));
   else if (outcome === 'flee') UI.appendEntry('gm', t('travel.encounterFlee'));
@@ -1011,7 +1006,7 @@ async function applyDiscovery(discovery, climate) {
       const item = pool.length ? pool[Math.floor(Math.random() * pool.length)] : { name: 'trinket', desc: '' };
       const entry = { id: slug(item.name), name: item.name, description: item.desc ?? '', quantity: 1 };
       setValue('party', { ...appState.party, inventory: addToInventory(appState.party?.inventory, entry) });
-      tick(); saveToStorage();
+      commit();
       UI.appendEntry('gm', t('travel.discoveryLoot', { name: item.name }));
       break;
     }
@@ -1019,7 +1014,7 @@ async function applyDiscovery(discovery, climate) {
       if (pc) {
         const record = { ...pc.record, hpCurrent: pc.sheet.hp.max, conditions: [], deathSaves: undefined };
         setValue('party', { ...appState.party, pc: { ...pc, record } });
-        tick(); saveToStorage();
+        commit();
       }
       UI.appendEntry('gm', t('travel.discoveryShrine'));
       break;
@@ -1036,7 +1031,7 @@ async function applyDiscovery(discovery, climate) {
       if (pc) {
         const record = { ...pc.record, gold: goldOf(pc.record) + gift };
         setValue('party', { ...appState.party, pc: { ...pc, record } });
-        tick(); saveToStorage();
+        commit();
       }
       UI.appendEntry('gm', t('travel.discoveryWanderer', { gold: gift }));
       break;
@@ -1099,7 +1094,7 @@ async function generateNeighbourRegion(exit) {
     const settlements = { ...appState.world.settlements, [settlement.id]: { ...settlement, regionId: region.id } };
     setValue('world', { ...appState.world, regions, settlements,
       location: { ...appState.world.location, regionId: region.id } });
-    tick(); saveToStorage();
+    commit();
     return { regionId: region.id, settlementId: settlement.id };
   } catch (e) {
     console.warn('Neighbour region generation failed:', e.message);
@@ -1136,8 +1131,7 @@ async function enterDungeon(exit, settlementId) {
     location: { ...appState.world.location, type: 'dungeon', dungeonId },
   });
 
-  tick();
-  saveToStorage();
+  commit();
 
   await beginAdventure();
 }
@@ -1175,7 +1169,7 @@ function describePC(pc) {
 
 // ─── Intro scene (dungeon entry) ─────────────────────────────────────────────
 
-export async function beginAdventure() {
+async function beginAdventure() {
   const room = appState.world.rooms[appState.world.currentRoom];
   const pc   = appState.party.pc;
 
@@ -1232,7 +1226,7 @@ function _collectChipValues(room, pc) {
 
 const RETRY_DELAYS = [1000, 2000, 4000];
 
-export async function playLoop() {
+async function playLoop() {
   let pendingRetry = null;
   const visitedRooms = new Set();
 
