@@ -15,7 +15,7 @@ import { checkKey }                          from '../ai/client.js';
 import { resolveRules, goblinRetaliates, commitAll, appendTranscript,
          isPcDown, resolveDownTurn, commitDownTurn } from './resolver.js';
 import { buildStoryContext, setStoryFlag, activeBeat, completeBeatNow } from './story.js';
-import { markTurn }                          from './undo.js';
+import { beginTurn, finalizeTurn }          from './undo.js';
 import { t }                                 from '../i18n/i18n.js';
 
 // ─── Scene context (pure snapshot for AI) ────────────────────────────────────
@@ -88,13 +88,14 @@ export async function generateTurnImage(prompt)  { return generateSceneImage(pro
 // ─── Main turn ────────────────────────────────────────────────────────────────
 
 export async function processTurn(playerInput, onNarrationChunk) {
-  // Bracket the turn for single-step undo (before any state writes). Covers
-  // both the normal and downed branches below.
-  markTurn(`turn:${appState.session?.turnCount ?? 0}`);
+  // Capture the pre-turn undo mark WITHOUT side effects (no history write yet),
+  // so a turn that throws mid-flight registers no dangling undo. It is finalized
+  // only after a successful commit below. Covers the normal + downed branches.
+  const turnMark = beginTurn();
 
   // If the PC is downed, this turn is a death save — resolved deterministically
   // (vendor death-save rules) with no AI call.
-  if (isPcDown()) return processDownTurn(playerInput);
+  if (isPcDown()) { const r = processDownTurn(playerInput); finalizeTurn(turnMark); return r; }
 
   // Snapshot scene BEFORE any mutations.
   const scene = buildScene();
@@ -136,6 +137,9 @@ export async function processTurn(playerInput, onNarrationChunk) {
   commitAll(resolved, goblinResult);
   appendTranscript(playerInput, narratorResp.narration);
   addValue('session.turnCount', 1);
+
+  // Turn committed — now register the undo mark (a throw above never reaches here).
+  finalizeTurn(turnMark);
 
   // 6. Autosave. tick() merges this turn's deltas into appState first, so the
   //    save reflects the turn just resolved (not the previous one).

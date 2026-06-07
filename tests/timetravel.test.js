@@ -86,3 +86,84 @@ describe('time-travel undo round-trip (vendored Spektrum)', () => {
     assert.equal(sp.history.length, before + 1); // checkpoint recorded, state unchanged
   });
 });
+
+// Model src/game/undo.js's context-scoped, deferred-mark design (the real module
+// imports the DOM + the Spektrum singleton, so the pure decision logic is mirrored
+// here against an engine instance). Locks the guards that fixed the pre-deploy
+// review's cross-context-corruption blockers.
+function makeUndo(sp) {
+  const marks = [];
+  const sig = () => {
+    const loc = sp.appState.world?.location ?? {};
+    return `${loc.type ?? ''}|${loc.dungeonId ?? ''}|${loc.settlementId ?? ''}`;
+  };
+  return {
+    marks,
+    beginTurn: () => sp.appState.world?.location?.type === 'encounter'
+      ? null : { index: sp.history.length, sig: sig() },
+    finalizeTurn: (m) => { if (m) marks.push(m); },           // only after a committed turn
+    undo: () => {
+      if (!marks.length) return false;
+      if (marks[marks.length - 1].sig !== sig()) { marks.length = 0; return false; } // stale context
+      sp.replay(marks.pop().index);
+      return true;
+    },
+  };
+}
+
+describe('undo context-scoping + deferred mark (mirrors src/game/undo.js)', () => {
+  it('a turn that throws before commit registers no mark (deferred finalize)', () => {
+    const sp = createSpektrum();
+    sp.setValue('world.location', { type: 'dungeon', dungeonId: 'd1' });
+    sp.setValue('session.turnCount', 1);
+    sp.tick();
+    const u = makeUndo(sp);
+    u.beginTurn();                 // mark captured…
+    /* turn body throws here → finalizeTurn never called */
+    assert.equal(u.marks.length, 0);
+    assert.equal(u.undo(), false); // nothing to undo, no phantom affordance
+  });
+
+  it('refuses + drops stale marks when the play context changed (dungeon → settlement)', () => {
+    const sp = createSpektrum();
+    sp.setValue('world.location', { type: 'dungeon', dungeonId: 'd1' });
+    sp.setValue('world.currentRoom', 'room-2');
+    sp.tick();
+    const u = makeUndo(sp);
+    const m = u.beginTurn();
+    sp.setValue('world.currentRoom', 'room-3');   // a dungeon turn
+    sp.tick();
+    u.finalizeTurn(m);
+    assert.equal(u.marks.length, 1);
+
+    sp.setValue('world.location', { type: 'settlement', settlementId: 's1', dungeonId: null }); // world swap
+    sp.tick();
+    assert.equal(u.undo(), false);                 // refused
+    assert.equal(u.marks.length, 0);               // stale marks dropped
+    assert.equal(sp.appState.world.currentRoom, 'room-3'); // state NOT rewound from town
+  });
+
+  it('takes no mark inside a transient encounter', () => {
+    const sp = createSpektrum();
+    sp.setValue('world.location', { type: 'encounter' });
+    sp.tick();
+    const u = makeUndo(sp);
+    assert.equal(u.beginTurn(), null);
+    u.finalizeTurn(u.beginTurn());
+    assert.equal(u.marks.length, 0);
+  });
+
+  it('undoes a room move within one dungeon (same context)', () => {
+    const sp = createSpektrum();
+    sp.setValue('world.location', { type: 'dungeon', dungeonId: 'd1' });
+    sp.setValue('world.currentRoom', 'room-1');
+    sp.tick();
+    const u = makeUndo(sp);
+    const m = u.beginTurn();
+    sp.setValue('world.currentRoom', 'room-2');   // moved rooms, same dungeon
+    sp.tick();
+    u.finalizeTurn(m);
+    assert.equal(u.undo(), true);
+    assert.equal(sp.appState.world.currentRoom, 'room-1'); // move undone
+  });
+});

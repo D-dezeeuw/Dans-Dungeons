@@ -372,6 +372,7 @@ async function enterSettlement(settlementId, skipFirstRender = false) {
 
 // Render the town banner, NPCs, exits, and gold; set the location pointer.
 function renderSettlement(settlement, settlementId) {
+  clearTurnMarks();   // entering town — dungeon turn marks must not be undoable from a settlement
   setValue('world', { ...appState.world, location: { ...appState.world.location, type: 'settlement', settlementId, dungeonId: null } });
   tick();
   // Phase 4.3: arriving in a region raises a visited flag (a beat prerequisite).
@@ -1105,6 +1106,7 @@ async function generateNeighbourRegion(exit) {
 // ─── Enter dungeon from settlement ───────────────────────────────────────────
 
 async function enterDungeon(exit, settlementId) {
+  clearTurnMarks();   // fresh dungeon context — never inherit a prior dungeon/town's undo marks
   const dungeonId = exit.targetId ?? `dungeon-${Date.now()}`;
 
   // Generate dungeon if not already in world state
