@@ -6,15 +6,17 @@
 // preserves the historical export surface so the rest of src/ai/* is unchanged.
 
 import { appState, addValue } from '../core/state.js';
-import { resolveModel, authHeaders, checkKey as libCheckKey,
-         call as libCall, chatStream, repairJson as libRepair, chatCompletion as libChat } from 'bag-of-holding-client';
+import { checkKey as libCheckKey, call as libCall, chatStream,
+         repairJson as libRepair, chatCompletion as libChat } from 'bag-of-holding-client';
 import { DEFAULT_MODELS, FREE_FALLBACKS } from './tiers.js';
 
 const APP_TITLE = "Dan's Dungeons";
 
 // Build the immutable transport config from current state. Re-derived per call
 // so a mid-game tier/key change (Deluxe upgrade) propagates without rebuilds.
-function cfg() {
+// Exported as `aiConfig` so the media helpers (image/tts/stt) inject the same
+// config — referer, brand, token + cost sinks — into the library.
+export function aiConfig() {
   const ai = appState.ai || {};
   return {
     key:           ai.key,
@@ -25,18 +27,12 @@ function cfg() {
     appTitle:      APP_TITLE,
     referer:       location.origin,
     onTokens:      (n) => addValue('ai.totalTokens', n),
+    onCost:        (usd) => addValue('ai.totalCostUsd', usd),
   };
 }
+const cfg = aiConfig;
 
 // ─── Historical surface (kept stable for the other ai/* + game modules) ───────
-
-export function modelFor(tier, ai = appState.ai || {}) {
-  return resolveModel(tier, { models: ai.models }, DEFAULT_MODELS);
-}
-
-export function headers(key, origin) {
-  return authHeaders({ key, referer: origin, appTitle: APP_TITLE });
-}
 
 export function checkKey()                  { return libCheckKey(cfg()); }
 export function _call(opts)                 { return libCall(cfg(), opts); }

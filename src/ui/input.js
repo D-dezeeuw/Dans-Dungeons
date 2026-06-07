@@ -13,7 +13,7 @@ const _history = [];
 let   _historyCursor = -1;
 let   _historyDraft  = '';  // preserves in-progress text when UP is first pressed
 
-export const cmdEl      = () => document.getElementById('cmd');
+const cmdEl      = () => document.getElementById('cmd');
 const transcriptEl      = () => document.getElementById('transcript');
 const actionChipsEl     = () => document.getElementById('action-chips');
 const inputRowEl        = () => document.getElementById('input-row');

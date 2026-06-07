@@ -28,6 +28,8 @@ export { ApiError, apiBase, authHeaders, post, DEFAULT_BASE_URL, DEFAULT_APP_TIT
 export { resolveModel, sampling, FREE_MODELS, PAID_MODELS, FREE_FALLBACKS } from './src/llm/tiers.js';
 export { JsonFieldStreamer } from './src/llm/stream.js';
 export { call, chatCompletion, chatStream, repairJson, checkKey } from './src/llm/client.js';
+export { generateImage, parseImageFromResponse } from './src/llm/image.js';
+export { synthesizeSpeech, transcribeAudio, pcmToWav, bytesToBase64, TTS_FALLBACKS, PCM_MODELS } from './src/llm/audio.js';
 
 // ── Worldgen ───────────────────────────────────────────────────────────────────
 export { pick, pickN, shuffle, randInt, mintSeed, mulberry32 } from './src/worldgen/rng.js';
@@ -64,3 +66,10 @@ export {
   beginTravel, stepTravel, isTravelDone, pickEncounter, runTravel,
   TRAVEL_SEGMENTS_MIN, TRAVEL_SEGMENTS_MAX, ENCOUNTER_CHANCE, DISCOVERY_CHANCE, DISCOVERY_TYPES,
 } from './src/travel/fsm.js';
+
+// ── Output (browser-only: ZIP byte-core is node-testable, EPUB needs a canvas) ───
+export { crc32, zipBytes, buildZip } from './src/output/zip.js';
+export { buildEpub } from './src/output/epub.js';
+
+// ── Persistence (versioned save envelope + migration runner + commit combinator) ─
+export { wrapEnvelope, loadEnvelope, saveEnvelope, makeCommit } from './src/persistence/envelope.js';

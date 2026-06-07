@@ -12,7 +12,7 @@ import {
 
 // ─── World seed (L00) ────────────────────────────────────────────────────────
 
-export async function generateWorldSeed(blueprint) {
+async function generateWorldSeed(blueprint) {
   const constraints = worldSeedConstraints(blueprint);
   return chatCompletion({
     tier: 'medium',
@@ -27,7 +27,7 @@ export async function generateWorldSeed(blueprint) {
 
 // ─── Red thread / beats ──────────────────────────────────────────────────────
 
-export async function generateBeats(worldDigest, blueprint) {
+async function generateBeats(worldDigest, blueprint) {
   return chatCompletion({
     tier: 'medium',
     max_tokens: 2000,
@@ -41,7 +41,7 @@ export async function generateBeats(worldDigest, blueprint) {
 
 // ─── Factions ────────────────────────────────────────────────────────────────
 
-export async function generateFactions(worldDigest, blueprint) {
+async function generateFactions(worldDigest, blueprint) {
   return chatCompletion({
     tier: 'medium',
     max_tokens: 1200,

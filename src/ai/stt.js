@@ -1,10 +1,11 @@
-// src/ai/stt.js — Speech-to-text via OpenRouter.
+// src/ai/stt.js — Speech-to-text capture.
 //
-// Records audio with MediaRecorder (outputs webm/ogg depending on browser),
-// converts to base64, then POSTs JSON to /audio/transcriptions per the OpenRouter API.
+// This module owns the browser capture (MediaRecorder → Blob). The HTTP call +
+// base64 encode + model selection live in the client library (transcribeAudio);
+// here we just hand it the recorded bytes and the locale.
 
-import { appState } from '../core/state.js';
-import { modelFor } from './client.js';
+import { transcribeAudio as libTranscribe } from 'bag-of-holding-client';
+import { aiConfig } from './client.js';
 import { locale } from '../i18n/i18n.js';
 
 // ─── Recording state ──────────────────────────────────────────────────────────
@@ -58,45 +59,10 @@ export function stopRecording() {
   }
 }
 
-// Converts a Blob to a base64 string (no data-URL prefix).
-async function _blobToBase64(blob) {
-  const buf   = await blob.arrayBuffer();
-  const bytes = new Uint8Array(buf);
-  let binary  = '';
-  for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
-  return btoa(binary);
-}
-
-// Sends an audio Blob to OpenRouter for transcription.
-// Returns the transcript string or throws on API error.
+// Sends a recorded audio Blob to the library for transcription.
+// Returns the transcript string or throws (ApiError) on failure.
 export async function transcribeAudio(blob) {
-  const ai     = appState.ai || {};
-  const model  = modelFor('stt', ai);
-  if (!model) throw new Error('STT not available on the free tier.');
-  const base   = (ai.baseUrl || 'https://openrouter.ai/api/v1').replace(/\/$/, '');
   const format = blob.type.includes('ogg') ? 'ogg' : 'webm';
-  const data64 = await _blobToBase64(blob);
-
-  const res = await fetch(`${base}/audio/transcriptions`, {
-    method:  'POST',
-    headers: {
-      'Authorization': `Bearer ${ai.key || ''}`,
-      'Content-Type':  'application/json',
-      'HTTP-Referer':  location.origin,
-      'X-Title':       "Dan's Dungeons",
-    },
-    body: JSON.stringify({
-      model:       modelFor('stt', ai),
-      input_audio: { data: data64, format },
-      language:    locale(),
-    }),
-  });
-
-  if (!res.ok) {
-    const err = await res.text().catch(() => '');
-    throw new Error(`AI ${res.status}: ${err.slice(0, 200)}`);
-  }
-
-  const result = await res.json();
-  return (result.text ?? '').trim();
+  const bytes  = await blob.arrayBuffer();
+  return libTranscribe(aiConfig(), { bytes, format, language: locale() });
 }

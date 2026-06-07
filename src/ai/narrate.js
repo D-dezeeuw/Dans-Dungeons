@@ -3,8 +3,8 @@
 // narrate() streams the GM narration for a resolved turn.
 // generateSceneImage() produces a journal-sketch data URI (decorative, silent on failure).
 
-import { appState, addValue } from '../core/state.js';
-import { _call, _callStream, repairJson, modelFor, headers, chatCompletion } from './client.js';
+import { _callStream, repairJson, chatCompletion, aiConfig } from './client.js';
+import { generateImage } from 'bag-of-holding-client';
 import { NARRATOR_SCHEMA } from './schemas.js';
 import { t, locale } from '../i18n/i18n.js';
 
@@ -66,11 +66,6 @@ export async function narrate(resolvedFacts, sceneContext, recentTranscript, onC
 // Never throws — image generation is decorative; errors are silent.
 
 export async function generateSceneImage(sceneDescription) {
-  const ai   = appState.ai || {};
-  const base = (ai.baseUrl || 'https://openrouter.ai/api/v1').replace(/\/$/, '');
-  const model = modelFor('image', ai);
-  if (!model) return null; // no image model available (free tier)
-
   const prompt =
     'Old hand-drawn journal sketch of a medieval fantasy scene. ' +
     'Black ink lines on sepia parchment paper. Rough, scratchy linework. ' +
@@ -78,53 +73,7 @@ export async function generateSceneImage(sceneDescription) {
     'No text, no labels, no writing of any kind. No borders, no frames, no decorative edges. ' +
     'Scene: ' + sceneDescription;
 
-  let res;
-  try {
-    res = await fetch(`${base}/chat/completions`, {
-      method: 'POST',
-      headers: headers(ai.key || '', location.origin),
-      body: JSON.stringify({
-        model,
-        messages: [{ role: 'user', content: prompt }],
-        max_tokens: 2048,
-      }),
-    });
-  } catch {
-    return null;
-  }
-
-  if (!res.ok) return null;
-
-  let data;
-  try { data = await res.json(); } catch { return null; }
-
-  if (data.usage?.total_tokens) addValue('ai.totalTokens', data.usage.total_tokens);
-
-  const msg     = data.choices?.[0]?.message ?? {};
-  const content = msg.content;
-
-  // Gemini via OpenRouter: image lands in message.images[], not message.content
-  if (Array.isArray(msg.images)) {
-    for (const part of msg.images) {
-      if (part.type === 'image_url' && part.image_url?.url) return part.image_url.url;
-    }
-  }
-
-  if (Array.isArray(content)) {
-    for (const part of content) {
-      if (part.type === 'image_url' && part.image_url?.url) return part.image_url.url;
-      if (part.type === 'image' && part.data) return `data:image/png;base64,${part.data}`;
-      if (part.inline_data?.data) {
-        const mime = part.inline_data.mime_type || 'image/png';
-        return `data:${mime};base64,${part.inline_data.data}`;
-      }
-    }
-  }
-
-  if (typeof content === 'string') {
-    const m = content.match(/data:image\/[^;]+;base64,[A-Za-z0-9+/]+=*/);
-    if (m) return m[0];
-  }
-
-  return null;
+  // The library owns the transport + the multi-shape provider response parsing;
+  // it resolves the image-tier model from config and returns null on any failure.
+  return generateImage(aiConfig(), { prompt });
 }
