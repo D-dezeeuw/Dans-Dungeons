@@ -16,7 +16,7 @@ const engine = createEngine();
 // re-derives a sheet (creation, save-load, future level-ups / equipment swaps)
 // must go through here so a cached sheet can never drift from its record.
 
-export function deriveSheetFor(record) {
+function deriveSheetFor(record) {
   return engine.deriveSheet(record);
 }
 

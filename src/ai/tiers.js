@@ -13,7 +13,7 @@ export const _cfg = () => { let r = ''; for (let i = 0; i < _a.length; i++) r +=
 // ─── Model sets ──────────────────────────────────────────────────────────────
 
 // All slots achievable at $0 on OpenRouter.
-export const FREE_MODELS = {
+const FREE_MODELS = {
   tiny:   'google/gemma-4-26b-a4b-it:free',
   medium: 'openai/gpt-oss-120b:free',
   large:  'nvidia/nemotron-3-super-120b-a12b:free',
@@ -26,7 +26,7 @@ export const FREE_MODELS = {
 export const DEFAULT_MODELS = { ...FREE_MODELS };
 
 // Paid tier — higher quality, costs money.
-export const PAID_MODELS = {
+const PAID_MODELS = {
   tiny:   'google/gemini-2.5-flash-lite',
   medium: 'deepseek/deepseek-v4-pro',
   large:  'deepseek/deepseek-v4-pro',

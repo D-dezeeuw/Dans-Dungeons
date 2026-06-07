@@ -1,7 +1,6 @@
 // src/ui/actionbar.js — three-zone footer action bar (compass, class, skills)
 // and the floating tooltip system.
 
-import { getSkills, classAbilities } from './chips.js';
 import { fireChip } from './input.js';
 import { t } from '../i18n/i18n.js';
 
@@ -33,7 +32,7 @@ document.addEventListener('mouseout', (e) => {
 // Three zones: compass (movement), class abilities, skill word cloud.
 // Called each turn when the action bar is enabled.
 
-export function updateActionBar(exits, record, sheet, cooldowns) {
+export function updateActionBar(exits) {
   // ── Compass ────────────────────────────────────────────────────────────────
   const DIRS = ['north', 'east', 'south', 'west'];
   for (const dir of DIRS) {
@@ -56,42 +55,9 @@ export function updateActionBar(exits, record, sheet, cooldowns) {
     }
   }
 
-  // ── Class abilities word cloud ─────────────────────────────────────────────
-  const abEl = document.getElementById('ab-abilities-list');
-  if (abEl) {
-    abEl.innerHTML = '';
-    if (record && sheet) {
-      for (const atk of (sheet.attacks ?? [])) {
-        const span = document.createElement('span');
-        span.className = 'ab-word ab-available';
-        span.dataset.tip = `${t('actionbar.attackTip')}\n+${atk.attackBonus} to hit · ${atk.damageDice} damage`;
-        span.textContent = atk.name;
-        abEl.appendChild(span);
-      }
-      for (const ability of classAbilities(record, sheet)) {
-        const span = document.createElement('span');
-        span.className = 'ab-word ab-available';
-        span.dataset.tip = ability.note;
-        span.textContent = ability.label;
-        abEl.appendChild(span);
-      }
-    }
-  }
-
-  // ── Skills word cloud ──────────────────────────────────────────────────────
-  const skEl = document.getElementById('ab-skills-list');
-  if (skEl) {
-    skEl.innerHTML = '';
-    for (const skill of getSkills()) {
-      const remaining = cooldowns[skill.id] ?? 0;
-      const onCd = remaining > 0;
-      const span = document.createElement('span');
-      span.className = 'ab-word ' + (onCd ? 'ab-unavailable' : 'ab-available');
-      span.dataset.tip = onCd
-        ? `${skill.label} · ${skill.ab}\n${skill.desc}\n\n${t('actionbar.cooldown', { n: remaining, s: remaining > 1 ? 'en' : '' })}`
-        : `${skill.label} · ${skill.ab}\n${skill.desc}`;
-      span.textContent = skill.label + (onCd ? ` (${remaining})` : '');
-      skEl.appendChild(span);
-    }
-  }
+  // The class-ability and skill word clouds (#ab-abilities-list /
+  // #ab-skills-list) now render declaratively via `data-each` bound to the
+  // `ui.classWords` / `ui.skillWords` computeds (see ui/reactive.js). They
+  // update reactively as the character and skill cooldowns change, so the
+  // action bar only owns the compass here.
 }

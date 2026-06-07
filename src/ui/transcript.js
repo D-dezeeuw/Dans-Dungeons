@@ -20,6 +20,18 @@ export function appendEntry(role, text) {
   return el;
 }
 
+// Rebuild the transcript DOM from appState.transcript. The transcript is
+// rendered imperatively, so a time-travel replay() (undo) reverts the
+// underlying data but leaves the DOM stale — this re-syncs it. Mirrors the
+// resume render in flow.js (player lines are prefixed with "> ").
+export function rebuildTranscript() {
+  clear();
+  for (const e of (appState.transcript ?? [])) {
+    if (e.role === 'player') appendEntry('player', `> ${e.text}`);
+    else                     appendEntry(e.role, e.text);
+  }
+}
+
 // beginStreamEntry + appendStreamChunk: progressive GM narration display.
 // beginStreamEntry creates an empty entry; appendStreamChunk grows it as
 // each token arrives so the player sees text appear in real time.

@@ -8,6 +8,7 @@ import { startNewGame, resumeGame, ensureKey, applySketchView, upgradeToDeluxe, 
 import { reconcilePc }                                                                        from './game/character.js';
 import { initSpeakHover }                                                                   from './ui/transcript.js';
 import { initMicButton }                                                                    from './ui/input.js';
+import { initUndoButton }                                                                   from './game/undo.js';
 import * as UI from './ui/console.js';
 import { locale, setLocale, t } from './i18n/i18n.js';
 
@@ -168,6 +169,7 @@ async function boot() {
 
   initSpeakHover();
   initMicButton();
+  initUndoButton();
 
   await ensureKey();
 

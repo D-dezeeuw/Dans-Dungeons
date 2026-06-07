@@ -1,16 +1,17 @@
 // src/ui/exports.js — journal, screenshot, sketch gallery, and save file I/O.
 // All functions are triggered by user action; none interact with the game loop.
 
-import { appState, setValue, restoreState, tick, saveToStorage } from '../core/state.js';
+import { appState, setValue, restoreState, commit } from '../core/state.js';
 import { appendEntry, setThinking } from './transcript.js';
 import { getJournalLog } from '../game/flow.js';
 import { reconcilePc } from '../game/character.js';
 import { t, locale } from '../i18n/i18n.js';
 import { escHtml } from '../core/utils.js';
+import { buildEpub } from 'bag-of-holding-client';
 
 // ─── Download helper ──────────────────────────────────────────────────────────
 
-export function triggerDownload(blob, filename) {
+function triggerDownload(blob, filename) {
   const url = URL.createObjectURL(blob);
   const a   = Object.assign(document.createElement('a'), { href: url, download: filename });
   a.click();
@@ -82,8 +83,7 @@ export function handleImportFile(e) {
       // Re-derive the sheet from the imported record rather than trusting the
       // sheet in the file (which may be stale or engine-version-mismatched).
       if (appState.party?.pc) setValue('party.pc', reconcilePc(appState.party.pc));
-      tick();
-      saveToStorage();
+      commit();
       appendEntry('system', t('exports.imported', { file: file.name }));
     } catch {
       appendEntry('error', t('exports.importFail'));
@@ -154,8 +154,6 @@ export async function createJournal() {
 // ─── Story journal (LLM-enhanced, EPUB export) ──────────────────────────────
 
 async function _downloadStoryJournal(story, pcName, pcClass, images) {
-  const { buildEpub } = await import('./epub.js');
-
   // Pair images to chapters
   const chapters = story.chapters.map((ch, i) => ({
     heading:      ch.heading,
@@ -169,6 +167,7 @@ async function _downloadStoryJournal(story, pcName, pcClass, images) {
     subtitle: `${pcName} — ${cap(pcClass)}`,
     lang:     locale(),
     chapters,
+    brand:    "Dan's Dungeons",
   });
 
   triggerDownload(blob, `dans-dungeons-${pcName.toLowerCase().replace(/\s+/g, '-')}.epub`);
@@ -278,7 +277,6 @@ export async function exportWorldBible() {
     appendEntry('system', t('exports.worldBibleBuilding'));
 
     // Build EPUB.
-    const { buildEpub } = await import('./epub.js');
     const slug = (world.seed?.name ?? 'world').toLowerCase().replace(/\s+/g, '-');
     const blob = await buildEpub({
       title:    world.seed?.name ?? 'Unknown World',
@@ -287,6 +285,7 @@ export async function exportWorldBible() {
       tone:     world.seed?.tone ?? null,
       tagline:  world.seed?.redThread?.premise ?? null,
       chapters,
+      brand:    "Dan's Dungeons",
     });
 
     triggerDownload(blob, `dans-dungeons-worldbible-${slug}.epub`);

@@ -36,7 +36,7 @@ export function getSkills() {
 }
 
 // Legacy export for actionbar.js compatibility.
-export const SKILLS = SKILL_IDS.map(id => ({ id, ab: SKILL_AB[id] }));
+const SKILLS = SKILL_IDS.map(id => ({ id, ab: SKILL_AB[id] }));
 
 // ─── Class abilities ──────────────────────────────────────────────────────────
 

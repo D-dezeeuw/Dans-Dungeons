@@ -5,6 +5,7 @@
 // always predictable regardless of restore order.
 
 import { DEFAULT_MODELS } from '../ai/tiers.js';
+import { saveEnvelope, loadEnvelope, makeCommit } from 'bag-of-holding-client';
 
 import {
   appState,
@@ -17,9 +18,18 @@ import {
   run,
   tick,
   bindDOM,
+  replay,
+  checkpoint,
+  history as spektrumHistory,
 } from 'spektrum';
 
 export { appState, setValue, addValue, watch, addSystem, serialize, computed, run, tick, bindDOM };
+
+// Time-travel surface (used by game/undo.js for single-step turn rollback).
+// `spektrumHistory` is the live, append-only mutation log; `replay(n)` rebuilds
+// the state after the first n entries; `checkpoint()` records a tagged,
+// state-less marker that replay walks past unchanged.
+export { replay, checkpoint, spektrumHistory };
 
 // ─── Default shape ───────────────────────────────────────────────────────────
 
@@ -112,35 +122,37 @@ export function restoreState(snapshot) {
 }
 
 // ─── Persistence ─────────────────────────────────────────────────────────────
+// Saves are versioned envelopes ({ v, data }) via the client library, so future
+// state-shape changes get an ordered migration path. localStorage already IS the
+// { getItem, setItem, removeItem } adapter the library expects, so it's injected
+// directly. Legacy bare-snapshot saves load as version 0 and pass straight
+// through — adding versioning never strands an existing save.
 
-const SAVE_KEY = 'dans-dungeons';
+const SAVE_KEY     = 'dans-dungeons';
+const SAVE_VERSION = 1;
+// Persisted top-level paths (ui is transient and rebuilt on load).
+const PERSIST_KEYS = ['session', 'ai', 'party', 'world', 'flags', 'transcript', 'settings'];
+// Ordered v→v+1 migrations for saved-state shape changes. Empty today.
+const SAVE_MIGRATIONS = {};
 
 export function saveToStorage() {
-  const snap = {
-    session:    appState.session,
-    ai:         appState.ai,
-    party:      appState.party,
-    world:      appState.world,
-    flags:      appState.flags,
-    transcript: appState.transcript,
-    settings:   appState.settings,
-  };
-  try {
-    localStorage.setItem(SAVE_KEY, JSON.stringify(snap));
-  } catch (e) {
-    console.warn('[state] localStorage save failed', e);
+  if (!saveEnvelope(localStorage, SAVE_KEY, appState, SAVE_VERSION, { pick: PERSIST_KEYS })) {
+    console.warn('[state] localStorage save failed');
   }
 }
 
 export function loadFromStorage() {
-  try {
-    const raw = localStorage.getItem(SAVE_KEY);
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
+  return loadEnvelope(localStorage.getItem(SAVE_KEY), {
+    migrations:     SAVE_MIGRATIONS,
+    currentVersion: SAVE_VERSION,
+  });
 }
 
 export function clearSave() {
   localStorage.removeItem(SAVE_KEY);
 }
+
+// tick (flush the Spektrum delta) + saveToStorage in one call — use after any
+// state mutation that must survive a reload. Replaces the repeated, easy-to-
+// forget `tick(); saveToStorage();` pair.
+export const commit = makeCommit({ tick, save: saveToStorage });

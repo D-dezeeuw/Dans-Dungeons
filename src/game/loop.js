@@ -8,13 +8,14 @@
 // flow.js calls checkApiKey() and generateTurnImage() here so those modules
 // never import AI layers directly either.
 
-import { appState, addValue, saveToStorage, tick } from '../core/state.js';
+import { appState, addValue, saveToStorage, tick, commit } from '../core/state.js';
 import { classify, checkBeatFulfilled }       from '../ai/classify.js';
 import { narrate, generateSceneImage }       from '../ai/narrate.js';
 import { checkKey }                          from '../ai/client.js';
 import { resolveRules, goblinRetaliates, commitAll, appendTranscript,
          isPcDown, resolveDownTurn, commitDownTurn } from './resolver.js';
 import { buildStoryContext, setStoryFlag, activeBeat, completeBeatNow } from './story.js';
+import { beginTurn, finalizeTurn }          from './undo.js';
 import { t }                                 from '../i18n/i18n.js';
 
 // ─── Scene context (pure snapshot for AI) ────────────────────────────────────
@@ -87,9 +88,14 @@ export async function generateTurnImage(prompt)  { return generateSceneImage(pro
 // ─── Main turn ────────────────────────────────────────────────────────────────
 
 export async function processTurn(playerInput, onNarrationChunk) {
+  // Capture the pre-turn undo mark WITHOUT side effects (no history write yet),
+  // so a turn that throws mid-flight registers no dangling undo. It is finalized
+  // only after a successful commit below. Covers the normal + downed branches.
+  const turnMark = beginTurn();
+
   // If the PC is downed, this turn is a death save — resolved deterministically
   // (vendor death-save rules) with no AI call.
-  if (isPcDown()) return processDownTurn(playerInput);
+  if (isPcDown()) { const r = processDownTurn(playerInput); finalizeTurn(turnMark); return r; }
 
   // Snapshot scene BEFORE any mutations.
   const scene = buildScene();
@@ -132,10 +138,12 @@ export async function processTurn(playerInput, onNarrationChunk) {
   appendTranscript(playerInput, narratorResp.narration);
   addValue('session.turnCount', 1);
 
+  // Turn committed — now register the undo mark (a throw above never reaches here).
+  finalizeTurn(turnMark);
+
   // 6. Autosave. tick() merges this turn's deltas into appState first, so the
   //    save reflects the turn just resolved (not the previous one).
-  tick();
-  saveToStorage();
+  commit();
 
   // 7. Narrative engine (Phase 4): raise flags for this turn's events and let
   //    the red thread advance if the narration fulfilled the current beat. These
@@ -190,8 +198,7 @@ function processDownTurn(playerInput) {
   commitDownTurn(down);
   appendTranscript(playerInput, narration);
   addValue('session.turnCount', 1);
-  tick();
-  saveToStorage();
+  commit();
 
   return { narration, _debug: { down } };
 }
