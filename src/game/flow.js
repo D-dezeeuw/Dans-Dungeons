@@ -42,6 +42,18 @@ function _cancelSpeech() {
 const journalLog = [];
 export function getJournalLog() { return journalLog; }
 
+// Record a scene's opening 'gm' narration into appState.transcript so a
+// time-travel scrub (rebuildTranscript renders only from appState.transcript)
+// and a reload keep the starting text — the UI.appendEntry calls that show the
+// opening are DOM-only. Committed so it persists immediately, even before the
+// first action of the scene.
+function recordOpening(text) {
+  if (!text) return;
+  const turn = appState.session?.turnCount ?? 0;
+  setValue('transcript', [...(appState.transcript ?? []), { role: 'gm', text, turn }]);
+  commit();
+}
+
 // Per-turn scene image cache (data-URIs), keyed by turn number — out of Spektrum
 // history, so a time-travel scrub restores the right background imperatively
 // without recording anything. (Keyed by turn count; two branches that share a
@@ -410,7 +422,9 @@ function renderSettlement(settlement, settlementId) {
   UI.clear();
   UI.appendEntry('system', t('settlement.banner', { name: settlement.name }));
   UI.appendEntry('system', '');
-  UI.appendEntry('gm', settlement.description ?? t('settlement.youAreIn', { name: settlement.name }));
+  const settlementIntro = settlement.description ?? t('settlement.youAreIn', { name: settlement.name });
+  UI.appendEntry('gm', settlementIntro);
+  recordOpening(settlementIntro);   // persist the opening narration (survives undo/redo + reload)
   UI.appendEntry('system', '');
 
   if (settlement.npcs?.length) {
@@ -1210,6 +1224,7 @@ async function beginAdventure() {
   UI.appendEntry('system', t('adventure.banner'));
   UI.appendEntry('system', '');
   UI.appendEntry('gm', room.description);
+  recordOpening(room.description);   // persist the opening narration (survives undo/redo + reload)
   UI.appendEntry('system', '');
   const exits = room.exits.map(e => t(`directions.${e.dir}`)).join(', ');
   UI.appendEntry('system', t('adventure.exits', { dirs: exits }));
