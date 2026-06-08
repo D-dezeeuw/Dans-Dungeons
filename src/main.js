@@ -195,7 +195,7 @@ async function boot() {
   // survives a reload. Failsafe: on any malformed/oversized blob, re-establish the
   // plain saved state — basic load is never blocked by time-travel.
   if (savedTimeTravel && appState.session?.phase === 'play') {
-    if (!importTimeTravel(savedTimeTravel)) {
+    if (!importTimeTravel(savedTimeTravel, save)) {
       restoreState(save);
       tick();
       if (appState.party?.pc) setValue('party.pc', reconcilePc(appState.party.pc));

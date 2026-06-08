@@ -337,10 +337,12 @@ export function exportTimeTravel() {
 // Rebuild the epoch from a persisted blob on reload: restore the root baseline,
 // re-record the spine to rebuild history, recompute the stops, re-register the
 // branches, and replay to the saved position. Does NOT touch the transcript DOM —
-// the boot/resume flow owns that. Returns false (and disables undo) on a
-// malformed blob or any failure, so the caller can fall back to the plain restore
-// — a broken time-travel blob can never block loading the game.
-export function importTimeTravel(tt) {
+// the boot/resume flow owns that. `expected` is the plainly-restored save snapshot;
+// after reconstruction the live state must match it on a few invariants, else the
+// rebuild diverged and we discard it. Returns false (and disables undo) on a
+// malformed blob, a divergence, or any failure, so the caller can fall back to the
+// plain restore — a broken time-travel blob can never block loading the game.
+export function importTimeTravel(tt, expected) {
   try {
     if (!tt || !Array.isArray(tt.spine) || tt.root == null) return false;
     restoreState(tt.root);
@@ -360,6 +362,11 @@ export function importTimeTravel(tt) {
     }));
     _pos = Math.max(0, Math.min(tt.pos ?? _stops.length - 1, _stops.length - 1));
     replay(_stops[_pos]);
+    if (expected && !matchesSaved(expected)) {
+      console.warn('[time-travel] reconstruction diverged from the saved state — discarding history');
+      clearTurnMarks();
+      return false;
+    }
     refreshButtons();
     notify();
     return true;
@@ -368,6 +375,17 @@ export function importTimeTravel(tt) {
     clearTurnMarks();
     return false;
   }
+}
+
+// Consistency guard for importTimeTravel: the replayed live state must match the
+// saved snapshot on a handful of cheap invariants. A lightweight check (not a
+// full deep-equal) avoids object-key-order false positives while still catching
+// real reconstruction drift.
+function matchesSaved(saved) {
+  return (appState.session?.turnCount ?? 0)        === (saved.session?.turnCount ?? 0)
+    &&    appState.world?.currentRoom              === saved.world?.currentRoom
+    &&    appState.party?.pc?.record?.hpCurrent    === saved.party?.pc?.record?.hpCurrent
+    &&   (appState.transcript?.length ?? 0)        === (saved.transcript?.length ?? 0);
 }
 
 function redrawCompass() {
