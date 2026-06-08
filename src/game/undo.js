@@ -55,12 +55,15 @@ let _stops    = [];
 let _pos      = 0;
 let _epochSig = null;
 
-// Abandoned timelines captured for the current epoch: { id, label, forkedAt,
-// entries, ts }. `_branchSeq` mints stable ids; `_branchListener` is the UI
-// refresh callback (ui/branches.js registers it, avoiding an import cycle).
-let _branches       = [];
-let _branchSeq      = 0;
-let _branchListener = null;
+// Abandoned timelines captured for the current epoch: { id, label, turns,
+// entries, ts }. `entries` is the FULL branch from the epoch root (not just the
+// dropped tail), so a swap always replays to the always-stable root and never
+// depends on a history index that a later truncation could invalidate.
+// `_branchSeq` mints stable ids; `_listeners` are UI refresh callbacks
+// (ui/branches.js + ui/timeline.js register them, avoiding an import cycle).
+let _branches  = [];
+let _branchSeq = 0;
+let _listeners = [];
 
 // Signature of the current undoable play context. Room moves within one dungeon
 // keep this stable (only location, not currentRoom, is included), so time-travel
@@ -97,6 +100,7 @@ export function finalizeTurn(mark) {
   _stops.push(spektrumHistory.length);
   _pos = _stops.length - 1;
   refreshButtons();
+  notify();
 }
 
 // Roll back one marked turn. Returns false when nothing is undoable. Refuses to
@@ -123,13 +127,25 @@ export function redoLastTurn() {
   return true;
 }
 
+// Jump directly to any turn boundary on the current branch (powers the timeline
+// scrubber, and undo/redo as the ±1 cases). Same guards as undo/redo.
+export function jumpToStop(index) {
+  if (index < 0 || index >= _stops.length || index === _pos) return false;
+  if (document.getElementById('cmd')?.disabled) return false;
+  if (_epochSig !== contextSig()) { clearTurnMarks(); return false; }
+  _pos = index;
+  scrubTo(_stops[_pos]);
+  return true;
+}
+
 // Shared scrub: replay to a stop, redraw the imperative surfaces, refresh the
-// buttons, persist. No recorded writes happen here (see the file header).
+// buttons + listeners, persist. No recorded writes happen here (see the header).
 function scrubTo(index) {
   replay(index);            // reactive bindings re-fire automatically
   rebuildTranscript();      // transcript DOM is imperative — redraw it
   redrawCompass();          // compass is imperative — redraw for the reverted room
   refreshButtons();
+  notify();
   saveToStorage();
 }
 
@@ -141,7 +157,7 @@ export function clearTurnMarks() {
   _epochSig = null;
   _branches = [];
   refreshButtons();
-  notifyBranches();
+  notify();
 }
 
 // ─── Branches (Phase 2) ────────────────────────────────────────────────────────
@@ -153,14 +169,27 @@ export function clearTurnMarks() {
 function captureFork(fork) {
   if (!_stops.length)              return;   // no active epoch
   if (fork.forkedAt < _stops[0])   return;   // belongs to a previous epoch
+  // Store the FULL branch from the epoch root: the still-intact shared prefix
+  // [root, forkedAt) plus the dropped tail. (At onFork time Spektrum has already
+  // truncated history to forkedAt, so the slice is exactly the shared prefix.)
+  // Root-relative entries make jumpToBranch replay to the stable root, immune to
+  // index shifts from later swaps.
+  const root  = _stops[0];
+  const entries = spektrumHistory.slice(root, fork.forkedAt).concat(fork.entries);
   _branches.push({
-    id:       `b${_branchSeq++}`,
-    label:    labelFork(fork),
-    forkedAt: fork.forkedAt,
-    entries:  fork.entries,
-    ts:       fork.ts,
+    id:      `b${_branchSeq++}`,
+    label:   labelFork(fork),
+    turns:   countTurns(entries),
+    entries,
+    ts:      fork.ts,
   });
-  notifyBranches();
+  notify();
+}
+
+// Count the 'turn' checkpoints in an entry list — the number of committed turns
+// the branch holds (shown in the picker / timeline).
+function countTurns(entries) {
+  return entries.reduce((n, e) => n + (e.op === 'checkpoint' && e.id === 'turn' ? 1 : 0), 0);
 }
 
 // Derive a human label from a dropped tail: the player action that started the
@@ -175,10 +204,11 @@ function labelFork(fork) {
   return 'an earlier path';
 }
 
-// Swap the live state onto a stored branch. Replays to the divergence point and
-// re-records the branch's entries; that re-record forks (and captureFork keeps)
-// the path being left, so hops are symmetric. Refuses mid-turn or across a world
-// swap, mirroring undo/redo. Returns false when the id is unknown or refused.
+// Swap the live state onto a stored branch. Replays to the epoch ROOT (always
+// stable — never truncated) and re-records the branch's full root-relative
+// entries; that re-record forks (and captureFork keeps) the path being left, so
+// hops are symmetric and safe at any tree depth. Refuses mid-turn or across a
+// world swap, mirroring undo/redo. Returns false when the id is unknown/refused.
 export function jumpToBranch(id) {
   const idx = _branches.findIndex(b => b.id === id);
   if (idx < 0) return false;
@@ -186,14 +216,14 @@ export function jumpToBranch(id) {
   if (_epochSig !== contextSig()) { clearTurnMarks(); return false; }
 
   const branch = _branches.splice(idx, 1)[0];   // consumed; the path we leave is re-captured by captureFork
-  replay(branch.forkedAt);                       // rewind to the divergence (replay fires no onFork)
-  reapplyEntries(branch.entries);                // re-record → forks the live tail → captureFork keeps it
+  replay(_stops[0]);                             // rewind to the epoch root (replay fires no onFork)
+  reapplyEntries(branch.entries);                // re-record the full branch → forks the live tail → captureFork keeps it
   tick();                                        // merge the re-applied delta into appState
   rebuildStops();                                // recompute _stops/_pos from the now-live 'turn' checkpoints
   rebuildTranscript();
   redrawCompass();
   refreshButtons();
-  notifyBranches();
+  notify();
   saveToStorage();
   return true;
 }
@@ -223,13 +253,38 @@ function rebuildStops() {
 // Snapshot of the current epoch's branches for the picker UI — newest first,
 // metadata only (entries stay internal).
 export function listBranches() {
-  return _branches.map(b => ({ id: b.id, label: b.label, ts: b.ts })).reverse();
+  return _branches.map(b => ({ id: b.id, label: b.label, turns: b.turns, ts: b.ts })).reverse();
 }
 
-// Register the UI refresh callback (ui/branches.js). Called once at boot.
-export function setBranchListener(fn) { _branchListener = fn; }
+// The current branch's turn timeline for the scrubber UI: one node per stop
+// (Start, then each committed turn) with its action label and which is current.
+export function listTimeline() {
+  return _stops.map((_, k) => ({
+    index:   k,
+    label:   k === 0 ? null : (turnLabelBetween(_stops[k - 1], _stops[k]) ?? `Turn ${k}`),
+    current: k === _pos,
+  }));
+}
 
-function notifyBranches() { _branchListener?.(listBranches()); }
+// The player action that opened turn k — the first player line in the first
+// transcript write recorded between two stops.
+function turnLabelBetween(from, to) {
+  for (let i = from; i < to; i++) {
+    const e = spektrumHistory[i];
+    if (e?.path === 'transcript' && Array.isArray(e.value)) {
+      const player = [...e.value].reverse().find(x => x?.role === 'player');
+      if (player?.text) return player.text;
+    }
+  }
+  return null;
+}
+
+// Register a UI refresh callback, fired on every time-travel change (new turn,
+// scrub, branch swap, epoch reset). ui/branches.js + ui/timeline.js subscribe;
+// keeping the registry here avoids an undo→ui import cycle.
+export function onTimeTravelChange(fn) { _listeners.push(fn); }
+
+function notify() { for (const fn of _listeners) fn(); }
 
 function redrawCompass() {
   if (!appState.settings?.actionBar) return;

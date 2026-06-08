@@ -9,7 +9,7 @@ import { reconcilePc }                                                          
 import { initSpeakHover }                                                                   from './ui/transcript.js';
 import { initMicButton }                                                                    from './ui/input.js';
 import { initTimeTravel }                                                                   from './game/undo.js';
-import { initBranchUI }                                                                     from './ui/branches.js';
+import { initTimeline }                                                                     from './ui/timeline.js';
 import { verifyCombatLog }                                                                  from './game/rng.js';
 import * as UI from './ui/console.js';
 import { locale, setLocale, t } from './i18n/i18n.js';
@@ -176,7 +176,7 @@ async function boot() {
   initSpeakHover();
   initMicButton();
   initTimeTravel();
-  initBranchUI();
+  initTimeline();
 
   await ensureKey();
 
