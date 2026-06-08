@@ -633,10 +633,10 @@
   50%       { opacity: 0.5; }
 }
 
-/* ─── Branch picker (Phase 2 time-travel) ────────────────── */
-#input-row { position: relative; }   /* anchor the branch menu above the row */
+/* ─── Timeline panel (time-travel: spine + branches) ─────── */
+#input-row { position: relative; }   /* anchor the timeline panel above the row */
 
-#branch-btn {
+#timeline-btn {
   display: inline-flex;
   align-items: center;
   color: var(--gm);
@@ -647,14 +647,14 @@
   margin-left: 2px;
   color: var(--player);
 }
-#branch-menu {
+#timeline-panel {
   display: none;
   position: absolute;
   bottom: calc(100% + 4px);
   right: 1rem;
-  min-width: 200px;
-  max-width: 340px;
-  max-height: 240px;
+  min-width: 220px;
+  max-width: 360px;
+  max-height: 300px;
   overflow-y: auto;
   background: var(--bg-edge);
   border: 1px solid var(--border);
@@ -663,8 +663,11 @@
   z-index: 50;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
 }
-#branch-menu.open { display: block; }
-.branch-item {
+#timeline-panel.open { display: block; }
+
+/* Spine node (one committed turn). A leading dot marks the rail; the current
+   node fills it and tints the row. */
+.tl-node, .tl-branch {
   display: block;
   width: 100%;
   text-align: left;
@@ -673,14 +676,45 @@
   color: var(--text);
   font-family: var(--font);
   font-size: 13px;
-  padding: 6px 8px;
+  padding: 5px 8px 5px 22px;
   border-radius: 3px;
   cursor: pointer;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  position: relative;
 }
-.branch-item:hover { background: var(--bg-mid); color: var(--player); }
+.tl-node::before {
+  content: '';
+  position: absolute;
+  left: 9px;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  margin-top: -3px;
+  border-radius: 50%;
+  border: 1px solid var(--system);
+}
+.tl-node:hover, .tl-branch:hover { background: var(--bg-mid); color: var(--player); }
+.tl-current { color: var(--player); }
+.tl-current::before { background: var(--player); border-color: var(--player); }
+
+.tl-section {
+  font-size: 11px;
+  color: var(--system);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 8px 8px 4px;
+  border-top: 1px solid var(--border);
+  margin-top: 4px;
+}
+.tl-branch::before {
+  content: '↳';
+  position: absolute;
+  left: 8px;
+  top: 5px;
+  color: var(--system);
+}
 
 /* ─── TTS toggle — sticky in top-right of transcript ────── */
 #tts-toggle {

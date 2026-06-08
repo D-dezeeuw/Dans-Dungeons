@@ -360,7 +360,11 @@ function makeBranching(sp) {
   };
   sp.onFork((fork) => {
     if (!stops.length || fork.forkedAt < stops[0]) return;
-    branches.push({ id: `b${seq++}`, label: labelFork(fork), forkedAt: fork.forkedAt, entries: fork.entries });
+    // Root-relative: store the full branch from the epoch root (shared prefix +
+    // dropped tail), so a swap replays to the always-stable root.
+    const entries = sp.history.slice(stops[0], fork.forkedAt).concat(fork.entries);
+    const turns = entries.filter(e => e.op === 'checkpoint' && e.id === 'turn').length;
+    branches.push({ id: `b${seq++}`, label: labelFork(fork), turns, entries });
   });
   const reapply = (entries) => {
     for (const e of entries) {
@@ -376,7 +380,10 @@ function makeBranching(sp) {
     stops = out; pos = stops.length - 1;
   };
   return {
-    get branches() { return branches.map(b => ({ id: b.id, label: b.label })); },
+    get branches() { return branches.map(b => ({ id: b.id, label: b.label, turns: b.turns })); },
+    get pos() { return pos; },
+    get stopCount() { return stops.length; },
+    undoTo: (k) => { if (k < 0 || k >= stops.length) return false; pos = k; sp.replay(stops[pos]); return true; },
     beginTurn: () => sp.appState.world?.location?.type === 'encounter'
       ? null : { index: sp.history.length, sig: sig() },
     finalizeTurn: (m) => {
@@ -392,7 +399,7 @@ function makeBranching(sp) {
       const idx = branches.findIndex(b => b.id === id);
       if (idx < 0) return false;
       const b = branches.splice(idx, 1)[0];
-      sp.replay(b.forkedAt);
+      sp.replay(stops[0]);          // replay to the ROOT, then re-apply the full branch
       reapply(b.entries);
       sp.tick();
       rebuildStops();
@@ -481,5 +488,45 @@ describe('time-travel branching (mirrors src/game/undo.js Phase 2)', () => {
     tt.jumpToBranch(east);
     assert.ok(sp.appState.transcript.some(e => e.text === 'go east'));
     assert.ok(!sp.appState.transcript.some(e => e.text === 'go west')); // west path gone from the live transcript
+  });
+
+  it('jumps to a DEEP branch correctly after a shallower divergence truncated history (root-relative)', () => {
+    // This is the multi-level case the Phase 3 hardening fixes: a forkedAt-indexed
+    // branch would be left pointing into history a later, shallower swap replaced.
+    const sp = seed();
+    const tt = makeBranching(sp);
+    play(sp, tt, { room: 'room-1', text: 'turn one' });
+    play(sp, tt, { room: 'room-2', text: 'turn two' });
+    play(sp, tt, { room: 'room-3', text: 'turn three' });   // path A, deep
+
+    tt.undo();                                               // back to after turn 2
+    play(sp, tt, { room: 'room-3b', text: 'turn three prime' }); // diverge → branch A (full 1,2,3) captured
+    tt.undo();                                               // back to after turn 1
+    play(sp, tt, { room: 'room-2c', text: 'turn two double' });  // diverge → truncates the turn-2 region
+
+    // Branch A diverged at the DEEP point (after turn 2); the second divergence
+    // truncated/replaced that region. Root-relative entries make it recoverable.
+    const deep = tt.branches.find(b => b.label === 'turn three');
+    assert.ok(deep, 'deep branch A survived');
+    assert.equal(deep.turns, 3);
+    assert.equal(tt.jumpToBranch(deep.id), true);
+    assert.equal(sp.appState.world.currentRoom, 'room-3');   // reconstructed exactly, not corrupted
+    assert.ok(sp.appState.transcript.some(e => e.text === 'turn three'));
+  });
+
+  it('scrubs directly to any turn on the spine and back', () => {
+    const sp = seed();
+    const tt = makeBranching(sp);
+    play(sp, tt, { room: 'room-1', text: 'one' });
+    play(sp, tt, { room: 'room-2', text: 'two' });
+    play(sp, tt, { room: 'room-3', text: 'three' });
+    assert.equal(tt.stopCount, 4);   // root + 3 turns
+
+    assert.equal(tt.undoTo(1), true);                       // jump straight to after turn 1
+    assert.equal(sp.appState.world.currentRoom, 'room-1');
+    assert.equal(tt.undoTo(3), true);                       // jump straight to the head
+    assert.equal(sp.appState.world.currentRoom, 'room-3');
+    assert.equal(tt.undoTo(0), true);                       // jump to the root
+    assert.equal(sp.appState.world.currentRoom, 'room-0');
   });
 });

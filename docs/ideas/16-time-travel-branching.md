@@ -137,13 +137,27 @@ right `forkedAt`/label; swap and assert `appState` + `_stops` match the branch;
 ping-pong twice and assert no entries are lost; assert epoch reset clears
 `_branches`.
 
-## 6. Phase 3 — Visual timeline / branch tree (optional polish)
+## 6. Phase 3 — Visual timeline + branch-model hardening
 
-Read-only view over `checkpoints` (turn nodes on the active branch) + `_branches`
-(divergence stubs). Render a vertical timeline with branch offshoots; clicking a
-turn node scrubs (`replay`), clicking a branch stub swaps. Pure presentation —
-no new state mechanics. Likely a sidebar panel or overlay; reuses the Lucide
-catalog. Defer until Phases 1–2 feel right.
+**Built in [`src/ui/timeline.js`](../../src/ui/timeline.js)** (which replaces the
+Phase 2 branch dropdown — one popup for the whole tree). It renders the current
+run's **spine** (one node per committed turn, labelled by that turn's action,
+current node highlighted; click to scrub) and an **Other timelines** section
+listing the abandoned branches (label + turn count; click to swap). undo.js gains
+`jumpToStop(index)` (scrub to any turn) and `listTimeline()` / `listBranches()`,
+and a single `onTimeTravelChange` listener fires the UI on every change.
+
+This phase was **not** "pure presentation": exposing arbitrary branch jumps
+surfaced a real correctness bug in Phase 2. Branches stored a history *index*
+(`forkedAt`), but swapping to a shallower branch truncates history that a deeper
+branch's index pointed into — a flat ping-pong is fine, a multi-level tree
+corrupts. **Fix: branches are now root-relative.** `captureFork` stores the full
+branch from the epoch root (`history.slice(root, forkedAt)` + the dropped tail),
+and `jumpToBranch` always replays to the always-stable root before re-applying.
+Covered by a dedicated "deep branch after a shallower divergence" test.
+
+i18n of the panel's control labels (English today) is deferred — consistent with
+the other time-travel control chrome.
 
 ## 7. Phase 4 — Persist branches across reload
 
