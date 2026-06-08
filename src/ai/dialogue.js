@@ -51,7 +51,7 @@ export async function npcReply(npc, playerLine, history, opts = {}) {
 
   return chatCompletion({
     tier: 'tiny',
-    max_tokens: 400,
+    maxTokens: 400,
     messages: [
       { role: 'system', content: system },
       { role: 'user',   content: playerLine },

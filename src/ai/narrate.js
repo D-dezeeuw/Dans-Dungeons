@@ -19,7 +19,7 @@ export async function narrateTravel(context) {
     const lang = locale() === 'nl' ? 'Dutch' : 'English';
     return await chatCompletion({
       tier: 'medium',
-      max_tokens: 220,
+      maxTokens: 220,
       messages: [
         { role: 'system', content: t('ai.travelPrompt', { language: lang, context: JSON.stringify(context) }) },
         { role: 'user',   content: t('ai.travelUserMsg') },

@@ -115,7 +115,7 @@ async function polishChapters(rawChapters) {
 
   const result = await chatCompletion({
     tier: 'medium',
-    max_tokens: 6000,
+    maxTokens: 6000,
     messages: [
       { role: 'system', content: t('ai.polishPrompt', { language: locale() === 'nl' ? 'Dutch' : 'English' }) },
       { role: 'user',   content: rawText },

@@ -16,7 +16,7 @@ async function generateWorldSeed(blueprint) {
   const constraints = worldSeedConstraints(blueprint);
   return chatCompletion({
     tier: 'medium',
-    max_tokens: 1000,
+    maxTokens: 1000,
     messages: [
       { role: 'system', content: t('ai.worldSeedPrompt') + constraints },
       { role: 'user',   content: t('ai.worldSeedUserMsg') },
@@ -30,7 +30,7 @@ async function generateWorldSeed(blueprint) {
 async function generateBeats(worldDigest, blueprint) {
   return chatCompletion({
     tier: 'medium',
-    max_tokens: 2000,
+    maxTokens: 2000,
     messages: [
       { role: 'system', content: t('ai.beatsPrompt', { parentDigest: worldDigest }) + beatsHints(blueprint) },
       { role: 'user',   content: t('ai.beatsUserMsg') },
@@ -44,7 +44,7 @@ async function generateBeats(worldDigest, blueprint) {
 async function generateFactions(worldDigest, blueprint) {
   return chatCompletion({
     tier: 'medium',
-    max_tokens: 1200,
+    maxTokens: 1200,
     messages: [
       { role: 'system', content: t('ai.factionsPrompt', { parentDigest: worldDigest }) + factionsHints(blueprint) },
       { role: 'user',   content: t('ai.factionsUserMsg') },
@@ -58,7 +58,7 @@ async function generateFactions(worldDigest, blueprint) {
 export async function generateRegion(parentDigest, blueprint) {
   return chatCompletion({
     tier: 'medium',
-    max_tokens: 800,
+    maxTokens: 800,
     messages: [
       { role: 'system', content: t('ai.regionPrompt', { parentDigest }) + regionHints(blueprint) },
       { role: 'user',   content: t('ai.regionUserMsg') },
@@ -72,7 +72,7 @@ export async function generateRegion(parentDigest, blueprint) {
 export async function generateSettlement(parentDigest, regionId, blueprint) {
   const raw = await chatCompletion({
     tier: 'medium',
-    max_tokens: 3000,
+    maxTokens: 3000,
     messages: [
       { role: 'system', content: t('ai.settlementPrompt', { parentDigest, regionId }) + settlementHints(blueprint) },
       { role: 'user',   content: t('ai.settlementUserMsg') },

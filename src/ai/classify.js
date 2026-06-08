@@ -25,7 +25,7 @@ export async function classify(playerInput, sceneContext) {
 export async function checkBeatFulfilled(beatPurpose, narration) {
   return chatCompletion({
     tier: 'tiny',
-    max_tokens: 120,
+    maxTokens: 120,
     messages: [
       { role: 'system', content: t('ai.beatCheckPrompt', { purpose: beatPurpose }) },
       { role: 'user',   content: narration },

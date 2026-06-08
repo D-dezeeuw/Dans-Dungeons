@@ -154,7 +154,7 @@ LLM-driven autopilot (`src/ai/autoplay.js`):
 | `tts` | Text-to-speech | gemini-3.1-flash-tts |
 | `stt` | Speech-to-text | nvidia/parakeet-tdt |
 
-The `max_tokens` override in `chatCompletion()` opts allows per-call limits (journal uses 4000).
+The `maxTokens` override in `chatCompletion()` opts allows per-call limits (journal uses 4000).
 
 ### Service worker
 
