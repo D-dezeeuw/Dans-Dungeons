@@ -753,3 +753,36 @@ describe('narrow sub-path commits (T1.1)', () => {
     assert.equal(sp.appState.party.pc.sheet.hp.max, 10);            // sibling sheet preserved
   });
 });
+
+// T2.1 — the app's Spektrum instance is created with `snapshotEvery` so replay()
+// (undo/redo/branch-jump) is O(K) not O(n). Snapshots are a transparent
+// accelerator: replay must still reconstruct the exact state at any index. Pin
+// that against the vendored engine so the config can't silently corrupt scrubs.
+describe('replay correctness with snapshotEvery (T2.1)', () => {
+  it('reconstructs the exact state at any boundary, with snapshots enabled', () => {
+    const sp = createSpektrum({ snapshotEvery: 3 });
+    sp.setValue('world.currentRoom', 'room-0');
+    sp.setValue('session.turnCount', 0);
+    sp.tick();
+    const marks = [];
+    for (let t = 1; t <= 12; t++) {
+      marks.push(sp.history.length);
+      sp.setValue('world.currentRoom', 'room-' + t);
+      sp.addValue('session.turnCount', 1);
+      sp.tick();
+    }
+    assert.ok(sp.snapshots.length > 0, 'snapshots were captured');
+
+    sp.replay(marks[5]);                         // before turn 6
+    assert.equal(sp.appState.world.currentRoom, 'room-5');
+    assert.equal(sp.appState.session.turnCount, 5);
+
+    sp.replay(marks[0]);                         // before turn 1
+    assert.equal(sp.appState.world.currentRoom, 'room-0');
+    assert.equal(sp.appState.session.turnCount, 0);
+
+    sp.replay(sp.history.length);                // head
+    assert.equal(sp.appState.world.currentRoom, 'room-12');
+    assert.equal(sp.appState.session.turnCount, 12);
+  });
+});

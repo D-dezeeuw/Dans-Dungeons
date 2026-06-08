@@ -7,22 +7,21 @@
 import { DEFAULT_MODELS } from '../ai/tiers.js';
 import { wrapEnvelope, saveEnvelope, loadEnvelope, makeCommit } from 'bag-of-holding-client';
 
-import {
-  appState,
-  setValue,
-  addValue,
-  watch,
-  addSystem,
-  serialize,
-  computed,
-  run,
-  tick,
-  bindDOM,
-  replay,
-  checkpoint,
-  onFork,
-  history as spektrumHistory,
-} from 'spektrum';
+import { createSpektrum } from 'spektrum';
+
+// One configured engine for the whole app — state.js is the sole 'spektrum'
+// importer (everything else goes through this module). `snapshotEvery` captures a
+// full-state snapshot every K recorded entries, so replay() — which powers
+// undo/redo and branch-jump — costs O(K) instead of O(n) once an epoch has many
+// turns. Snapshots are in-memory only (regenerated as history grows, never
+// persisted), so the only cost is memory.
+const spektrum = createSpektrum({ snapshotEvery: 25 });
+
+const {
+  appState, setValue, addValue, watch, addSystem, serialize, computed, run,
+  tick, bindDOM, replay, checkpoint, onFork,
+} = spektrum;
+const spektrumHistory = spektrum.history;
 
 export { appState, setValue, addValue, watch, addSystem, serialize, computed, run, tick, bindDOM };
 
