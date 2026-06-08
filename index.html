@@ -255,6 +255,10 @@ html.styles-loaded #brand-bar {
           <span class="ab-toggle-label">Last turn</span>
           <button id="debug-bar-toggle" :ariaPressed="ui.debugBarActive" aria-pressed="false" aria-label="Toggle last turn panel" title="Show last turn debug info below the action bar">{{ui.debugBarLabel}}</button>
         </div>
+        <div id="verify-row">
+          <span class="ab-toggle-label">Seeded rolls</span>
+          <button id="verify-rolls-btn" aria-label="Verify seeded combat rolls" title="Replay the recorded combat rolls from the seed and confirm they all reproduce">Verify</button>
+        </div>
         <div id="export-zone">
           <div class="export-zone-label">Export / Import</div>
           <div id="export-tiles">

@@ -70,6 +70,11 @@
     "minutesAgo": "{{n}}m ago",
     "hoursAgo": "{{n}}h ago"
   },
+  "audit": {
+    "ok": "✓ {{n}} combat rolls verified — reproducible from the seed.",
+    "empty": "No seeded combat rolls recorded yet.",
+    "diverged": "✗ Roll audit failed — diverged at entry {{i}}."
+  },
   "transcript": {
     "thinking": "The Dungeon Master considers…",
     "readAloud": "Read aloud"

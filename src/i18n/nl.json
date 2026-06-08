@@ -70,6 +70,11 @@
     "minutesAgo": "{{n}}m geleden",
     "hoursAgo": "{{n}}u geleden"
   },
+  "audit": {
+    "ok": "✓ {{n}} gevechtsworpen geverifieerd — reproduceerbaar vanaf de seed.",
+    "empty": "Nog geen geseede gevechtsworpen vastgelegd.",
+    "diverged": "✗ Worp-audit mislukt — afwijking bij item {{i}}."
+  },
   "transcript": {
     "thinking": "De Dungeon Master overdenkt…",
     "readAloud": "Voorlezen"
