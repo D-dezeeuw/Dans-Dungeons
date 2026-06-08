@@ -411,6 +411,7 @@
     "sketchesOf": "Sketches of {{name}}",
     "imported": "Imported save: {{file}}",
     "importFail": "Failed to import — file is not a valid save.",
+    "exported": "Saved game exported: {{file}}",
     "adventureBegins": "The Adventure Begins",
     "journalOf": "Journal of {{name}}",
     "subtitle": "A {{class}} — Dan's Dungeons"

@@ -5,7 +5,7 @@
 // always predictable regardless of restore order.
 
 import { DEFAULT_MODELS } from '../ai/tiers.js';
-import { saveEnvelope, loadEnvelope, makeCommit } from 'bag-of-holding-client';
+import { wrapEnvelope, saveEnvelope, loadEnvelope, makeCommit } from 'bag-of-holding-client';
 
 import {
   appState,
@@ -135,6 +135,12 @@ const PERSIST_KEYS = ['session', 'ai', 'party', 'world', 'flags', 'transcript', 
 // Ordered v→v+1 migrations for saved-state shape changes. Empty today.
 const SAVE_MIGRATIONS = {};
 
+// The persisted slice of appState (the single source of the save shape, shared
+// by the localStorage save and the downloadable save file).
+function pickPersisted() {
+  return Object.fromEntries(PERSIST_KEYS.map(k => [k, appState[k]]));
+}
+
 export function saveToStorage() {
   if (!saveEnvelope(localStorage, SAVE_KEY, appState, SAVE_VERSION, { pick: PERSIST_KEYS })) {
     console.warn('[state] localStorage save failed');
@@ -146,6 +152,20 @@ export function loadFromStorage() {
     migrations:     SAVE_MIGRATIONS,
     currentVersion: SAVE_VERSION,
   });
+}
+
+// Serialize the persisted state as a versioned-envelope JSON string for a
+// downloadable save file. Same { v, data } shape as the localStorage save, so a
+// file and a browser save are interchangeable.
+export function serializeSave() {
+  return JSON.stringify(wrapEnvelope(pickPersisted(), SAVE_VERSION), null, 2);
+}
+
+// Parse a save file's text — envelope-aware, so it accepts both new versioned
+// envelopes and legacy bare snapshots (which load as version 0 and migrate
+// forward). Returns the unwrapped, migrated data, or null if unparseable.
+export function parseSave(raw) {
+  return loadEnvelope(raw, { migrations: SAVE_MIGRATIONS, currentVersion: SAVE_VERSION });
 }
 
 export function clearSave() {

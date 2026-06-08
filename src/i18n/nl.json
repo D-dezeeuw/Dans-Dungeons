@@ -411,6 +411,7 @@
     "sketchesOf": "Schetsen van {{name}}",
     "imported": "Opgeslagen spel geïmporteerd: {{file}}",
     "importFail": "Importeren mislukt — bestand is geen geldig opgeslagen spel.",
+    "exported": "Opgeslagen spel geëxporteerd: {{file}}",
     "adventureBegins": "Het Avontuur Begint",
     "journalOf": "Dagboek van {{name}}",
     "subtitle": "Een {{class}} — Dan's Dungeons"
