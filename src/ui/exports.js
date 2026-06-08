@@ -101,7 +101,7 @@ export function handleImportFile(e) {
       // Reconstruct undo/redo + branches if the file carried them; failsafe
       // re-restores the plain state so a bad blob never breaks the import.
       if (snap._timeTravel && appState.session?.phase === 'play') {
-        if (!importTimeTravel(snap._timeTravel)) restoreState(snap);
+        if (!importTimeTravel(snap._timeTravel, snap)) restoreState(snap);
       }
       commit();
       appendEntry('system', t('exports.imported', { file: file.name }));

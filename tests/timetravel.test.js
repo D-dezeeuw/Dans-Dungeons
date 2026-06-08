@@ -593,7 +593,7 @@ function makePersistable(sp) {
       const head = stops[stops.length - 1];
       return { pos, root, spine: sp.history.slice(stops[0], head), branches: branches.map(b => ({ label: b.label, turns: b.turns, entries: b.entries })) };
     },
-    importTT: (tt) => {
+    importTT: (tt, expected) => {
       restore(tt.root); sp.tick();
       const r = sp.history.length;
       reapply(tt.spine); sp.tick();
@@ -601,6 +601,15 @@ function makePersistable(sp) {
       branches = tt.branches.map(b => ({ id: `b${seq++}`, label: b.label, turns: b.turns, entries: b.entries }));
       pos = Math.min(tt.pos, stops.length - 1);
       sp.replay(stops[pos]);
+      // Consistency guard (mirrors matchesSaved in undo.js): the reconstructed
+      // live state must match the saved snapshot, else discard the rebuild.
+      if (expected && (
+        sp.appState.world?.currentRoom        !== expected.world?.currentRoom ||
+        (sp.appState.session?.turnCount ?? 0) !== (expected.session?.turnCount ?? 0) ||
+        (sp.appState.transcript?.length ?? 0) !== (expected.transcript?.length ?? 0))) {
+        stops = []; pos = 0; branches = [];
+        return false;
+      }
       return true;
     },
   };
@@ -662,6 +671,24 @@ describe('time-travel persistence (mirrors src/game/undo.js Phase 4)', () => {
     assert.equal(tt.exportTT(), null);
     play(sp, tt, { room: 'room-1', text: 'one step' });
     assert.ok(tt.exportTT(), 'one committed turn is persistable');
+  });
+
+  it('accepts a faithful reconstruction but rejects one that diverges from the saved state (T1.5)', () => {
+    const sp1 = seedWorld();
+    const tt1 = makePersistable(sp1);
+    play(sp1, tt1, { room: 'room-1', text: 'go north' });
+    play(sp1, tt1, { room: 'room-2', text: 'onward' });
+    const blob  = tt1.exportTT();
+    const saved = { world: { currentRoom: 'room-2' }, session: { turnCount: 2 }, transcript: sp1.appState.transcript };
+
+    const spA = seedWorld(), ttA = makePersistable(spA);
+    assert.equal(ttA.importTT(blob, saved), true);                 // faithful → accepted
+    assert.equal(spA.appState.world.currentRoom, 'room-2');
+
+    const spB = seedWorld(), ttB = makePersistable(spB);
+    const wrong = { ...saved, world: { currentRoom: 'room-WRONG' } };
+    assert.equal(ttB.importTT(blob, wrong), false);                // diverged → rejected (caller falls back)
+    assert.equal(ttB.branches.length, 0);                          // history discarded on rejection
   });
 });
 
