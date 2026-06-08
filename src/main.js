@@ -8,7 +8,7 @@ import { startNewGame, resumeGame, ensureKey, applySketchView, upgradeToDeluxe, 
 import { reconcilePc }                                                                        from './game/character.js';
 import { initSpeakHover }                                                                   from './ui/transcript.js';
 import { initMicButton }                                                                    from './ui/input.js';
-import { initTimeTravel }                                                                   from './game/undo.js';
+import { initTimeTravel, importTimeTravel }                                                 from './game/undo.js';
 import { initTimeline }                                                                     from './ui/timeline.js';
 import { verifyCombatLog }                                                                  from './game/rng.js';
 import * as UI from './ui/console.js';
@@ -129,8 +129,9 @@ async function boot() {
   initState();
 
   const save = loadFromStorage();
+  const savedTimeTravel = save?._timeTravel ?? null;   // reconstructed after initTimeTravel (below)
   if (save) {
-    restoreState(save);
+    restoreState(save);   // skips _timeTravel internally
     // Re-derive the sheet from the record — never trust the persisted sheet,
     // which may have been produced by an older rules engine.
     if (appState.party?.pc) setValue('party.pc', reconcilePc(appState.party.pc));
@@ -177,6 +178,17 @@ async function boot() {
   initMicButton();
   initTimeTravel();
   initTimeline();
+
+  // Reconstruct the time-travel epoch (undo/redo + branches) from the save, so it
+  // survives a reload. Failsafe: on any malformed/oversized blob, re-establish the
+  // plain saved state — basic load is never blocked by time-travel.
+  if (savedTimeTravel && appState.session?.phase === 'play') {
+    if (!importTimeTravel(savedTimeTravel)) {
+      restoreState(save);
+      tick();
+      if (appState.party?.pc) setValue('party.pc', reconcilePc(appState.party.pc));
+    }
+  }
 
   await ensureKey();
 

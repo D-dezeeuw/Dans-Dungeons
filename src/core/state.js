@@ -119,12 +119,21 @@ export function initState() {
   }
 }
 
-// Restore a previously saved snapshot (top-level keys only).
+// Restore a previously saved snapshot (top-level keys only). The `_timeTravel`
+// blob is NOT appState — it's reconstructed separately by game/undo.js — so it's
+// skipped here to keep it out of the reactive store (and out of history).
 export function restoreState(snapshot) {
   for (const [key, value] of Object.entries(snapshot)) {
+    if (key === '_timeTravel') continue;
     setValue(key, value);
   }
 }
+
+// game/undo.js registers a provider that returns the serializable time-travel
+// blob for the current epoch (or null). Inverted dependency: state.js never
+// imports undo.js, avoiding a cycle. Saves embed the blob under `_timeTravel`.
+let _timeTravelProvider = null;
+export function setTimeTravelProvider(fn) { _timeTravelProvider = fn; }
 
 // ─── Persistence ─────────────────────────────────────────────────────────────
 // Saves are versioned envelopes ({ v, data }) via the client library, so future
@@ -134,20 +143,32 @@ export function restoreState(snapshot) {
 // through — adding versioning never strands an existing save.
 
 const SAVE_KEY     = 'dans-dungeons';
-const SAVE_VERSION = 1;
+const SAVE_VERSION = 2;
 // Persisted top-level paths (ui is transient and rebuilt on load).
 const PERSIST_KEYS = ['session', 'ai', 'party', 'world', 'flags', 'transcript', 'settings'];
-// Ordered v→v+1 migrations for saved-state shape changes. Empty today.
-const SAVE_MIGRATIONS = {};
+// Ordered v→v+1 migrations for saved-state shape changes. v1→v2 added the
+// optional `_timeTravel` blob; v1 saves simply lack it (load as no history), so
+// the migration is an identity pass — it just records that the bump is benign.
+const SAVE_MIGRATIONS = {
+  1: (data) => data,
+};
 
 // The persisted slice of appState (the single source of the save shape, shared
-// by the localStorage save and the downloadable save file).
-function pickPersisted() {
+// by the localStorage save and the downloadable save file). Optionally carries
+// the time-travel blob (game/undo.js) under `_timeTravel`.
+export function pickPersisted() {
   return Object.fromEntries(PERSIST_KEYS.map(k => [k, appState[k]]));
 }
 
+function buildSaveSnapshot() {
+  const snap = pickPersisted();
+  const tt = _timeTravelProvider?.();
+  if (tt) snap._timeTravel = tt;
+  return snap;
+}
+
 export function saveToStorage() {
-  if (!saveEnvelope(localStorage, SAVE_KEY, appState, SAVE_VERSION, { pick: PERSIST_KEYS })) {
+  if (!saveEnvelope(localStorage, SAVE_KEY, buildSaveSnapshot(), SAVE_VERSION)) {
     console.warn('[state] localStorage save failed');
   }
 }
@@ -163,7 +184,7 @@ export function loadFromStorage() {
 // downloadable save file. Same { v, data } shape as the localStorage save, so a
 // file and a browser save are interchangeable.
 export function serializeSave() {
-  return JSON.stringify(wrapEnvelope(pickPersisted(), SAVE_VERSION), null, 2);
+  return JSON.stringify(wrapEnvelope(buildSaveSnapshot(), SAVE_VERSION), null, 2);
 }
 
 // Parse a save file's text — envelope-aware, so it accepts both new versioned
