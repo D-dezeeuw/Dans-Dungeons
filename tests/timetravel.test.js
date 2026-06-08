@@ -690,6 +690,30 @@ describe('time-travel persistence (mirrors src/game/undo.js Phase 4)', () => {
     assert.equal(ttB.importTT(blob, wrong), false);                // diverged → rejected (caller falls back)
     assert.equal(ttB.branches.length, 0);                          // history discarded on rejection
   });
+
+  it('captures a story flag recorded BEFORE the boundary, but not one recorded after (trailing-flag fix)', () => {
+    // loop.js now records the turn's flag writes BEFORE finalizeTurn, so they fall
+    // inside the boundary and survive a reload. A write after finalizeTurn would
+    // land outside the spine — the bug this ordering avoids.
+    const playWithFlag = (afterBoundary) => {
+      const sp = seedWorld(), tt = makePersistable(sp);
+      const m = tt.beginTurn();
+      sp.setValue('world.currentRoom', 'room-1');
+      sp.addValue('session.turnCount', 1);
+      sp.setValue('transcript', [...sp.appState.transcript, { role: 'player', text: 'slay the boss', turn: 0 }, { role: 'gm', text: 'the boss falls', turn: 0 }]);
+      if (!afterBoundary) { sp.setValue('world.redThread', { flags: { bossSlain: true } }); }
+      sp.tick();
+      tt.finalizeTurn(m);
+      if (afterBoundary) { sp.setValue('world.redThread', { flags: { bossSlain: true } }); sp.tick(); }
+      // round-trip into a fresh store
+      const fresh = seedWorld(), ttF = makePersistable(fresh);
+      ttF.importTT(tt.exportTT());
+      return fresh.appState.world.redThread?.flags?.bossSlain;
+    };
+
+    assert.equal(playWithFlag(false), true);          // flag before the boundary → survives the reload
+    assert.notEqual(playWithFlag(true), true);        // flag after the boundary → lost (the avoided bug)
+  });
 });
 
 // T1.1 — narrowing commitAll/commitDownTurn from whole-`world`/`party` writes to
