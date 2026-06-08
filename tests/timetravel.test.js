@@ -336,3 +336,150 @@ describe('time-travel undo/redo cursor model (mirrors src/game/undo.js Phase 1)'
     assert.equal(sp.appState.world.currentRoom, 'room-1');  // state NOT rewound from town
   });
 });
+
+// Phase 2 — branch capture + swap. Mirrors the branch machinery in
+// src/game/undo.js: an onFork handler captures abandoned tails (epoch-scoped,
+// labelled by the action that started the path), and jumpToBranch() replays to
+// the divergence point and re-records a branch's entries — which forks (and so
+// re-captures) the path being left.
+function makeBranching(sp) {
+  let stops = [], pos = 0, epochSig = null;
+  let branches = [], seq = 0;
+  const sig = () => {
+    const loc = sp.appState.world?.location ?? {};
+    return `${loc.type ?? ''}|${loc.dungeonId ?? ''}|${loc.settlementId ?? ''}`;
+  };
+  const labelFork = (fork) => {
+    for (const e of fork.entries) {
+      if (e.path === 'transcript' && Array.isArray(e.value)) {
+        const p = [...e.value].reverse().find(x => x?.role === 'player');
+        if (p?.text) return p.text;
+      }
+    }
+    return 'an earlier path';
+  };
+  sp.onFork((fork) => {
+    if (!stops.length || fork.forkedAt < stops[0]) return;
+    branches.push({ id: `b${seq++}`, label: labelFork(fork), forkedAt: fork.forkedAt, entries: fork.entries });
+  });
+  const reapply = (entries) => {
+    for (const e of entries) {
+      if (e.op === 'checkpoint') sp.checkpoint(e.id, e.value);
+      else if (e.op === 'add')   sp.addValue(e.path, e.value, e.id);
+      else                       sp.setValue(e.path, e.value, e.id);
+    }
+  };
+  const rebuildStops = () => {
+    const root = stops[0] ?? 0;
+    const out = [root];
+    sp.history.forEach((e, i) => { if (e.op === 'checkpoint' && e.id === 'turn' && i >= root) out.push(i + 1); });
+    stops = out; pos = stops.length - 1;
+  };
+  return {
+    get branches() { return branches.map(b => ({ id: b.id, label: b.label })); },
+    beginTurn: () => sp.appState.world?.location?.type === 'encounter'
+      ? null : { index: sp.history.length, sig: sig() },
+    finalizeTurn: (m) => {
+      if (!m) return;
+      if (!stops.length || epochSig !== m.sig) { epochSig = m.sig; stops = [m.index]; pos = 0; }
+      else if (pos < stops.length - 1) { stops.length = pos + 1; }
+      sp.checkpoint('turn');
+      stops.push(sp.history.length);
+      pos = stops.length - 1;
+    },
+    undo: () => { if (pos <= 0) return false; pos -= 1; sp.replay(stops[pos]); return true; },
+    jumpToBranch: (id) => {
+      const idx = branches.findIndex(b => b.id === id);
+      if (idx < 0) return false;
+      const b = branches.splice(idx, 1)[0];
+      sp.replay(b.forkedAt);
+      reapply(b.entries);
+      sp.tick();
+      rebuildStops();
+      return true;
+    },
+  };
+}
+
+describe('time-travel branching (mirrors src/game/undo.js Phase 2)', () => {
+  function seed() {
+    const sp = createSpektrum();
+    sp.setValue('world.location', { type: 'dungeon', dungeonId: 'd1' });
+    sp.setValue('world.currentRoom', 'room-0');
+    sp.setValue('session.turnCount', 0);
+    sp.setValue('transcript', []);
+    sp.tick();
+    return sp;
+  }
+  function play(sp, tt, { room, text }) {
+    const m = tt.beginTurn();
+    sp.setValue('world.currentRoom', room);
+    sp.addValue('session.turnCount', 1);
+    sp.setValue('transcript', [
+      ...sp.appState.transcript,
+      { role: 'player', text, turn: 0 },
+      { role: 'gm',     text: `narration for "${text}"`, turn: 0 },
+    ]);
+    sp.tick();
+    tt.finalizeTurn(m);
+  }
+
+  it('captures the abandoned path as a labelled branch on divergence', () => {
+    const sp = seed();
+    const tt = makeBranching(sp);
+    play(sp, tt, { room: 'room-east', text: 'go east' });
+    assert.equal(tt.undo(), true);                          // back to the root
+    assert.equal(tt.branches.length, 0);
+    play(sp, tt, { room: 'room-west', text: 'go west' });   // diverge onto a new path
+    assert.equal(sp.appState.world.currentRoom, 'room-west');
+    assert.equal(tt.branches.length, 1);
+    assert.equal(tt.branches[0].label, 'go east');          // the path not taken, labelled
+  });
+
+  it('jumps onto an abandoned branch and re-captures the path left behind', () => {
+    const sp = seed();
+    const tt = makeBranching(sp);
+    play(sp, tt, { room: 'room-east', text: 'go east' });
+    tt.undo();
+    play(sp, tt, { room: 'room-west', text: 'go west' });
+    const east = tt.branches.find(b => b.label === 'go east');
+    assert.ok(east, 'east path captured');
+
+    assert.equal(tt.jumpToBranch(east.id), true);
+    assert.equal(sp.appState.world.currentRoom, 'room-east'); // swapped onto the east path
+    assert.equal(tt.branches.length, 1);
+    assert.equal(tt.branches[0].label, 'go west');           // the west path is now the alternative
+  });
+
+  it('ping-pongs between two branches without losing either', () => {
+    const sp = seed();
+    const tt = makeBranching(sp);
+    play(sp, tt, { room: 'room-east', text: 'go east' });
+    tt.undo();
+    play(sp, tt, { room: 'room-west', text: 'go west' });
+
+    const east = tt.branches.find(b => b.label === 'go east').id;
+    assert.equal(tt.jumpToBranch(east), true);
+    assert.equal(sp.appState.world.currentRoom, 'room-east');
+
+    const west = tt.branches.find(b => b.label === 'go west').id;
+    assert.equal(tt.jumpToBranch(west), true);
+    assert.equal(sp.appState.world.currentRoom, 'room-west');
+    assert.equal(tt.branches.length, 1);                     // always exactly one alternative
+    assert.equal(tt.branches[0].label, 'go east');
+  });
+
+  it('restores the full transcript when swapping branches', () => {
+    const sp = seed();
+    const tt = makeBranching(sp);
+    play(sp, tt, { room: 'room-east', text: 'go east' });
+    tt.undo();
+    play(sp, tt, { room: 'room-west', text: 'go west' });
+    assert.ok(sp.appState.transcript.some(e => e.text === 'go west'));
+
+    const east = tt.branches.find(b => b.label === 'go east').id;
+    tt.jumpToBranch(east);
+    assert.ok(sp.appState.transcript.some(e => e.text === 'go east'));
+    assert.ok(!sp.appState.transcript.some(e => e.text === 'go west')); // west path gone from the live transcript
+  });
+});

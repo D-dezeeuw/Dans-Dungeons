@@ -633,6 +633,55 @@
   50%       { opacity: 0.5; }
 }
 
+/* ─── Branch picker (Phase 2 time-travel) ────────────────── */
+#input-row { position: relative; }   /* anchor the branch menu above the row */
+
+#branch-btn {
+  display: inline-flex;
+  align-items: center;
+  color: var(--gm);
+}
+.branch-count {
+  font-size: 10px;
+  font-weight: bold;
+  margin-left: 2px;
+  color: var(--player);
+}
+#branch-menu {
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 4px);
+  right: 1rem;
+  min-width: 200px;
+  max-width: 340px;
+  max-height: 240px;
+  overflow-y: auto;
+  background: var(--bg-edge);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 4px;
+  z-index: 50;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+}
+#branch-menu.open { display: block; }
+.branch-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 13px;
+  padding: 6px 8px;
+  border-radius: 3px;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.branch-item:hover { background: var(--bg-mid); color: var(--player); }
+
 /* ─── TTS toggle — sticky in top-right of transcript ────── */
 #tts-toggle {
   position: sticky;
