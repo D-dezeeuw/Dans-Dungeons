@@ -9,11 +9,9 @@ import { getSkills, classAbilities } from './chips.js';
 import { t } from '../i18n/i18n.js';
 
 export function registerReactiveSidebar() {
-  computed('ui.costDisplay', ['ai.totalTokens', 'ai.totalCostUsd'], (s) => {
-    const tokens = s.ai?.totalTokens ?? 0;
-    const cost   = s.ai?.totalCostUsd ?? 0;
-    return tokens > 0 ? '$' + cost.toFixed(4) + ' · ' + tokens.toLocaleString() + ' tok' : '';
-  });
+  // NOTE: the cost meter is driven imperatively from real cumulative spend
+  // (src/ai/spend.js + initSpendMeter in main.js), NOT a reactive computed —
+  // that figure lives outside Spektrum history so undo can't rewind it.
 
   // Boolean flags that drive data-if visibility on the two chrome stat rows.
   computed('ui.pcStatsVisible',   ['party.pc'], (s) => !!(s.party?.pc?.record && s.party?.pc?.sheet));

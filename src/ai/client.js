@@ -9,6 +9,7 @@ import { appState, addValue } from '../core/state.js';
 import { checkKey as libCheckKey, call as libCall, chatStream,
          repairJson as libRepair, chatCompletion as libChat } from 'bag-of-holding-client';
 import { DEFAULT_MODELS, FREE_FALLBACKS } from './tiers.js';
+import { addSpend } from './spend.js';
 
 const APP_TITLE = "Dan's Dungeons";
 
@@ -26,8 +27,10 @@ export function aiConfig() {
     fallbacks:     FREE_FALLBACKS,
     appTitle:      APP_TITLE,
     referer:       location.origin,
-    onTokens:      (n) => addValue('ai.totalTokens', n),
-    onCost:        (usd) => addValue('ai.totalCostUsd', usd),
+    // addValue → per-timeline cost (recorded; rewound by undo). addSpend → real
+    // cumulative spend (out of history; survives undo + reload; drives the meter).
+    onTokens:      (n)   => { addValue('ai.totalTokens', n);     addSpend(n, 0); },
+    onCost:        (usd) => { addValue('ai.totalCostUsd', usd);  addSpend(0, usd); },
   };
 }
 const cfg = aiConfig;
