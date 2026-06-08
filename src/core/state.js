@@ -20,16 +20,19 @@ import {
   bindDOM,
   replay,
   checkpoint,
+  onFork,
   history as spektrumHistory,
 } from 'spektrum';
 
 export { appState, setValue, addValue, watch, addSystem, serialize, computed, run, tick, bindDOM };
 
-// Time-travel surface (used by game/undo.js for single-step turn rollback).
+// Time-travel surface (used by game/undo.js for undo/redo + branching).
 // `spektrumHistory` is the live, append-only mutation log; `replay(n)` rebuilds
 // the state after the first n entries; `checkpoint()` records a tagged,
-// state-less marker that replay walks past unchanged.
-export { replay, checkpoint, spektrumHistory };
+// state-less marker that replay walks past unchanged; `onFork(fn)` fires with
+// the dropped history tail whenever a mutation while scrubbed back diverges the
+// timeline — the hook the branch registry listens on.
+export { replay, checkpoint, onFork, spektrumHistory };
 
 // ─── Default shape ───────────────────────────────────────────────────────────
 
