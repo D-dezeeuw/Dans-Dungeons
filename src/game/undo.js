@@ -229,19 +229,32 @@ function labelFork(fork) {
 // Swap the live state onto a stored branch. Replays to the epoch ROOT (always
 // stable — never truncated) and re-records the branch's full root-relative
 // entries; that re-record forks (and captureFork keeps) the path being left, so
-// hops are symmetric and safe at any tree depth. Refuses mid-turn or across a
-// world swap, mirroring undo/redo. Returns false when the id is unknown/refused.
+// hops are symmetric and safe at any tree depth. Lands at the DIVERGENCE POINT
+// between the target branch and the path being left, NOT the branch head — so
+// the target's continuation is the navigable "future" (redo) and the shared
+// prefix is the "past" (undo). This makes the timeline a tree: at a fork you can
+// switch which future is active and explore it in both directions. Refuses
+// mid-turn or across a world swap, mirroring undo/redo.
 export function jumpToBranch(id) {
   const idx = _branches.findIndex(b => b.id === id);
   if (idx < 0) return false;
   if (document.getElementById('cmd')?.disabled) return false;
   if (_epochSig !== contextSig()) { clearTurnMarks(); return false; }
 
+  // The full path we're leaving (root→head), captured before the swap, to find
+  // where the target branch first diverges from it.
+  const prevPath = spektrumHistory.slice(_stops[0], _stops[_stops.length - 1]);
+
   const branch = _branches.splice(idx, 1)[0];   // consumed; the path we leave is re-captured by captureFork
   replay(_stops[0]);                             // rewind to the epoch root (replay fires no onFork)
   reapplyEntries(branch.entries);                // re-record the full branch → forks the live tail → captureFork keeps it
   tick();                                        // merge the re-applied delta into appState
-  rebuildStops();                                // recompute _stops/_pos from the now-live 'turn' checkpoints
+  rebuildStops();                                // _stops = the target branch's boundaries (lands _pos at head)
+
+  // Re-position at the fork so the branch's later turns stay ahead as future.
+  _pos = Math.min(commonTurnPrefix(branch.entries, prevPath), _stops.length - 1);
+  replay(_stops[_pos]);                          // move live state from the head back to the divergence point
+
   rebuildTranscript();
   redrawCompass();
   onScrub();                                     // scene image + journal follow the swapped-in branch
@@ -249,6 +262,24 @@ export function jumpToBranch(id) {
   notify();
   saveToStorage();
   return true;
+}
+
+// Number of leading turns the two entry lists share, i.e. the turn index of the
+// divergence point. Walks entries until the first mismatch, then counts the
+// 'turn' checkpoints passed. The shared turns are the same recorded turns (same
+// mutations), so a structural compare is exact.
+function commonTurnPrefix(a, b) {
+  let i = 0;
+  const len = Math.min(a.length, b.length);
+  while (i < len && entriesEqual(a[i], b[i])) i++;
+  let turns = 0;
+  for (let j = 0; j < i; j++) if (a[j].op === 'checkpoint' && a[j].id === 'turn') turns++;
+  return turns;
+}
+
+function entriesEqual(x, y) {
+  return x && y && x.op === y.op && x.path === y.path
+    && JSON.stringify(x.value) === JSON.stringify(y.value);
 }
 
 // Re-record a dropped tail's entries onto the live timeline (used by the swap).
