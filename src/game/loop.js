@@ -8,7 +8,7 @@
 // flow.js calls checkApiKey() and generateTurnImage() here so those modules
 // never import AI layers directly either.
 
-import { appState, addValue, saveToStorage, tick, commit } from '../core/state.js';
+import { appState, addValue, tick, commit } from '../core/state.js';
 import { classify, checkBeatFulfilled }       from '../ai/classify.js';
 import { narrate, generateSceneImage }       from '../ai/narrate.js';
 import { checkKey }                          from '../ai/client.js';
@@ -138,31 +138,31 @@ export async function processTurn(playerInput, onNarrationChunk) {
     onNarrationChunk,
   );
 
-  // 5. Commit everything to Spektrum.
+  // 5. Commit the turn's mechanics, then tick so they're live in appState —
+  //    the story-flag writes below spread the whole `world`, so they must build
+  //    on the already-merged mechanics (not clobber them).
   commitAll(resolved, goblinResult);
   appendTranscript(playerInput, narratorResp.narration);
   addValue('session.turnCount', 1);
   commitRoller(roller);   // advance the seeded stream's cursor + append the roll log (recorded state)
+  tick();
 
-  // Turn committed — now register the undo mark (a throw above never reaches here).
-  finalizeTurn(turnMark);
-
-  // 6. Autosave. tick() merges this turn's deltas into appState first, so the
-  //    save reflects the turn just resolved (not the previous one).
-  commit();
-
-  // 7. Narrative engine (Phase 4): raise flags for this turn's events and let
-  //    the red thread advance if the narration fulfilled the current beat. These
-  //    run after the step-6 save (they depend on the resolved narration), so the
-  //    second save persists any flag/beat change before the player can reload.
-  let storyChanged = false;
+  // 6. Narrative engine (Phase 4): raise flags for this turn's events and let the
+  //    red thread advance if the narration fulfilled the current beat. These are
+  //    recorded writes, run BEFORE finalizeTurn so they fall INSIDE this turn's
+  //    undo boundary — otherwise the last turn's flags land after the boundary
+  //    and a reload's spine (and an undo/redo to this turn) would miss them.
+  //    (Each self-ticks; maybeAdvanceBeat is best-effort.)
   if (killedNpc) {
     setStoryFlag('enemy-slain');
     if (killedNpc.isBoss) setStoryFlag(`boss-${killedNpc.creatureId ?? 'boss'}-slain`);
-    storyChanged = true;
   }
-  if (await maybeAdvanceBeat(narratorResp.narration)) storyChanged = true;
-  if (storyChanged) saveToStorage();
+  await maybeAdvanceBeat(narratorResp.narration);
+
+  // 7. Turn fully committed (mechanics + flags) — register the undo boundary (a
+  //    throw above never reaches here) and autosave once.
+  finalizeTurn(turnMark);
+  commit();
 
   return { ...narratorResp, _debug: { classified, resolved, goblinResult } };
 }
