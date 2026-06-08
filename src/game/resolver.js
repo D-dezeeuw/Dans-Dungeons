@@ -223,16 +223,11 @@ export function resolveDownTurn(roller = plainRoller()) {
   };
 }
 
-// Commit a resolved down-turn to the PC record.
+// Commit a resolved down-turn to the PC record. Narrow path (party.pc.record)
+// so the recorded history entry is the small record object, not the whole party.
 export function commitDownTurn(down) {
   const prev = appState.party.pc.record;
-  setValue('party', {
-    ...appState.party,
-    pc: {
-      ...appState.party.pc,
-      record: { ...prev, hpCurrent: down.hp, deathSaves: down.deathSaves, conditions: down.conditions },
-    },
-  });
+  setValue('party.pc.record', { ...prev, hpCurrent: down.hp, deathSaves: down.deathSaves, conditions: down.conditions });
 }
 
 // ─── State commits ────────────────────────────────────────────────────────────
@@ -247,45 +242,42 @@ export function commitAll(resolved, goblinResult) {
   if (resolved.intent === 'skill') cooldowns[resolved.skill] = 3;
   setValue('session.skillCooldowns', cooldowns);
 
+  // Every write below targets the smallest sub-path that actually changes, NOT
+  // the whole `world`/`party` object. Spektrum deep-merges sub-path deltas (and
+  // replaces arrays), so readers see the full merged map while each recorded
+  // history entry stays tiny — keeping saved time-travel history small and fast.
+  // (Dungeon ids are dot-free: room-N, boss, enemy-N — safe as path segments.)
+
   // Movement
   if (resolved.intent === 'move' && resolved.newRoomId) {
-    setValue('world', { ...appState.world, currentRoom: resolved.newRoomId });
+    setValue('world.currentRoom', resolved.newRoomId);
   }
 
   // Item pickup
   if (resolved.intent === 'take') {
-    const roomId  = appState.world.currentRoom;
-    const picked  = appState.world.rooms[roomId].loot.find(i => i.id === resolved.itemId);
-    const rooms   = { ...appState.world.rooms };
-    rooms[roomId] = {
-      ...rooms[roomId],
-      loot: rooms[roomId].loot.map(i => i.id === resolved.itemId ? { ...i, taken: true } : i),
-    };
-    setValue('world',  { ...appState.world, rooms });
-    setValue('party',  { ...appState.party, inventory: [...(appState.party?.inventory ?? []), picked] });
+    const roomId = appState.world.currentRoom;
+    const loot   = appState.world.rooms[roomId].loot;
+    const picked = loot.find(i => i.id === resolved.itemId);
+    setValue('world.rooms.' + roomId + '.loot', loot.map(i => i.id === resolved.itemId ? { ...i, taken: true } : i));
+    setValue('party.inventory', [...(appState.party?.inventory ?? []), picked]);
   }
 
   // Unlock door
   if (resolved.intent === 'unlock') {
-    const roomId  = appState.world.currentRoom;
-    const rooms   = { ...appState.world.rooms };
-    rooms[roomId] = {
-      ...rooms[roomId],
-      exits: rooms[roomId].exits.map(e => e.dir === resolved.exitDir ? { ...e, locked: false } : e),
-    };
-    setValue('world', { ...appState.world, rooms });
+    const roomId = appState.world.currentRoom;
+    const exits  = appState.world.rooms[roomId].exits;
+    setValue('world.rooms.' + roomId + '.exits', exits.map(e => e.dir === resolved.exitDir ? { ...e, locked: false } : e));
   }
 
   // NPC state
   if (resolved.intent === 'attack' && resolved.hit) {
-    const npcs = { ...appState.world?.npcs };
-    npcs[resolved.targetId] = {
-      ...npcs[resolved.targetId],
+    const npc = appState.world?.npcs?.[resolved.targetId];
+    setValue('world.npcs.' + resolved.targetId, {
+      ...npc,
       hp:       resolved.targetNewHp,
       alive:    !resolved.targetDead,
-      attitude: resolved.targetDead ? 'dead' : npcs[resolved.targetId].attitude,
-    };
-    setValue('world', { ...appState.world, npcs });
+      attitude: resolved.targetDead ? 'dead' : npc.attitude,
+    });
   }
 
   // PC HP after goblin attack
@@ -300,7 +292,7 @@ export function commitAll(resolved, goblinResult) {
         ? prev.conditions
         : [...(prev.conditions ?? []), 'unconscious'];
     }
-    setValue('party', { ...appState.party, pc: { ...appState.party.pc, record } });
+    setValue('party.pc.record', record);
   }
 }
 
