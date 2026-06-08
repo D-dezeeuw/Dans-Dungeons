@@ -11,6 +11,7 @@ import { initMicButton }                                                        
 import { initTimeTravel, importTimeTravel }                                                 from './game/undo.js';
 import { initTimeline }                                                                     from './ui/timeline.js';
 import { verifyCombatLog }                                                                  from './game/rng.js';
+import { getSpend, onSpendChange }                                                          from './ai/spend.js';
 import * as UI from './ui/console.js';
 import { locale, setLocale, t } from './i18n/i18n.js';
 
@@ -20,6 +21,17 @@ async function boot() {
   // Audit the current epoch's seeded combat rolls from the console:
   // verifyRolls() → { ok } if every recorded roll replays from the seed.
   window.verifyRolls = verifyCombatLog;
+
+  // Cost meter = real cumulative AI spend (src/ai/spend.js), updated imperatively
+  // so undo can't rewind it (it lives outside Spektrum history).
+  const renderSpend = (s) => {
+    const el = document.getElementById('cost-meter');
+    if (!el) return;
+    el.textContent   = s.tokens > 0 ? '$' + s.costUsd.toFixed(4) + ' · ' + s.tokens.toLocaleString() + ' tok' : '';
+    el.style.display = s.tokens > 0 ? '' : 'none';
+  };
+  onSpendChange(renderSpend);
+  renderSpend(getSpend());
 
   document.getElementById('skeleton-loading')?.remove();
   document.documentElement.classList.add('styles-loaded');
