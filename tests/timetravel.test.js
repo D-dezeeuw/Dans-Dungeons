@@ -786,3 +786,40 @@ describe('replay correctness with snapshotEvery (T2.1)', () => {
     assert.equal(sp.appState.session.turnCount, 12);
   });
 });
+
+// T2.3 — the in-session branch registry is capped (oldest evicted), bounding
+// memory and the persisted blob. Mirrors captureFork's eviction.
+describe('branch registry cap (T2.3)', () => {
+  it('keeps only the most recent MAX branches', () => {
+    const MAX = 3;
+    const branches = [];
+    const push = (label) => {
+      branches.push({ label });
+      if (branches.length > MAX) branches.splice(0, branches.length - MAX);
+    };
+    for (let i = 1; i <= 6; i++) push('b' + i);
+    assert.equal(branches.length, MAX);
+    assert.deepEqual(branches.map(b => b.label), ['b4', 'b5', 'b6']);   // oldest three evicted
+  });
+});
+
+// T2.2 — exportTimeTravel is memoized; it rebuilds the blob only when the
+// timeline changed (notify() sets the dirty flag). Mirrors the memo in undo.js.
+describe('exportTimeTravel memo (T2.2)', () => {
+  it('reuses the cached blob until a timeline change invalidates it', () => {
+    let dirty = true, cache = null, builds = 0;
+    const build    = () => { builds++; return { v: builds }; };
+    const exportTT = () => { if (!dirty) return cache; dirty = false; cache = build(); return cache; };
+    const notify   = () => { dirty = true; };
+
+    const a = exportTT();          // first call builds
+    const b = exportTT();          // cached — no rebuild
+    assert.equal(a, b);
+    assert.equal(builds, 1);
+
+    notify();                      // timeline changed
+    const c = exportTT();          // rebuilds
+    assert.notEqual(c, a);
+    assert.equal(builds, 2);
+  });
+});

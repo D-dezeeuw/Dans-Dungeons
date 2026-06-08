@@ -66,6 +66,14 @@ let _branches  = [];
 let _branchSeq = 0;
 let _listeners = [];
 
+// Bound the in-session branch registry (and so the persisted blob + memory):
+// keep the most recent MAX_BRANCHES, evicting oldest — mirrors Spektrum's own
+// forkLimit. `_ttCache`/`_ttDirty` memoize exportTimeTravel so it isn't rebuilt
+// on saves that didn't change the timeline (e.g. UI-toggle autosaves).
+const MAX_BRANCHES = 50;
+let _ttCache = null;
+let _ttDirty = true;
+
 // Deep-cloned PERSIST_KEYS state at the epoch root — the baseline a reload
 // replays the spine + branches on top of. MAX_TT_ENTRIES caps how big an epoch
 // we'll persist (over it, the save just omits history; basic save/load is never
@@ -196,6 +204,7 @@ function captureFork(fork) {
     entries,
     ts:      fork.ts,
   });
+  if (_branches.length > MAX_BRANCHES) _branches.splice(0, _branches.length - MAX_BRANCHES);   // evict oldest
   notify();
 }
 
@@ -298,7 +307,9 @@ function turnLabelBetween(from, to) {
 // keeping the registry here avoids an undo→ui import cycle.
 export function onTimeTravelChange(fn) { _listeners.push(fn); }
 
-function notify() { for (const fn of _listeners) fn(); }
+// Fired on every timeline change (new turn, scrub, branch capture/swap, epoch
+// reset) — also the single point that invalidates the exportTimeTravel memo.
+function notify() { _ttDirty = true; for (const fn of _listeners) fn(); }
 
 // Scrub handler — fired ONLY on live undo/redo/branch scrubs (NOT on the boot
 // reconstruction, which would blank the reload-restored sketch). game/flow.js
@@ -317,6 +328,13 @@ function onScrub() { _scrubHandler?.(appState.session?.turnCount ?? 0); }
 // exceeds MAX_TT_ENTRIES; the save then simply omits history, so basic save/load
 // is never affected.
 export function exportTimeTravel() {
+  if (!_ttDirty) return _ttCache;   // timeline unchanged since the last save — reuse
+  _ttDirty = false;
+  _ttCache = buildTimeTravelBlob();
+  return _ttCache;
+}
+
+function buildTimeTravelBlob() {
   if (_stops.length < 2 || !_epochRootSnapshot) return null;
   const head  = _stops[_stops.length - 1];
   const spine = spektrumHistory.slice(_stops[0], head);
