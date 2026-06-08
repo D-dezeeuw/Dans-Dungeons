@@ -847,3 +847,45 @@ describe('exportTimeTravel memo (T2.2)', () => {
     assert.equal(builds, 2);
   });
 });
+
+// story.js tidy-up — narrowing setStoryFlag/completeBeatNow/awardReputation from
+// whole-`world` writes to world.redThread / world.factionReputation. The subtle
+// requirement: deep-merge must accumulate flags across writes (not replace the
+// flags object), preserve sibling world keys, and round-trip through undo.
+describe('narrow story writes deep-merge additively (story.js tidy-up)', () => {
+  it('a world.redThread write adds a flag without losing prior flags or sibling world keys', () => {
+    const sp = createSpektrum();
+    sp.setValue('world', {
+      currentRoom: 'room-0',
+      npcs: { boss: { hp: 10, alive: true } },
+      redThread: { beats: [{ id: 'b1' }], currentIndex: 0, flags: { 'enemy-slain': true } },
+    });
+    sp.tick();
+
+    const rt = sp.appState.world.redThread;                                   // setStoryFlag-style write
+    sp.setValue('world.redThread', { ...rt, flags: { ...rt.flags, 'boss-slain': true } });
+    sp.tick();
+
+    assert.equal(sp.appState.world.redThread.flags['enemy-slain'], true);     // prior flag kept
+    assert.equal(sp.appState.world.redThread.flags['boss-slain'], true);      // new flag added
+    assert.equal(sp.appState.world.redThread.currentIndex, 0);
+    assert.deepEqual(sp.appState.world.redThread.beats, [{ id: 'b1' }]);
+    assert.equal(sp.appState.world.npcs.boss.hp, 10);                         // sibling world key untouched
+  });
+
+  it('advancing the beat via a redThread write round-trips through undo', () => {
+    const sp = createSpektrum();
+    sp.setValue('world', { redThread: { beats: [], currentIndex: 2, flags: {} } });
+    sp.tick();
+    const mark = sp.history.length;
+
+    const rt = sp.appState.world.redThread;                                   // completeBeatNow-style write
+    sp.setValue('world.redThread', { ...rt, currentIndex: 3, flags: { 'beat-done-2': true } });
+    sp.tick();
+    assert.equal(sp.appState.world.redThread.currentIndex, 3);
+
+    sp.replay(mark);                                                          // undo the story turn
+    assert.equal(sp.appState.world.redThread.currentIndex, 2);
+    assert.deepEqual(sp.appState.world.redThread.flags, {});                  // flag reverted
+  });
+});
