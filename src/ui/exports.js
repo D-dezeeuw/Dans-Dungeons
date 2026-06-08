@@ -1,7 +1,7 @@
 // src/ui/exports.js — journal, screenshot, sketch gallery, and save file I/O.
 // All functions are triggered by user action; none interact with the game loop.
 
-import { appState, setValue, restoreState, commit } from '../core/state.js';
+import { appState, setValue, restoreState, commit, serializeSave, parseSave } from '../core/state.js';
 import { appendEntry, setThinking } from './transcript.js';
 import { getJournalLog } from '../game/flow.js';
 import { reconcilePc } from '../game/character.js';
@@ -67,6 +67,14 @@ export function exportAllSketches() {
 
 // ─── Save file import ─────────────────────────────────────────────────────────
 
+// Download the current game as a versioned save file (.dnd.json).
+export function exportSave() {
+  const pcName   = appState.party?.pc?.record?.name ?? 'adventurer';
+  const filename = `dans-dungeons-${pcName.toLowerCase().replace(/\s+/g, '-')}.dnd.json`;
+  triggerDownload(new Blob([serializeSave()], { type: 'application/json' }), filename);
+  appendEntry('system', t('exports.exported', { file: filename }));
+}
+
 export function importSave() {
   document.getElementById('import-file-input').click();
 }
@@ -78,7 +86,13 @@ export function handleImportFile(e) {
   const reader = new FileReader();
   reader.onload = ev => {
     try {
-      const snap = JSON.parse(ev.target.result);
+      // Envelope-aware: accepts both versioned save files and legacy bare
+      // snapshots (migrated forward). Returns null if the file isn't a save.
+      const snap = parseSave(ev.target.result);
+      if (!snap || typeof snap !== 'object') {
+        appendEntry('error', t('exports.importFail'));
+        return;
+      }
       restoreState(snap);
       // Re-derive the sheet from the imported record rather than trusting the
       // sheet in the file (which may be stale or engine-version-mismatched).

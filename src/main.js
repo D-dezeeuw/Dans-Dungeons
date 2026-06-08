@@ -3,7 +3,7 @@
 
 import { appState, setValue, bindDOM, initState, restoreState, loadFromStorage, saveToStorage, run, tick } from './core/state.js';
 import { registerReactiveSidebar }                                                           from './ui/reactive.js';
-import { createJournal, exportScreenshot, exportAllSketches, importSave, handleImportFile, exportWorldBible } from './ui/exports.js';
+import { createJournal, exportScreenshot, exportAllSketches, exportSave, importSave, handleImportFile, exportWorldBible } from './ui/exports.js';
 import { startNewGame, resumeGame, ensureKey, applySketchView, upgradeToDeluxe, requireDeluxe } from './game/flow.js';
 import { reconcilePc }                                                                        from './game/character.js';
 import { initSpeakHover }                                                                   from './ui/transcript.js';
@@ -102,6 +102,7 @@ async function boot() {
   });
   document.getElementById('export-screenshot')?.addEventListener('click', exportScreenshot);
   document.getElementById('export-sketches')?.addEventListener('click', exportAllSketches);
+  document.getElementById('export-save')?.addEventListener('click', exportSave);
   document.getElementById('export-import')?.addEventListener('click', importSave);
   document.getElementById('export-world-bible')?.addEventListener('click', () => {
     exportWorldBible().catch(e => {
