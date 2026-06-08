@@ -426,11 +426,28 @@ function setBtn(id, show) {
   if (btn) btn.style.display = show ? '' : 'none';
 }
 
-// Wire the input-row undo/redo buttons and the branch-capture hook. Called once
-// during boot (like initMicButton).
+// Wire the input-row undo/redo buttons, the keyboard shortcuts, and the
+// branch-capture hook. Called once during boot (like initMicButton).
 export function initTimeTravel() {
   onFork(captureFork);
   setTimeTravelProvider(exportTimeTravel);   // embed the epoch in every save
   document.getElementById('undo-btn')?.addEventListener('click', () => undoLastTurn());
   document.getElementById('redo-btn')?.addEventListener('click', () => redoLastTurn());
+  document.addEventListener('keydown', onShortcut);
+}
+
+// Cmd/Ctrl+Z = undo turn, Cmd/Ctrl+Shift+Z or Ctrl+Y = redo turn. Deferred to
+// the browser's native text-undo while the command input holds unsubmitted text,
+// so editing a command still works; when it's empty (the usual between-turns
+// state) the shortcut scrubs the turn timeline instead.
+function onShortcut(e) {
+  if (!(e.metaKey || e.ctrlKey)) return;
+  const k = e.key.toLowerCase();
+  const isUndo = k === 'z' && !e.shiftKey;
+  const isRedo = (k === 'z' && e.shiftKey) || k === 'y';
+  if (!isUndo && !isRedo) return;
+  const cmd = document.getElementById('cmd');
+  if (e.target === cmd && cmd.value.trim() !== '') return;   // let native text-undo win
+  e.preventDefault();
+  if (isRedo) redoLastTurn(); else undoLastTurn();
 }
