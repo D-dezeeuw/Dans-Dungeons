@@ -5,11 +5,16 @@
 // commitAll() and appendTranscript() write the resolved state to Spektrum.
 
 import { appState, setValue, addValue } from '../core/state.js';
-import { Combat, Checks } from './rules.js';
+import { Combat } from './rules.js';
+import { plainRoller } from './rng.js';
 
 // ─── Rules resolver ───────────────────────────────────────────────────────────
 
-export function resolveRules(classified) {
+// `roller` threads the epoch-seeded, audited dice stream (src/game/rng.js)
+// through every random roll. It defaults to the plain Math.random roller, so
+// callers that don't care about replay-determinism (and direct unit tests) are
+// unaffected.
+export function resolveRules(classified, roller = plainRoller()) {
   const { record, sheet } = appState.party?.pc ?? {};
   if (!record || !sheet) return { intent: 'impossible', reason: 'No character found' };
 
@@ -29,14 +34,14 @@ export function resolveRules(classified) {
       damageType:   'bludgeoning',
     };
 
-    const atk = Combat.attackRoll({ attackBonus: weapon.attackBonus, ac: target.ac });
+    const atk = roller.attack({ attackBonus: weapon.attackBonus, ac: target.ac });
 
     let damage = 0;
     let targetNewHp = target.hp;
     let targetDead  = false;
 
     if (atk.hit) {
-      const dmg   = Combat.damageRoll({
+      const dmg   = roller.damage({
         damageDice: weapon.damageDice,
         damageMod:  weapon.damageMod ?? 0,
         critical:   atk.critical,
@@ -64,7 +69,7 @@ export function resolveRules(classified) {
     // Expertise doubles the proficiency portion; abilityCheck takes a flat
     // proficiencyBonus, so pass the doubled value when the skill has expertise.
     const profBonus = skillRow?.proficient ? sheet.proficiencyBonus : 0;
-    const check = Checks.abilityCheck({
+    const check = roller.check({
       abilityScore:     sheet.abilityScores.final[ability],
       proficient:       skillRow?.proficient ?? false,
       proficiencyBonus: skillRow?.expertise ? sheet.proficiencyBonus * 2 : sheet.proficiencyBonus,
@@ -124,7 +129,7 @@ export function resolveRules(classified) {
 
 // ─── Goblin retaliation ───────────────────────────────────────────────────────
 
-export function goblinRetaliates() {
+export function goblinRetaliates(roller = plainRoller()) {
   const roomId   = appState.world?.currentRoom;
   const hostiles = Object.values(appState.world?.npcs ?? {})
     .filter(n => n.roomId === roomId && n.alive && n.attitude === 'hostile');
@@ -134,11 +139,11 @@ export function goblinRetaliates() {
   const { record, sheet } = appState.party?.pc ?? {};
   if (!record || !sheet) return null;
 
-  const atk = Combat.attackRoll({ attackBonus: goblin.toHit, ac: sheet.ac.value });
+  const atk = roller.attack({ attackBonus: goblin.toHit, ac: sheet.ac.value });
 
   let damage = 0, pcNewHp = record.hpCurrent;
   if (atk.hit) {
-    const dmg = Combat.damageRoll({
+    const dmg = roller.damage({
       damageDice: goblin.damageDie,
       damageMod:  goblin.damageBonus,
       critical:   atk.critical,
@@ -170,7 +175,7 @@ export function isPcDown() {
 // an auto-crit = two failed saves), then the PC rolls a death save. Stabilising
 // with no hostiles left revives the PC at 1 HP (house rule — the game has no
 // healing). Pure: reads appState, mutates nothing.
-export function resolveDownTurn() {
+export function resolveDownTurn(roller = plainRoller()) {
   const { record, sheet } = appState.party.pc;
   let actor = {
     hp:         record.hpCurrent,
@@ -185,7 +190,7 @@ export function resolveDownTurn() {
 
   let strike = null;
   if (hostile) {
-    const dmg = Combat.damageRoll({ damageDice: hostile.damageDie, damageMod: hostile.damageBonus, critical: true });
+    const dmg = roller.damage({ damageDice: hostile.damageDie, damageMod: hostile.damageBonus, critical: true });
     const res = Combat.applyDamageWhileDown(actor, dmg.total, { critical: true, hpMax: actor.hpMax });
     actor = res.actor;
     strike = { by: hostile.name, damage: dmg.total, outcome: res.outcome };
@@ -193,7 +198,7 @@ export function resolveDownTurn() {
 
   let save = null;
   if (!actor.deathSaves.dead && !actor.deathSaves.stable) {
-    const ds = Combat.deathSave(actor);
+    const ds = roller.deathSave(actor);
     actor = ds.actor;
     save = { d20: ds.d20, outcome: ds.outcome };
   }

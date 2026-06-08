@@ -10,12 +10,16 @@ import { initSpeakHover }                                                       
 import { initMicButton }                                                                    from './ui/input.js';
 import { initTimeTravel }                                                                   from './game/undo.js';
 import { initBranchUI }                                                                     from './ui/branches.js';
+import { verifyCombatLog }                                                                  from './game/rng.js';
 import * as UI from './ui/console.js';
 import { locale, setLocale, t } from './i18n/i18n.js';
 
 async function boot() {
   // Expose game state for console debugging: game.world, game.party, etc.
   window.game = appState;
+  // Audit the current epoch's seeded combat rolls from the console:
+  // verifyRolls() → { ok } if every recorded roll replays from the seed.
+  window.verifyRolls = verifyCombatLog;
 
   document.getElementById('skeleton-loading')?.remove();
   document.documentElement.classList.add('styles-loaded');

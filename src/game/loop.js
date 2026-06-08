@@ -14,6 +14,7 @@ import { narrate, generateSceneImage }       from '../ai/narrate.js';
 import { checkKey }                          from '../ai/client.js';
 import { resolveRules, goblinRetaliates, commitAll, appendTranscript,
          isPcDown, resolveDownTurn, commitDownTurn } from './resolver.js';
+import { beginRoller, commitRoller }          from './rng.js';
 import { buildStoryContext, setStoryFlag, activeBeat, completeBeatNow } from './story.js';
 import { beginTurn, finalizeTurn }          from './undo.js';
 import { t }                                 from '../i18n/i18n.js';
@@ -100,11 +101,15 @@ export async function processTurn(playerInput, onNarrationChunk) {
   // Snapshot scene BEFORE any mutations.
   const scene = buildScene();
 
+  // Epoch-seeded dice for every roll this turn (one stream → reproducible +
+  // auditable; src/game/rng.js). commitRoller below advances the stored cursor.
+  const roller = beginRoller();
+
   // 1. Classify intent (AI).
   const classified = await classify(playerInput, scene);
 
   // 2. Resolve PC action (pure JS — reads pre-commit appState, no mutations).
-  const resolved = resolveRules(classified);
+  const resolved = resolveRules(classified, roller);
 
   // Capture a slain enemy BEFORE commit (so we can raise story flags after) —
   // the npc object still carries isBoss / creatureId here.
@@ -116,7 +121,7 @@ export async function processTurn(playerInput, onNarrationChunk) {
   const goblinTurnTriggered = ['attack', 'skill', 'wait', 'look', 'talk', 'move', 'take', 'unlock'].includes(resolved.intent);
   const goblinSurvived      = resolved.intent !== 'attack' || !resolved.targetDead;
   const goblinResult        = (goblinTurnTriggered && goblinSurvived)
-    ? goblinRetaliates()
+    ? goblinRetaliates(roller)
     : null;
 
   // Outcome flags for narrator context and end-of-loop checks.
@@ -137,6 +142,7 @@ export async function processTurn(playerInput, onNarrationChunk) {
   commitAll(resolved, goblinResult);
   appendTranscript(playerInput, narratorResp.narration);
   addValue('session.turnCount', 1);
+  commitRoller(roller);   // advance the seeded stream's cursor + append the roll log (recorded state)
 
   // Turn committed — now register the undo mark (a throw above never reaches here).
   finalizeTurn(turnMark);
@@ -177,7 +183,8 @@ async function maybeAdvanceBeat(narration) {
 // ─── Down turn (deterministic, no AI) ────────────────────────────────────────
 
 function processDownTurn(playerInput) {
-  const down  = resolveDownTurn();
+  const roller = beginRoller();
+  const down  = resolveDownTurn(roller);
   const lines = [];
 
   if (down.strike) lines.push(t('deathsave.strike', { enemy: down.strike.by, damage: down.strike.damage }));
@@ -198,6 +205,7 @@ function processDownTurn(playerInput) {
   commitDownTurn(down);
   appendTranscript(playerInput, narration);
   addValue('session.turnCount', 1);
+  commitRoller(roller);   // advance the seeded stream + append the death-save / strike rolls
   commit();
 
   return { narration, _debug: { down } };

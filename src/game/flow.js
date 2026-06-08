@@ -10,6 +10,7 @@ import { OVERWORLD_ENEMY_IDS } from './creatures.js';
 import { createCharacter } from './character.js';
 import { processTurn, checkApiKey, generateTurnImage, buildScene } from './loop.js';
 import { clearTurnMarks } from './undo.js';
+import { seedCombat }     from './rng.js';
 import {
   goldOf, resolvePurchase, addToInventory, resolveRest, DEFAULT_REST_COST,
   questId, makeQuest, addQuest, canRevealSecret, pushDialogue, slug,
@@ -278,6 +279,7 @@ async function startQuickDungeon() {
   const world = generateDungeon(seed, blueprint);
   setValue('world', world);
   setValue('session.phase', 'play');
+  seedCombat(seed);   // epoch-seeded combat dice — replayable + auditable (rng.js)
   commit();
 
   // Show the dungeon theme in transcript for flavor.
@@ -1123,6 +1125,7 @@ async function enterDungeon(exit, settlementId) {
   }
 
   const dungeon = appState.world.dungeons[dungeonId];
+  seedCombat(dungeon.seed);   // epoch-seeded combat dice for this dungeon (rng.js)
 
   // Set flat world fields for the resolver (legacy compat)
   setValue('world', {

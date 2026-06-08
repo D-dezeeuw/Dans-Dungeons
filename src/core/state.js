@@ -42,6 +42,8 @@ const DEFAULTS = {
     turnCount: 0,
     chapterId: 'ch-1',
     skillCooldowns: {},  // { skillId: turnsRemaining }
+    rng:     null,       // { seed, cursor } — epoch-seeded combat dice stream (game/rng.js)
+    rollLog: [],         // verifyLog-compatible audit of this epoch's rolls
   },
   ai: {
     tier:    'free',       // 'free' | 'deluxe'
