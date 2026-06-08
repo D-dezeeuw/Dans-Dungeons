@@ -123,12 +123,18 @@ reachable.
   0` would **suppress** the hook, the opposite of the `.d.ts` comment — so we
   keep the default `forkLimit` and simply don't read Spektrum's own `forks`
   array.)
-- **Swap to a branch** = `replay(branch.forkedAt)` then re-apply
-  `branch.entries` (Spektrum re-records them as live history; the branch you
-  *left* fires `onFork`, so it lands back in `_branches` automatically). After
-  the swap, rebuild `_stops`/`_pos` by scanning the now-live history for
-  `'turn'` checkpoints. Branch-swapping is therefore symmetric ping-pong, all
-  within one epoch.
+- **Swap to a branch** = `replay(epoch root)` then re-apply `branch.entries`
+  (Spektrum re-records them as live history; the branch you *left* fires
+  `onFork`, so it lands back in `_branches` automatically). After the swap,
+  rebuild `_stops` by scanning the now-live history for `'turn'` checkpoints.
+  Branch-swapping is symmetric ping-pong, all within one epoch.
+  - **Land at the DIVERGENCE POINT, not the head** (`commonTurnPrefix`): `_pos`
+    is set to the turn where the target branch first differs from the path being
+    left, then `replay(_stops[_pos])`. So after a switch the branch's
+    continuation is the navigable **future** (redo) and the shared prefix is the
+    **past** (undo) — the timeline becomes a tree where, at a fork, you choose
+    which future is active and explore it both ways. (Landing at the head left
+    you stuck at the branch's end with no redo.)
 - **UI (minimal):** a branch-count indicator (Lucide `git-branch`) that opens a
   dropdown of `_branches` (label + turn + timestamp); selecting one swaps.
 

@@ -342,6 +342,19 @@ describe('time-travel undo/redo cursor model (mirrors src/game/undo.js Phase 1)'
 // labelled by the action that started the path), and jumpToBranch() replays to
 // the divergence point and re-records a branch's entries — which forks (and so
 // re-captures) the path being left.
+// Shared divergence helpers (mirror undo.js): the turn index where two entry
+// lists first differ — jumpToBranch lands there so the branch's later turns stay
+// ahead as future.
+const entriesEqual = (x, y) => x && y && x.op === y.op && x.path === y.path && JSON.stringify(x.value) === JSON.stringify(y.value);
+function commonTurnPrefix(a, b) {
+  let i = 0;
+  const n = Math.min(a.length, b.length);
+  while (i < n && entriesEqual(a[i], b[i])) i++;
+  let t = 0;
+  for (let j = 0; j < i; j++) if (a[j].op === 'checkpoint' && a[j].id === 'turn') t++;
+  return t;
+}
+
 function makeBranching(sp) {
   let stops = [], pos = 0, epochSig = null;
   let branches = [], seq = 0;
@@ -395,14 +408,18 @@ function makeBranching(sp) {
       pos = stops.length - 1;
     },
     undo: () => { if (pos <= 0) return false; pos -= 1; sp.replay(stops[pos]); return true; },
+    redo: () => { if (pos >= stops.length - 1) return false; pos += 1; sp.replay(stops[pos]); return true; },
     jumpToBranch: (id) => {
       const idx = branches.findIndex(b => b.id === id);
       if (idx < 0) return false;
+      const prev = sp.history.slice(stops[0], stops[stops.length - 1]);
       const b = branches.splice(idx, 1)[0];
       sp.replay(stops[0]);          // replay to the ROOT, then re-apply the full branch
       reapply(b.entries);
       sp.tick();
       rebuildStops();
+      pos = Math.min(commonTurnPrefix(b.entries, prev), stops.length - 1);   // land at the divergence
+      sp.replay(stops[pos]);
       return true;
     },
   };
@@ -443,7 +460,7 @@ describe('time-travel branching (mirrors src/game/undo.js Phase 2)', () => {
     assert.equal(tt.branches[0].label, 'go east');          // the path not taken, labelled
   });
 
-  it('jumps onto an abandoned branch and re-captures the path left behind', () => {
+  it('jumps onto a branch at the divergence point, with its future ahead, re-capturing the path left', () => {
     const sp = seed();
     const tt = makeBranching(sp);
     play(sp, tt, { room: 'room-east', text: 'go east' });
@@ -453,9 +470,11 @@ describe('time-travel branching (mirrors src/game/undo.js Phase 2)', () => {
     assert.ok(east, 'east path captured');
 
     assert.equal(tt.jumpToBranch(east.id), true);
-    assert.equal(sp.appState.world.currentRoom, 'room-east'); // swapped onto the east path
+    assert.equal(sp.appState.world.currentRoom, 'room-0');    // at the fork (east/west diverge at the root)
+    assert.equal(tt.redo(), true);                            // its future is available…
+    assert.equal(sp.appState.world.currentRoom, 'room-east'); // …and leads onto the east path
     assert.equal(tt.branches.length, 1);
-    assert.equal(tt.branches[0].label, 'go west');           // the west path is now the alternative
+    assert.equal(tt.branches[0].label, 'go west');            // the west path is now the alternative
   });
 
   it('ping-pongs between two branches without losing either', () => {
@@ -467,16 +486,20 @@ describe('time-travel branching (mirrors src/game/undo.js Phase 2)', () => {
 
     const east = tt.branches.find(b => b.label === 'go east').id;
     assert.equal(tt.jumpToBranch(east), true);
+    assert.equal(sp.appState.world.currentRoom, 'room-0');   // fork; redo into the chosen future
+    tt.redo();
     assert.equal(sp.appState.world.currentRoom, 'room-east');
 
     const west = tt.branches.find(b => b.label === 'go west').id;
     assert.equal(tt.jumpToBranch(west), true);
+    assert.equal(sp.appState.world.currentRoom, 'room-0');
+    tt.redo();
     assert.equal(sp.appState.world.currentRoom, 'room-west');
     assert.equal(tt.branches.length, 1);                     // always exactly one alternative
     assert.equal(tt.branches[0].label, 'go east');
   });
 
-  it('restores the full transcript when swapping branches', () => {
+  it('restores the branch transcript as you move forward into it', () => {
     const sp = seed();
     const tt = makeBranching(sp);
     play(sp, tt, { room: 'room-east', text: 'go east' });
@@ -485,9 +508,11 @@ describe('time-travel branching (mirrors src/game/undo.js Phase 2)', () => {
     assert.ok(sp.appState.transcript.some(e => e.text === 'go west'));
 
     const east = tt.branches.find(b => b.label === 'go east').id;
-    tt.jumpToBranch(east);
-    assert.ok(sp.appState.transcript.some(e => e.text === 'go east'));
-    assert.ok(!sp.appState.transcript.some(e => e.text === 'go west')); // west path gone from the live transcript
+    tt.jumpToBranch(east);                                                // lands at the root fork
+    assert.ok(!sp.appState.transcript.some(e => e.text === 'go west'));   // west path gone from the live transcript
+    assert.ok(!sp.appState.transcript.some(e => e.text === 'go east'));   // east not reached yet — it's the future
+    tt.redo();
+    assert.ok(sp.appState.transcript.some(e => e.text === 'go east'));    // east narration appears as you go forward
   });
 
   it('jumps to a DEEP branch correctly after a shallower divergence truncated history (root-relative)', () => {
@@ -501,7 +526,7 @@ describe('time-travel branching (mirrors src/game/undo.js Phase 2)', () => {
 
     tt.undo();                                               // back to after turn 2
     play(sp, tt, { room: 'room-3b', text: 'turn three prime' }); // diverge → branch A (full 1,2,3) captured
-    tt.undo();                                               // back to after turn 1
+    tt.undo(); tt.undo();                                    // back to after turn 1 (shallower than A's fork)
     play(sp, tt, { room: 'room-2c', text: 'turn two double' });  // diverge → truncates the turn-2 region
 
     // Branch A diverged at the DEEP point (after turn 2); the second divergence
@@ -510,8 +535,37 @@ describe('time-travel branching (mirrors src/game/undo.js Phase 2)', () => {
     assert.ok(deep, 'deep branch A survived');
     assert.equal(deep.turns, 3);
     assert.equal(tt.jumpToBranch(deep.id), true);
-    assert.equal(sp.appState.world.currentRoom, 'room-3');   // reconstructed exactly, not corrupted
+    assert.equal(sp.appState.world.currentRoom, 'room-1');   // fork (shares turn 1 with the current path)
+    tt.redo();
+    assert.equal(sp.appState.world.currentRoom, 'room-2');
+    tt.redo();
+    assert.equal(sp.appState.world.currentRoom, 'room-3');   // A's deep future reconstructed exactly, not corrupted
     assert.ok(sp.appState.transcript.some(e => e.text === 'turn three'));
+  });
+
+  it('switching to a branch leaves both its past AND future navigable (the reported fix)', () => {
+    const sp = seed();
+    const tt = makeBranching(sp);
+    play(sp, tt, { room: 'room-1', text: 'one' });
+    play(sp, tt, { room: 'room-2', text: 'two' });
+    play(sp, tt, { room: 'room-3', text: 'three' });        // branch A: 1,2,3
+    tt.undo(); tt.undo();                                    // back to turn 1
+    play(sp, tt, { room: 'room-2b', text: 'two prime' });    // diverge → A captured, now on B at its head
+
+    const A = tt.branches[0];
+    assert.ok(A, 'branch A captured');
+    assert.equal(tt.jumpToBranch(A.id), true);
+
+    // FUTURE available — redo forward through A's turns to its head
+    assert.equal(tt.redo(), true); assert.equal(sp.appState.world.currentRoom, 'room-2');
+    assert.equal(tt.redo(), true); assert.equal(sp.appState.world.currentRoom, 'room-3');
+    assert.equal(tt.redo(), false);                          // at A's head — nothing beyond
+
+    // PAST available — undo back through A
+    assert.equal(tt.undo(), true); assert.equal(sp.appState.world.currentRoom, 'room-2');
+    assert.equal(tt.undo(), true); assert.equal(sp.appState.world.currentRoom, 'room-1');
+
+    assert.equal(tt.branches.length, 1);                     // the path we left stays a switchable alternative
   });
 
   it('scrubs directly to any turn on the spine and back', () => {
@@ -584,8 +638,11 @@ function makePersistable(sp) {
     jumpToBranch: (id) => {
       const i = branches.findIndex(b => b.id === id);
       if (i < 0) return false;
+      const prev = sp.history.slice(stops[0], stops[stops.length - 1]);
       const b = branches.splice(i, 1)[0];
       sp.replay(stops[0]); reapply(b.entries); sp.tick(); rebuildFrom(stops[0]);
+      pos = Math.min(commonTurnPrefix(b.entries, prev), stops.length - 1);   // land at the divergence
+      sp.replay(stops[pos]);
       return true;
     },
     exportTT: () => {
@@ -662,7 +719,9 @@ describe('time-travel persistence (mirrors src/game/undo.js Phase 4)', () => {
     assert.ok(fight, 'the abandoned branch survived the round-trip');
     assert.equal(fight.turns, 2);
     assert.equal(tt2.jumpToBranch(fight.id), true);
-    assert.equal(sp2.appState.world.currentRoom, 'room-2');  // and is swappable after reload
+    assert.equal(sp2.appState.world.currentRoom, 'room-1');  // fork (shares turn 1); its future is ahead
+    tt2.redo();
+    assert.equal(sp2.appState.world.currentRoom, 'room-2');  // swappable after reload, with future reachable
   });
 
   it('exports null for a trivial epoch (no committed turns → nothing to persist)', () => {
