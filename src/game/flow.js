@@ -9,7 +9,7 @@ import { buildWorldBlueprint } from './worldseed.js';
 import { OVERWORLD_ENEMY_IDS } from './creatures.js';
 import { createCharacter } from './character.js';
 import { processTurn, checkApiKey, generateTurnImage, buildScene } from './loop.js';
-import { clearTurnMarks } from './undo.js';
+import { clearTurnMarks, setScrubHandler } from './undo.js';
 import { seedCombat }     from './rng.js';
 import {
   goldOf, resolvePurchase, addToInventory, resolveRest, DEFAULT_REST_COST,
@@ -42,6 +42,30 @@ function _cancelSpeech() {
 const journalLog = [];
 export function getJournalLog() { return journalLog; }
 
+// Per-turn scene image cache (data-URIs), keyed by turn number — out of Spektrum
+// history, so a time-travel scrub restores the right background imperatively
+// without recording anything. (Keyed by turn count; two branches that share a
+// turn number share a slot — acceptable for a decorative background.)
+const sketchByTurn = new Map();
+
+// On a live undo/redo/branch scrub, follow the timeline: trim the journal to the
+// live turn (drop undone turns from the EPUB/sketch exports) and restore the
+// scene image for that turn (or blank it). Registered with the time-travel layer
+// (NOT called on boot reconstruction, which would blank the reload-restored
+// image). Cross-branch image identity is approximate; narration is always
+// recovered exactly from appState.transcript.
+setScrubHandler((turn) => {
+  const kept = journalLog.filter(e => (e.turn ?? 0) <= turn);
+  journalLog.length = 0;
+  journalLog.push(...kept);
+
+  const view = appState.settings?.sketchView ?? 'windowed';
+  if (view === 'minimized') return;                 // respect a minimized sketch
+  const src = sketchByTurn.get(turn);
+  if (src) { UI.setSketchOpacity(view); UI.setSceneImage(src); }   // ensure visible, then set
+  else     { UI.hideSceneImage(); }                 // no image for this turn → blank the stale one
+});
+
 // ─── Sketch view state ────────────────────────────────────────────────────────
 export function applySketchView(view) {
   setValue('settings.sketchView', view);
@@ -66,7 +90,10 @@ function requestSceneImage(narration, journalEntry = null) {
   return generateTurnImage(buildImagePrompt(narration))
     .then(src => {
       src ? UI.setSceneImage(src) : UI.hideSceneImage();
-      if (src && journalEntry) journalEntry.imageSrc = src;
+      if (src && journalEntry) {
+        journalEntry.imageSrc = src;
+        sketchByTurn.set(journalEntry.turn ?? 0, src);   // cache for time-travel restore
+      }
       return src;
     })
     .catch(() => { UI.hideSceneImage(); return null; });

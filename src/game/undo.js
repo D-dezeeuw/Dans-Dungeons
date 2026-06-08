@@ -155,6 +155,7 @@ function scrubTo(index) {
   replay(index);            // reactive bindings re-fire automatically
   rebuildTranscript();      // transcript DOM is imperative — redraw it
   redrawCompass();          // compass is imperative — redraw for the reverted room
+  onScrub();                // scene image + journal follow the timeline
   refreshButtons();
   notify();
   saveToStorage();
@@ -234,6 +235,7 @@ export function jumpToBranch(id) {
   rebuildStops();                                // recompute _stops/_pos from the now-live 'turn' checkpoints
   rebuildTranscript();
   redrawCompass();
+  onScrub();                                     // scene image + journal follow the swapped-in branch
   refreshButtons();
   notify();
   saveToStorage();
@@ -297,6 +299,14 @@ function turnLabelBetween(from, to) {
 export function onTimeTravelChange(fn) { _listeners.push(fn); }
 
 function notify() { for (const fn of _listeners) fn(); }
+
+// Scrub handler — fired ONLY on live undo/redo/branch scrubs (NOT on the boot
+// reconstruction, which would blank the reload-restored sketch). game/flow.js
+// registers it to follow the timeline with out-of-history surfaces (the scene
+// image cache + the journal log). Receives the live post-scrub turn count.
+let _scrubHandler = null;
+export function setScrubHandler(fn) { _scrubHandler = fn; }
+function onScrub() { _scrubHandler?.(appState.session?.turnCount ?? 0); }
 
 // ─── Persistence (Phase 4) ──────────────────────────────────────────────────────
 
