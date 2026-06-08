@@ -6,7 +6,11 @@
 // standings (dialogue tone, shop prices), and render the /story view.
 //
 // All writes go through setValue + tick so the change is live before the next
-// read or save (Spektrum merges deltas on tick()).
+// read or save (Spektrum merges deltas on tick()). They target narrow sub-paths
+// (world.redThread, world.factionReputation), not the whole `world` — these now
+// land in the time-travel spine each story turn, so keeping the recorded entry
+// small matters (same rationale as resolver.js's commitAll). Deep-merge makes a
+// narrow write identical in result to the old whole-world spread.
 
 import { appState, setValue, tick } from '../core/state.js';
 import {
@@ -22,7 +26,7 @@ export function setStoryFlag(flag) {
   const rt = appState.world?.redThread ?? emptyRT();
   const next = setBeatFlag(rt, flag);
   if (next === rt) return;
-  setValue('world', { ...appState.world, redThread: next });
+  setValue('world.redThread', next);
   tick();
 }
 
@@ -36,7 +40,7 @@ export function completeBeatNow(beatId) {
   const rt = appState.world?.redThread ?? emptyRT();
   const next = completeBeat(rt, beatId);
   if (next === rt) return false;
-  setValue('world', { ...appState.world, redThread: next });
+  setValue('world.redThread', next);
   tick();
   return true;
 }
@@ -46,7 +50,7 @@ export function completeBeatNow(beatId) {
 export function awardReputation(factionId, delta) {
   if (!factionId || !delta) return;
   const map = appState.world?.factionReputation ?? {};
-  setValue('world', { ...appState.world, factionReputation: adjustReputation(map, factionId, delta) });
+  setValue('world.factionReputation', adjustReputation(map, factionId, delta));
   tick();
 }
 
