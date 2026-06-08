@@ -664,3 +664,65 @@ describe('time-travel persistence (mirrors src/game/undo.js Phase 4)', () => {
     assert.ok(tt.exportTT(), 'one committed turn is persistable');
   });
 });
+
+// T1.1 — narrowing commitAll/commitDownTurn from whole-`world`/`party` writes to
+// sub-paths. Two guarantees the resolver now relies on, pinned against the
+// vendored engine: (1) a reactive subscriber on an ancestor path (e.g.
+// 'world.npcs') still fires when a descendant path is written, so the ui.*
+// computed bindings refresh; (2) narrow writes replay/undo exactly.
+describe('narrow sub-path commits (T1.1)', () => {
+  it('a descendant write (world.npcs.<id>) re-fires watch + computed subscribed to the ancestor', () => {
+    const sp = createSpektrum();
+    sp.setValue('world', { currentRoom: 'room-0', npcs: { 'enemy-1': { hp: 7, alive: true, attitude: 'hostile' } } });
+    sp.tick();
+    let watchFires = 0, computedRuns = 0;
+    sp.watch(['world.npcs', 'world.currentRoom'], () => { watchFires++; });
+    sp.computed('ui.enemyStats', ['world.npcs', 'world.currentRoom'], () => { computedRuns++; return 'x'; });
+    sp.tick();
+    const w = watchFires, c = computedRuns;
+
+    sp.setValue('world.npcs.enemy-1', { hp: 0, alive: false, attitude: 'dead' });   // narrow, descendant
+    sp.tick();
+    assert.ok(watchFires  > w, 'watch fired on the descendant write');
+    assert.ok(computedRuns > c, 'computed re-ran on the descendant write');
+
+    const w2 = watchFires;
+    sp.setValue('world.currentRoom', 'room-1');   // sibling dep also still fires
+    sp.tick();
+    assert.ok(watchFires > w2, 'watch fired on the currentRoom write');
+  });
+
+  it('a narrow npc write preserves siblings and round-trips through undo', () => {
+    const sp = createSpektrum();
+    sp.setValue('world', { currentRoom: 'room-0', npcs: {
+      boss:      { hp: 12, alive: true, attitude: 'hostile' },
+      'enemy-1': { hp: 5,  alive: true, attitude: 'hostile' },
+    } });
+    sp.tick();
+    const mark = sp.history.length;   // pre-turn boundary
+
+    // the kill turn, exactly as narrowed commitAll records it:
+    const npc = sp.appState.world.npcs.boss;
+    sp.setValue('world.npcs.boss', { ...npc, hp: 0, alive: false, attitude: 'dead' });
+    sp.tick();
+    assert.equal(sp.appState.world.npcs.boss.alive, false);
+    assert.equal(sp.appState.world.npcs['enemy-1'].hp, 5);   // sibling untouched by the narrow write
+
+    sp.replay(mark);   // undo
+    assert.equal(sp.appState.world.npcs.boss.alive, true);   // alive restored…
+    assert.equal(sp.appState.world.npcs.boss.hp, 12);        // …and hp
+    assert.equal(sp.appState.world.npcs['enemy-1'].hp, 5);
+  });
+
+  it('a narrow party.pc.record write preserves the sibling sheet and replaces arrays', () => {
+    const sp = createSpektrum();
+    sp.setValue('party', { pc: { record: { hpCurrent: 10, conditions: ['unconscious'] }, sheet: { hp: { max: 10 } } }, inventory: [] });
+    sp.tick();
+    const prev = sp.appState.party.pc.record;
+    sp.setValue('party.pc.record', { ...prev, hpCurrent: 1, conditions: [] });   // revive: clear conditions
+    sp.tick();
+    assert.equal(sp.appState.party.pc.record.hpCurrent, 1);
+    assert.deepEqual(sp.appState.party.pc.record.conditions, []);   // array replaced, not merged
+    assert.equal(sp.appState.party.pc.sheet.hp.max, 10);            // sibling sheet preserved
+  });
+});
