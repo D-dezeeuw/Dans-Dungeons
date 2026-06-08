@@ -113,13 +113,16 @@ stops.
 **Goal:** "go back and take a different path," keeping the abandoned future
 reachable.
 
-- **Own the branch registry.** Set `forkLimit: 0` on the store so Spektrum
-  doesn't accumulate stale cross-epoch forks, but the `onFork` hook **still
-  fires with the dropped `entries`**. Capture each into an epoch-scoped
-  `_branches` list: `{ id, label, forkedAt, entries, ts }`, where `label` is the
-  divergence point (e.g. `"Turn 7: open the vault"`, read from the transcript /
-  turn counter at `forkedAt`). Reset `_branches` in `clearTurnMarks()` so
-  branches never leak across an epoch.
+- **Own the branch registry.** Subscribe to `onFork` and capture each dropped
+  tail into an epoch-scoped `_branches` list: `{ id, label, forkedAt, entries,
+  ts }`, where `label` is the action that started the path not taken (read from
+  the first player line in the tail's first `transcript` write). The handler
+  ignores forks whose `forkedAt` precedes the epoch root, and `clearTurnMarks()`
+  resets `_branches`, so branches never leak across an epoch. (Note: the
+  *vendored* Spektrum gates `onFork` on `forkLimit !== 0` — setting `forkLimit:
+  0` would **suppress** the hook, the opposite of the `.d.ts` comment — so we
+  keep the default `forkLimit` and simply don't read Spektrum's own `forks`
+  array.)
 - **Swap to a branch** = `replay(branch.forkedAt)` then re-apply
   `branch.entries` (Spektrum re-records them as live history; the branch you
   *left* fires `onFork`, so it lands back in `_branches` automatically). After
@@ -173,25 +176,39 @@ game's resolver: `Dice.seededRng` + an engine session `rollLog` + `verifyLog`
 ([`../bag-of-holding/src/engine.js`](../../../bag-of-holding/src/engine.js),
 [`replay.js`](../../../bag-of-holding/src/replay.js)). Adopt it:
 
-- **Seed per epoch:** store a combat seed in appState at dungeon/campaign start
-  (e.g. `world.dungeons[id].combatSeed`, defaulting from the existing dungeon
-  seed) so it's saved and replayed like any other state.
-- **RNG state lives in appState.** Store the raw RNG state (mulberry32 is a
-  single 32-bit int) at e.g. `session.rngState`, and `setValue` it on every
-  roll. Because it's in history, **scrub restores it automatically** — and a new
-  branch continues from the restored RNG state. Net effect: **dice become a
-  deterministic function of the choice sequence.** Replaying a branch reproduces
-  it exactly; a *new* branch from a divergence point is deterministic given the
-  state at that point, yet a *different* action advances the RNG differently →
-  different outcome. Exactly the property we want.
-- **Route combat through it.** Thread the stored RNG into
-  [`Combat.attackRoll` / `damageRoll`](../../src/game/resolver.js#L32),
-  `goblinRetaliates`, and `resolveDownTurn` (all currently default to
-  `Math.random`). Append each roll to a `rollLog` kept in appState (so it's
-  undone/redone/persisted with everything else).
-- **Audit:** `verifyLog({ seed, log })` confirms the recorded rolls are
-  reproducible from the seed — a tamper/desync check and a debugging aid. Aligns
-  with the project's "seeded RNG with audit from day one" principle.
+**Implemented in [`src/game/rng.js`](../../src/game/rng.js).**
+
+- **RNG position lives in appState.** `session.rng = { seed, cursor }` — the
+  epoch seed plus the cumulative number of Mulberry32 draws consumed. Because
+  it's recorded Spektrum state, **a scrub restores the exact position** and a new
+  branch continues from it. Net effect: **dice become a deterministic function
+  of the choice sequence** — re-issuing the same action after an undo reproduces
+  the roll; a *different* action consumes the stream differently and diverges.
+  `session.rollLog` is the audit trail, rebuilt from cursor 0 each epoch.
+- **Reconstruct, don't cache.** The per-turn roller rebuilds the stream with
+  `Dice.seededRng(seed)` fast-forwarded `cursor` draws — decoupled from the
+  PRNG's internals (only `seededRng` determinism is assumed), and bounded
+  O(cursor) per turn (one epoch's rolls).
+- **Combat goes through a seeded *engine*, not bare functions.** Key discovery:
+  the library exports `Combat`/`Checks` **bound to the default engine**
+  (`export const { Combat } = createEngine()`), so a per-call `rng` argument is
+  ignored. The only injection point is an engine created *with* the rng:
+  `createEngine({ rng, logRolls: true })`. So [`resolver.js`](../../src/game/resolver.js)
+  now takes a `roller` (default = unseeded engine, so existing tests are
+  unchanged) and rolls through `engine.Combat.attackRoll` / `damageRoll` /
+  `deathSave` and `engine.Checks.abilityCheck`. The roller counts draws (to
+  advance `cursor`) and records a verifyLog-shaped entry per roll.
+- **Seed per epoch:** `seedCombat(dungeon.seed)` on dungeon entry
+  ([`flow.js`](../../src/game/flow.js)) resets `{ seed, cursor: 0 }` + `rollLog:
+  []`, so each dungeon's log is self-contained and verifiable.
+- **Audit:** `verifyCombatLog()` → `verifyLog({ seed, log })` confirms every
+  recorded roll replays from the seed (tamper/desync check). The engine logs a
+  death save under a `deathSave` op that `verifyLog` can't replay, so the roller
+  encodes it as its single `rollDie(20)` draw instead — keeping the whole log
+  verifiable. Exposed as `window.verifyRolls()` for console audits.
+- **Limitation:** only dungeon epochs are seeded; settlement/overworld rolls
+  (rare) stay on `Math.random`. Acceptable — combat and its time-travel stakes
+  live in dungeons.
 
 **Tests:** same seed + same action sequence → identical `rollLog`; scrub +
 re-issue same action → identical roll; scrub + different action → RNG diverges;
@@ -210,11 +227,13 @@ re-issue same action → identical roll; scrub + different action → RNG diverg
 
 ## 10. Spektrum config to confirm
 
-`snapshotEvery` (replay perf) and `forkLimit: 0` (§5) are set at store creation.
-The app imports a **singleton** from `spektrum`; confirm the config seam (a
-config call vs. `createSpektrum(opts)`) when Phase 2 starts. Also consider
-`historyLimit` — but note a limit makes `replay()` below the surviving window
-undefined, which is fine *only* because we never scrub past the epoch root.
+The app imports the **default singleton** (`createSpektrum()` with default
+options), and Phases 1–2 work on it as-is: default `forkLimit` (50) keeps
+`onFork` firing, and `replay()` is O(n) without `snapshotEvery`, which is fine at
+one-epoch scale. If replay perf ever bites, the singleton would need
+re-creation with `snapshotEvery` (a vendored-file change). Avoid `forkLimit: 0`
+(it suppresses `onFork` in this build) and `historyLimit` (makes `replay()` below
+the surviving window undefined).
 
 ## 11. Recommended order
 

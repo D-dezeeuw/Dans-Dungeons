@@ -17,4 +17,5 @@ export {
   Monsters,
   Beats,
   createEngine,
+  verifyLog,
 } from 'bag-of-holding';
