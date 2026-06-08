@@ -71,7 +71,7 @@ export async function generateJournalStory(entries, pcName, pcClass) {
 
   const result = await chatCompletion({
     tier: 'medium',
-    max_tokens: 4000,
+    maxTokens: 4000,
     messages: [
       { role: 'system', content: system },
       { role: 'user',   content: t('ai.journalUserMsg') },
