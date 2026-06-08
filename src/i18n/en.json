@@ -59,6 +59,17 @@
     "autoplayLabel": "Toggle autoplay",
     "autoplayTitle": "Let AI play automatically"
   },
+  "timeline": {
+    "label": "Timeline",
+    "title": "Timeline — jump to any turn or branch",
+    "start": "Start",
+    "others": "Other timelines ({{n}})",
+    "turns": "{{n}} turns",
+    "turnsOne": "1 turn",
+    "justNow": "just now",
+    "minutesAgo": "{{n}}m ago",
+    "hoursAgo": "{{n}}h ago"
+  },
   "transcript": {
     "thinking": "The Dungeon Master considers…",
     "readAloud": "Read aloud"

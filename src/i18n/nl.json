@@ -59,6 +59,17 @@
     "autoplayLabel": "Automatisch spelen aan/uit",
     "autoplayTitle": "Laat AI automatisch spelen"
   },
+  "timeline": {
+    "label": "Tijdlijn",
+    "title": "Tijdlijn — spring naar een beurt of vertakking",
+    "start": "Start",
+    "others": "Andere tijdlijnen ({{n}})",
+    "turns": "{{n}} beurten",
+    "turnsOne": "1 beurt",
+    "justNow": "zojuist",
+    "minutesAgo": "{{n}}m geleden",
+    "hoursAgo": "{{n}}u geleden"
+  },
   "transcript": {
     "thinking": "De Dungeon Master overdenkt…",
     "readAloud": "Voorlezen"

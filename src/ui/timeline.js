@@ -9,6 +9,7 @@
 // never imports the UI).
 
 import { listTimeline, listBranches, jumpToStop, jumpToBranch, onTimeTravelChange } from '../game/undo.js';
+import { t } from '../i18n/i18n.js';
 
 let _open = false;
 
@@ -19,6 +20,8 @@ const countEl = () => document.getElementById('timeline-count');
 export function initTimeline() {
   const btn = btnEl();
   if (!btn) return;
+  btn.setAttribute('aria-label', t('timeline.label'));   // localized (HTML carries an English fallback)
+  btn.title = t('timeline.title');
   btn.addEventListener('click', (e) => { e.stopPropagation(); toggle(); });
   document.addEventListener('click', (e) => {
     if (_open && !panelEl()?.contains(e.target) && !btn.contains(e.target)) close();
@@ -56,7 +59,7 @@ function render() {
     const node = document.createElement('button');
     node.type        = 'button';
     node.className   = 'tl-node' + (n.current ? ' tl-current' : '');
-    node.textContent = n.label === null ? 'Start' : truncate(n.label);
+    node.textContent = n.label === null ? t('timeline.start') : truncate(n.label);
     if (n.label) node.title = n.label;
     node.addEventListener('click', (e) => { e.stopPropagation(); jumpToStop(n.index); });
     children.push(node);
@@ -65,13 +68,15 @@ function render() {
   if (branches.length) {
     const hdr = document.createElement('div');
     hdr.className   = 'tl-section';
-    hdr.textContent = `Other timelines (${branches.length})`;
+    hdr.textContent = t('timeline.others', { n: branches.length });
     children.push(hdr);
     for (const b of branches) {
       const item = document.createElement('button');
       item.type        = 'button';
-      item.className   = 'tl-branch';
-      item.textContent = `${truncate(b.label)} · ${b.turns} turn${b.turns === 1 ? '' : 's'}`;
+      // Richer label: the divergent action + branch length + when it was taken,
+      // so multiple same-action branches stay distinguishable.
+      const meta       = [turnsLabel(b.turns), relTime(b.ts)].filter(Boolean).join(' · ');
+      item.textContent = `${truncate(b.label)} · ${meta}`;
       item.title       = b.label;
       item.addEventListener('click', (e) => { e.stopPropagation(); jumpToBranch(b.id); });
       children.push(item);
@@ -81,7 +86,22 @@ function render() {
   panel.replaceChildren(...children);
 }
 
-function truncate(s, n = 44) {
+function turnsLabel(n) {
+  return t(n === 1 ? 'timeline.turnsOne' : 'timeline.turns', { n });
+}
+
+// Coarse relative time for a branch's capture timestamp (just now / Nm / Nh).
+// Recomputed on each render (a render fires on every time-travel change).
+function relTime(ts) {
+  if (!ts) return '';
+  const secs = Math.max(0, Math.floor((Date.now() - ts) / 1000));
+  if (secs < 60) return t('timeline.justNow');
+  const mins = Math.floor(secs / 60);
+  if (mins < 60) return t('timeline.minutesAgo', { n: mins });
+  return t('timeline.hoursAgo', { n: Math.floor(mins / 60) });
+}
+
+function truncate(s, n = 36) {
   s = String(s ?? '').trim();
   return s.length > n ? s.slice(0, n - 1) + '…' : s;
 }
