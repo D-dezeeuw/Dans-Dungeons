@@ -183,3 +183,156 @@ describe('undo context-scoping + deferred mark (mirrors src/game/undo.js)', () =
     assert.equal(sp.appState.world.currentRoom, 'room-1'); // move undone
   });
 });
+
+// Phase 1 — the redo-capable cursor model that replaced the pop-stack. Mirrors
+// the pure logic of src/game/undo.js (the real module also drives DOM + the
+// Spektrum singleton); `_stops` is the ascending list of turn-boundary indices
+// and `_pos` the position within it. NOTE the contract the real module leans on:
+// no recorded write (setValue/addValue/checkpoint) may happen after replay(),
+// because replay() leaves the cursor scrubbed back and the next record would
+// fork away the redo tail — so these tests never write between a scrub and the
+// next assertion, and the module drives button state imperatively.
+function makeTimeTravel(sp) {
+  let stops = [];
+  let pos = 0;
+  let epochSig = null;
+  const sig = () => {
+    const loc = sp.appState.world?.location ?? {};
+    return `${loc.type ?? ''}|${loc.dungeonId ?? ''}|${loc.settlementId ?? ''}`;
+  };
+  const stale = () => { stops = []; pos = 0; epochSig = null; };
+  return {
+    get stops() { return stops; },
+    get pos() { return pos; },
+    canUndo: () => pos > 0,
+    canRedo: () => pos < stops.length - 1,
+    beginTurn: () => sp.appState.world?.location?.type === 'encounter'
+      ? null : { index: sp.history.length, sig: sig() },
+    finalizeTurn: (m) => {
+      if (!m) return;
+      if (!stops.length || epochSig !== m.sig) { epochSig = m.sig; stops = [m.index]; pos = 0; }
+      else if (pos < stops.length - 1) { stops.length = pos + 1; }
+      sp.checkpoint('turn');
+      stops.push(sp.history.length);
+      pos = stops.length - 1;
+    },
+    undo: () => {
+      if (pos <= 0) return false;
+      if (epochSig !== sig()) { stale(); return false; }
+      pos -= 1; sp.replay(stops[pos]); return true;
+    },
+    redo: () => {
+      if (pos >= stops.length - 1) return false;
+      if (epochSig !== sig()) { stale(); return false; }
+      pos += 1; sp.replay(stops[pos]); return true;
+    },
+    clear: stale,
+  };
+}
+
+describe('time-travel undo/redo cursor model (mirrors src/game/undo.js Phase 1)', () => {
+  function seed() {
+    const sp = createSpektrum();
+    sp.setValue('world.location', { type: 'dungeon', dungeonId: 'd1' });
+    sp.setValue('party.pc.record.hpCurrent', 30);
+    sp.setValue('world.currentRoom', 'room-0');
+    sp.setValue('session.turnCount', 0);
+    sp.setValue('transcript', []);
+    sp.tick();
+    return sp;
+  }
+  function play(sp, tt, { hp, room, text }) {
+    const m = tt.beginTurn();
+    sp.setValue('party.pc.record.hpCurrent', hp);
+    sp.setValue('world.currentRoom', room);
+    sp.addValue('session.turnCount', 1);
+    sp.setValue('transcript', [...sp.appState.transcript, { role: 'gm', text, turn: 1 }]);
+    sp.tick();
+    tt.finalizeTurn(m);
+  }
+
+  it('undo then redo round-trips a turn exactly, both directions', () => {
+    const sp = seed();
+    const tt = makeTimeTravel(sp);
+    play(sp, tt, { hp: 18, room: 'room-1', text: 'a goblin strikes' });
+
+    assert.equal(sp.appState.world.currentRoom, 'room-1');
+    assert.equal(tt.canUndo(), true);
+    assert.equal(tt.canRedo(), false);
+
+    assert.equal(tt.undo(), true);
+    assert.equal(sp.appState.party.pc.record.hpCurrent, 30);
+    assert.equal(sp.appState.world.currentRoom, 'room-0');
+    assert.equal(sp.appState.session.turnCount, 0);
+    assert.equal(sp.appState.transcript.length, 0);
+    assert.equal(tt.canUndo(), false);
+    assert.equal(tt.canRedo(), true);
+
+    assert.equal(tt.redo(), true);
+    assert.equal(sp.appState.party.pc.record.hpCurrent, 18);
+    assert.equal(sp.appState.world.currentRoom, 'room-1');
+    assert.equal(sp.appState.session.turnCount, 1);
+    assert.equal(tt.canRedo(), false);
+  });
+
+  it('walks a multi-turn timeline back and forth', () => {
+    const sp = seed();
+    const tt = makeTimeTravel(sp);
+    play(sp, tt, { hp: 25, room: 'room-1', text: 'one' });
+    play(sp, tt, { hp: 20, room: 'room-2', text: 'two' });
+    play(sp, tt, { hp: 15, room: 'room-3', text: 'three' });
+    assert.equal(sp.appState.session.turnCount, 3);
+
+    assert.equal(tt.undo(), true);  // → after turn 2
+    assert.equal(sp.appState.world.currentRoom, 'room-2');
+    assert.equal(tt.undo(), true);  // → after turn 1
+    assert.equal(sp.appState.world.currentRoom, 'room-1');
+    assert.equal(sp.appState.session.turnCount, 1);
+    assert.equal(tt.redo(), true);  // → after turn 2
+    assert.equal(sp.appState.world.currentRoom, 'room-2');
+    assert.equal(sp.appState.session.turnCount, 2);
+
+    // back to the epoch root, then redo cannot pass the head once re-applied
+    assert.equal(tt.undo(), true);  // turn 1
+    assert.equal(tt.undo(), true);  // root
+    assert.equal(tt.canUndo(), false);
+    assert.equal(tt.undo(), false); // nothing before the root
+    assert.equal(sp.appState.session.turnCount, 0);
+    assert.equal(sp.appState.world.currentRoom, 'room-0');
+  });
+
+  it('a new turn after undo discards the redo future and forks the dropped tail', () => {
+    const sp = seed();
+    const tt = makeTimeTravel(sp);
+    play(sp, tt, { hp: 18, room: 'room-1', text: 'down the east hall' });
+    assert.equal(tt.undo(), true);          // back to root, an undone future exists
+    assert.equal(tt.canRedo(), true);
+
+    const forksBefore = sp.forks.length;
+    play(sp, tt, { hp: 22, room: 'room-9', text: 'down the WEST hall instead' });
+
+    assert.equal(sp.appState.world.currentRoom, 'room-9'); // on the new branch
+    assert.equal(tt.canRedo(), false);                     // old future is gone…
+    assert.equal(tt.redo(), false);
+    assert.ok(sp.forks.length > forksBefore, 'Spektrum captured the abandoned tail as a fork');
+
+    // the epoch root still survives — we can rewind the divergent turn too
+    assert.equal(tt.undo(), true);
+    assert.equal(sp.appState.world.currentRoom, 'room-0');
+  });
+
+  it('refuses + drops the timeline when the play context changes (no cross-world scrub)', () => {
+    const sp = seed();
+    const tt = makeTimeTravel(sp);
+    play(sp, tt, { hp: 18, room: 'room-1', text: 'deeper in' });
+    assert.equal(tt.canUndo(), true);
+
+    sp.setValue('world.location', { type: 'settlement', settlementId: 's1', dungeonId: null });
+    sp.tick();
+
+    assert.equal(tt.undo(), false);                         // refused
+    assert.equal(tt.redo(), false);
+    assert.equal(tt.canUndo(), false);                      // stale timeline dropped
+    assert.equal(sp.appState.world.currentRoom, 'room-1');  // state NOT rewound from town
+  });
+});

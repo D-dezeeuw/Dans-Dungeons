@@ -7,3 +7,9 @@ docs/references/
 
 # Build tooling — runtime vendor bundle is committed, not node_modules
 node_modules/
+
+# Transient Claude Code scheduler state
+.claude/scheduled_tasks.lock
+
+# Generated in-game exports (journals, world bibles) — produced at play time
+docs/journals/
