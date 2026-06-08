@@ -161,27 +161,35 @@ the other time-travel control chrome.
 
 ## 7. Phase 4 — Persist branches across reload
 
-**Goal:** undo/redo/branch survive a page reload.
+**Goal:** undo/redo/branch survive a page reload. **Built.**
 
-- Persist, scoped to the **current epoch only** (cross-epoch history is invalid
-  per §3.1): the live appState (as today) plus a `timeTravel` blob
-  `{ epochSig, stops, pos, branches: [{id,label,forkedAt,entries,ts}] }`.
-  The live branch's serialized history runs from `stops[0]` (epoch root) to head.
-- **Load:** after `restoreState` sets the live appState, rebuild Spektrum history
-  by re-applying the recorded entries from the epoch root in order (dropping
-  `checkpoint('turn')` at each stop), then re-register `_branches` from the blob.
-- **Envelope:** bump `SAVE_VERSION` 1→2 with a forward migration; v1 saves load
-  with an empty `timeTravel` (no branches) — never strands an old save.
+The blob (embedded in the save under `_timeTravel`) is scoped to the current
+epoch and self-contained from the epoch ROOT:
+`{ epochSig, pos, root, spine, branches: [{label, turns, entries}] }`, where
+`root` is a deep-cloned PERSIST_KEYS snapshot captured at the first turn's
+`beginTurn`, `spine` is the current branch's `root→head` entries, and each
+branch carries its full root-relative entries.
 
-> **⚠ Size risk — call this out before building.** History entries store
-> **absolute** values, and `commitAll` does `setValue('world', { ...world })` —
-> i.e. it snapshots the *whole world object* every turn. In-session that's just
-> memory, but persisting N turns × full-world can bloat the save. Options, in
-> order of preference: (a) cap persisted history to the last *K* stops; (b)
-> accept it (one epoch is bounded — a single dungeon visit); (c) a separate
-> refactor narrowing the mutation paths (`world.npcs`, `world.rooms.<id>`)
-> instead of the whole `world`. Decide this when Phase 4 starts; it's the one
-> place this design isn't "free."
+- **Save** ([`state.js`](../../src/core/state.js)): undo.js registers an
+  `exportTimeTravel` provider (inverted dependency — state.js never imports
+  undo.js); `saveToStorage`/`serializeSave` embed its output. `SAVE_VERSION`
+  bumped 1→2 with an identity migration (v1 saves just lack `_timeTravel`).
+- **Load** ([`main.js`](../../src/main.js)/[`exports.js`](../../src/ui/exports.js)):
+  `restoreState` skips `_timeTravel`; after init, `importTimeTravel` restores the
+  root baseline, re-records the spine to rebuild history, recomputes the stops,
+  re-registers branches, and replays to `pos`. It runs **before** `resumeGame`
+  (which is read-only over appState) and doesn't touch the transcript DOM.
+- **Failsafe (critical):** `importTimeTravel` is wrapped in try/catch and
+  validates the blob; on any failure it returns false and the caller
+  re-establishes the plain saved state. A broken/oversized blob can therefore
+  **never** block loading the game — worst case is "no surviving history," i.e.
+  today's behaviour.
+- **Size cap:** the doc's §7 risk is real (entries store absolute values, and
+  `commitAll` snapshots the whole `world` each turn). Resolved with option (b)+a
+  guard: epochs over `MAX_TT_ENTRIES` (500) are simply **not** persisted
+  (logged); basic save/load is unaffected. A typical dungeon (~15–40 turns) is
+  well under. Future work for huge epochs: narrow `commitAll`'s mutation paths
+  (option c) or a sliding window (option a).
 
 ## 8. Phase 5 — Seeded-roll audit (reproducible, verifiable branches)
 

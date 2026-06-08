@@ -530,3 +530,137 @@ describe('time-travel branching (mirrors src/game/undo.js Phase 2)', () => {
     assert.equal(sp.appState.world.currentRoom, 'room-0');
   });
 });
+
+// Phase 4 — persistence across reload. Mirrors src/game/undo.js's root-baseline
+// export/import: capture the epoch root state on the first turn, persist the
+// spine + branches, and rebuild them into a FRESH store (the reload). The real
+// module wraps import in a failsafe and caps oversized epochs; the round-trip
+// mechanism is what's pinned here.
+function makePersistable(sp) {
+  const PERSIST = ['world', 'session', 'transcript'];
+  let stops = [], pos = 0, epochSig = null, root = null;
+  let branches = [], seq = 0;
+  const snapshotPersisted = () => Object.fromEntries(PERSIST.map(k => [k, sp.appState[k]]));
+  const restore = (snap) => { for (const k of PERSIST) sp.setValue(k, snap[k]); };
+  const labelFork = (fork) => {
+    for (const e of fork.entries) {
+      if (e.path === 'transcript' && Array.isArray(e.value)) {
+        const p = [...e.value].reverse().find(x => x?.role === 'player');
+        if (p?.text) return p.text;
+      }
+    }
+    return '?';
+  };
+  const reapply = (entries) => {
+    for (const e of entries) {
+      if (e.op === 'checkpoint') sp.checkpoint(e.id, e.value);
+      else if (e.op === 'add')   sp.addValue(e.path, e.value, e.id);
+      else                       sp.setValue(e.path, e.value, e.id);
+    }
+  };
+  const rebuildFrom = (rootIdx) => {
+    stops = [rootIdx];
+    sp.history.forEach((e, i) => { if (e.op === 'checkpoint' && e.id === 'turn' && i >= rootIdx) stops.push(i + 1); });
+    pos = stops.length - 1;
+  };
+  sp.onFork((fork) => {
+    if (!stops.length || fork.forkedAt < stops[0]) return;
+    const entries = sp.history.slice(stops[0], fork.forkedAt).concat(fork.entries);
+    branches.push({ id: `b${seq++}`, label: labelFork(fork), turns: entries.filter(e => e.op === 'checkpoint' && e.id === 'turn').length, entries });
+  });
+  return {
+    get pos() { return pos; },
+    get branches() { return branches.map(b => ({ id: b.id, label: b.label, turns: b.turns })); },
+    beginTurn: () => { if (!stops.length) root = JSON.parse(JSON.stringify(snapshotPersisted())); return { index: sp.history.length, sig: '' }; },
+    finalizeTurn: (m) => {
+      if (!stops.length || epochSig !== m.sig) { epochSig = m.sig; stops = [m.index]; pos = 0; }
+      else if (pos < stops.length - 1) stops.length = pos + 1;
+      sp.checkpoint('turn');
+      stops.push(sp.history.length);
+      pos = stops.length - 1;
+    },
+    undo: () => { if (pos <= 0) return false; pos -= 1; sp.replay(stops[pos]); return true; },
+    redo: () => { if (pos >= stops.length - 1) return false; pos += 1; sp.replay(stops[pos]); return true; },
+    jumpToBranch: (id) => {
+      const i = branches.findIndex(b => b.id === id);
+      if (i < 0) return false;
+      const b = branches.splice(i, 1)[0];
+      sp.replay(stops[0]); reapply(b.entries); sp.tick(); rebuildFrom(stops[0]);
+      return true;
+    },
+    exportTT: () => {
+      if (stops.length < 2 || !root) return null;
+      const head = stops[stops.length - 1];
+      return { pos, root, spine: sp.history.slice(stops[0], head), branches: branches.map(b => ({ label: b.label, turns: b.turns, entries: b.entries })) };
+    },
+    importTT: (tt) => {
+      restore(tt.root); sp.tick();
+      const r = sp.history.length;
+      reapply(tt.spine); sp.tick();
+      rebuildFrom(r);
+      branches = tt.branches.map(b => ({ id: `b${seq++}`, label: b.label, turns: b.turns, entries: b.entries }));
+      pos = Math.min(tt.pos, stops.length - 1);
+      sp.replay(stops[pos]);
+      return true;
+    },
+  };
+}
+
+describe('time-travel persistence (mirrors src/game/undo.js Phase 4)', () => {
+  function seedWorld() {
+    const sp = createSpektrum();
+    sp.setValue('world', { location: { type: 'dungeon', dungeonId: 'd1' }, currentRoom: 'room-0' });
+    sp.setValue('session', { turnCount: 0 });
+    sp.setValue('transcript', []);
+    sp.tick();
+    return sp;
+  }
+  function play(sp, tt, { room, text }) {
+    const m = tt.beginTurn();
+    sp.setValue('world.currentRoom', room);
+    sp.addValue('session.turnCount', 1);
+    sp.setValue('transcript', [...sp.appState.transcript, { role: 'player', text, turn: 0 }, { role: 'gm', text: `re: ${text}`, turn: 0 }]);
+    sp.tick();
+    tt.finalizeTurn(m);
+  }
+
+  it('exports an epoch and re-imports it into a FRESH store: position, undo/redo, and branches survive', () => {
+    const sp1 = seedWorld();
+    const tt1 = makePersistable(sp1);
+    play(sp1, tt1, { room: 'room-1', text: 'go north' });
+    play(sp1, tt1, { room: 'room-2', text: 'fight goblin' });
+    tt1.undo();                                          // back to after turn 1
+    play(sp1, tt1, { room: 'room-2b', text: 'flee' });   // diverge → branch 'fight goblin'
+    tt1.undo();                                          // scrub back to after turn 1 (pos = 1)
+
+    const blob = tt1.exportTT();
+    assert.ok(blob, 'epoch is exportable');
+
+    // Simulate the reload: a brand-new store, nothing carried over but the blob.
+    const sp2 = seedWorld();         // a fresh store (its own setup history)
+    const tt2 = makePersistable(sp2);
+    assert.equal(tt2.importTT(blob), true);
+
+    assert.equal(sp2.appState.world.currentRoom, 'room-1');  // restored to the saved position…
+    assert.equal(tt2.pos, 1);
+
+    assert.equal(tt2.redo(), true);                          // …and undo/redo work in the fresh store
+    assert.equal(sp2.appState.world.currentRoom, 'room-2b');
+    assert.equal(tt2.undo(), true);
+    assert.equal(sp2.appState.world.currentRoom, 'room-1');
+
+    const fight = tt2.branches.find(b => b.label === 'fight goblin');
+    assert.ok(fight, 'the abandoned branch survived the round-trip');
+    assert.equal(fight.turns, 2);
+    assert.equal(tt2.jumpToBranch(fight.id), true);
+    assert.equal(sp2.appState.world.currentRoom, 'room-2');  // and is swappable after reload
+  });
+
+  it('exports null for a trivial epoch (no committed turns → nothing to persist)', () => {
+    const sp = seedWorld();
+    const tt = makePersistable(sp);
+    assert.equal(tt.exportTT(), null);
+    play(sp, tt, { room: 'room-1', text: 'one step' });
+    assert.ok(tt.exportTT(), 'one committed turn is persistable');
+  });
+});

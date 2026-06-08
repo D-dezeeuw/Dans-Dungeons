@@ -44,7 +44,8 @@
 //      game boundary into stale history.
 
 import { appState, setValue, addValue, tick, replay, checkpoint, onFork,
-         spektrumHistory, saveToStorage } from '../core/state.js';
+         spektrumHistory, saveToStorage, restoreState, pickPersisted,
+         setTimeTravelProvider } from '../core/state.js';
 import { rebuildTranscript } from '../ui/transcript.js';
 import { updateActionBar }   from '../ui/actionbar.js';
 
@@ -65,6 +66,13 @@ let _branches  = [];
 let _branchSeq = 0;
 let _listeners = [];
 
+// Deep-cloned PERSIST_KEYS state at the epoch root — the baseline a reload
+// replays the spine + branches on top of. MAX_TT_ENTRIES caps how big an epoch
+// we'll persist (over it, the save just omits history; basic save/load is never
+// affected — see exportTimeTravel).
+let _epochRootSnapshot = null;
+const MAX_TT_ENTRIES   = 500;
+
 // Signature of the current undoable play context. Room moves within one dungeon
 // keep this stable (only location, not currentRoom, is included), so time-travel
 // works across a move; any world swap (dungeon↔settlement, into/out of an
@@ -79,6 +87,9 @@ function contextSig() {
 // encounters).
 export function beginTurn() {
   if (appState.world?.location?.type === 'encounter') return null;
+  // First turn of an epoch: snapshot the pre-turn state as the persistable root
+  // baseline (deep-cloned so later mutations can't mutate it).
+  if (!_stops.length) _epochRootSnapshot = JSON.parse(JSON.stringify(pickPersisted()));
   return { index: spektrumHistory.length, sig: contextSig() };
 }
 
@@ -152,10 +163,11 @@ function scrubTo(index) {
 // Forget the whole timeline AND the captured branches (new game, or a
 // play-context transition). Hides both buttons and clears the branch picker.
 export function clearTurnMarks() {
-  _stops    = [];
-  _pos      = 0;
-  _epochSig = null;
-  _branches = [];
+  _stops             = [];
+  _pos               = 0;
+  _epochSig          = null;
+  _branches          = [];
+  _epochRootSnapshot = null;
   refreshButtons();
   notify();
 }
@@ -286,6 +298,68 @@ export function onTimeTravelChange(fn) { _listeners.push(fn); }
 
 function notify() { for (const fn of _listeners) fn(); }
 
+// ─── Persistence (Phase 4) ──────────────────────────────────────────────────────
+
+// Serializable snapshot of the current epoch's time-travel state — the root
+// baseline plus the spine (root→head entries) and each branch's root-relative
+// entries — embedded in the save under `_timeTravel` (state.js calls this via the
+// registered provider). Returns null when there's nothing to persist or the epoch
+// exceeds MAX_TT_ENTRIES; the save then simply omits history, so basic save/load
+// is never affected.
+export function exportTimeTravel() {
+  if (_stops.length < 2 || !_epochRootSnapshot) return null;
+  const head  = _stops[_stops.length - 1];
+  const spine = spektrumHistory.slice(_stops[0], head);
+  const branchEntries = _branches.reduce((n, b) => n + b.entries.length, 0);
+  if (spine.length + branchEntries > MAX_TT_ENTRIES) {
+    console.warn(`[time-travel] epoch too large to persist (${spine.length + branchEntries} entries) — saved without history`);
+    return null;
+  }
+  return {
+    epochSig: _epochSig,
+    pos:      _pos,
+    root:     _epochRootSnapshot,
+    spine,
+    branches: _branches.map(b => ({ label: b.label, turns: b.turns, entries: b.entries })),
+  };
+}
+
+// Rebuild the epoch from a persisted blob on reload: restore the root baseline,
+// re-record the spine to rebuild history, recompute the stops, re-register the
+// branches, and replay to the saved position. Does NOT touch the transcript DOM —
+// the boot/resume flow owns that. Returns false (and disables undo) on a
+// malformed blob or any failure, so the caller can fall back to the plain restore
+// — a broken time-travel blob can never block loading the game.
+export function importTimeTravel(tt) {
+  try {
+    if (!tt || !Array.isArray(tt.spine) || tt.root == null) return false;
+    restoreState(tt.root);
+    tick();
+    const root = spektrumHistory.length;
+    reapplyEntries(tt.spine);
+    tick();
+    _epochSig          = tt.epochSig ?? contextSig();
+    _epochRootSnapshot = tt.root;
+    _stops = [root];
+    for (let i = root; i < spektrumHistory.length; i++) {
+      const e = spektrumHistory[i];
+      if (e.op === 'checkpoint' && e.id === 'turn') _stops.push(i + 1);
+    }
+    _branches = (tt.branches ?? []).map(b => ({
+      id: `b${_branchSeq++}`, label: b.label, turns: b.turns, entries: b.entries,
+    }));
+    _pos = Math.max(0, Math.min(tt.pos ?? _stops.length - 1, _stops.length - 1));
+    replay(_stops[_pos]);
+    refreshButtons();
+    notify();
+    return true;
+  } catch (e) {
+    console.warn('[time-travel] reconstruction failed — continuing without history', e);
+    clearTurnMarks();
+    return false;
+  }
+}
+
 function redrawCompass() {
   if (!appState.settings?.actionBar) return;
   const roomId = appState.world?.currentRoom;
@@ -310,6 +384,7 @@ function setBtn(id, show) {
 // during boot (like initMicButton).
 export function initTimeTravel() {
   onFork(captureFork);
+  setTimeTravelProvider(exportTimeTravel);   // embed the epoch in every save
   document.getElementById('undo-btn')?.addEventListener('click', () => undoLastTurn());
   document.getElementById('redo-btn')?.addEventListener('click', () => redoLastTurn());
 }

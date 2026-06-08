@@ -4,6 +4,7 @@
 import { appState, setValue, restoreState, commit, serializeSave, parseSave } from '../core/state.js';
 import { appendEntry, setThinking } from './transcript.js';
 import { getJournalLog } from '../game/flow.js';
+import { importTimeTravel } from '../game/undo.js';
 import { reconcilePc } from '../game/character.js';
 import { t, locale } from '../i18n/i18n.js';
 import { escHtml } from '../core/utils.js';
@@ -93,10 +94,15 @@ export function handleImportFile(e) {
         appendEntry('error', t('exports.importFail'));
         return;
       }
-      restoreState(snap);
+      restoreState(snap);   // skips _timeTravel internally
       // Re-derive the sheet from the imported record rather than trusting the
       // sheet in the file (which may be stale or engine-version-mismatched).
       if (appState.party?.pc) setValue('party.pc', reconcilePc(appState.party.pc));
+      // Reconstruct undo/redo + branches if the file carried them; failsafe
+      // re-restores the plain state so a bad blob never breaks the import.
+      if (snap._timeTravel && appState.session?.phase === 'play') {
+        if (!importTimeTravel(snap._timeTravel)) restoreState(snap);
+      }
       commit();
       appendEntry('system', t('exports.imported', { file: file.name }));
     } catch {
