@@ -687,6 +687,15 @@
 }
 #timeline-panel.open { display: block; }
 
+/* Divergence cue — sits just above the input when scrubbed back. */
+#branch-hint {
+  padding: 0.25rem 1rem;
+  font-size: 11px;
+  font-style: italic;
+  color: var(--gm);
+  border-top: 1px solid var(--border);
+}
+
 /* Spine node (one committed turn). A leading dot marks the rail; the current
    node fills it and tints the row. */
 .tl-node, .tl-branch {

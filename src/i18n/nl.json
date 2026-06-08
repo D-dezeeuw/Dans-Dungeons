@@ -68,7 +68,8 @@
     "turnsOne": "1 beurt",
     "justNow": "zojuist",
     "minutesAgo": "{{n}}m geleden",
-    "hoursAgo": "{{n}}u geleden"
+    "hoursAgo": "{{n}}u geleden",
+    "branchHint": "↳ Je bent teruggespoeld — een nieuwe actie start hier een vertakking (gebruikt AI)."
   },
   "audit": {
     "ok": "✓ {{n}} gevechtsworpen geverifieerd — reproduceerbaar vanaf de seed.",
