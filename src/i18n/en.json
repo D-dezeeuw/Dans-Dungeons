@@ -68,7 +68,8 @@
     "turnsOne": "1 turn",
     "justNow": "just now",
     "minutesAgo": "{{n}}m ago",
-    "hoursAgo": "{{n}}h ago"
+    "hoursAgo": "{{n}}h ago",
+    "branchHint": "↳ You've rewound — a new action here starts a branch (uses AI)."
   },
   "audit": {
     "ok": "✓ {{n}} combat rolls verified — reproducible from the seed.",

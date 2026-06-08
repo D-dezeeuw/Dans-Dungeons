@@ -41,7 +41,17 @@ function render() {
   if (!btn) return;
   const nodes    = listTimeline();
   const branches = listBranches();
-  const show     = nodes.length > 1 || branches.length > 0;
+
+  // Divergence cue: when scrubbed back from the head, a new action branches a
+  // fresh path (re-runs the AI), so hint that before the player types.
+  const scrubbedBack = nodes.length > 0 && !nodes[nodes.length - 1].current;
+  const hint = document.getElementById('branch-hint');
+  if (hint) {
+    hint.textContent   = scrubbedBack ? t('timeline.branchHint') : '';
+    hint.style.display = scrubbedBack ? '' : 'none';
+  }
+
+  const show = nodes.length > 1 || branches.length > 0;
   btn.style.display = show ? '' : 'none';
 
   const badge = countEl();
