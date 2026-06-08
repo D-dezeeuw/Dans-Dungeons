@@ -69,6 +69,16 @@ async function boot() {
     saveToStorage();
   });
 
+  // Roll audit: replay this epoch's recorded combat rolls from the seed and
+  // report whether they all reproduce (a "the dice were honest" check).
+  document.getElementById('verify-rolls-btn')?.addEventListener('click', () => {
+    const log = appState.session?.rollLog ?? [];
+    if (!log.length) { UI.appendEntry('system', t('audit.empty')); return; }
+    const res = verifyCombatLog();
+    if (res.ok) UI.appendEntry('system', t('audit.ok', { n: log.length }));
+    else        UI.appendEntry('error',  t('audit.diverged', { i: res.divergedAt }));
+  });
+
   document.getElementById('sketch-toggle')?.addEventListener('click', () => {
     if (!requireDeluxe('imageLabel')) return;
     setValue('settings.sceneImage', !(appState.settings?.sceneImage ?? false));
