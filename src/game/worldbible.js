@@ -4,6 +4,8 @@
 // settlement → dungeon) and formats the result into EPUB chapters.
 // Also stores the raw world JSON for export/import.
 
+import { appState } from '../core/state.js';
+import { recentEvents } from './ledger.js';
 import { runWorldgenPipeline } from './worldgen.js';
 import { createDungeonEntry } from './world.js';
 import { buildWorldBlueprint } from './worldseed.js';
@@ -20,7 +22,72 @@ function truncate(s, n = 200) {
 
 // ─── Pipeline ────────────────────────────────────────────────────────────────
 
-export async function generateWorldBible(onProgress) {
+// Is there a campaign worth documenting? A world seed plus at least one turn
+// played — anything less and there is nothing to write about that generating a
+// fresh world would not say better.
+export function hasLiveCampaign() {
+  return Boolean(appState.world?.digest) && (appState.session?.turnCount ?? 0) > 0;
+}
+
+// The world bible for the campaign the player is ACTUALLY in.
+//
+// The export used to generate an entirely new world every time — a handsome
+// book about a place the player had never been, produced at the cost of a full
+// worldgen pipeline, while the campaign they had spent hours in went
+// undocumented. When a campaign is live, this documents that instead: its seed,
+// its factions, the acts as they actually played, the regions visited, and the
+// ledger entities the world accumulated along the way.
+export function campaignWorld() {
+  const w = appState.world ?? {};
+  return {
+    blueprint:  w.blueprint ?? null,
+    seed: {
+      name:      w.name ?? 'The World',
+      tone:      w.tone ?? null,
+      creation:  w.creation ?? '',
+      gods:      w.gods ?? [],
+      redThread: w.redThread ?? null,
+      digest:    w.digest ?? '',
+    },
+    factions:   Object.values(w.factions ?? {}),
+    beats:      w.redThread?.beats ?? [],
+    acts:       w.acts?.acts ?? [],
+    regions:    Object.values(w.regions ?? {}),
+    settlements: Object.values(w.settlements ?? {}),
+    dungeons:   Object.values(w.dungeons ?? {}),
+    // What the world remembered: folded ledger entities with a name, deduped.
+    chronicle:  chronicleEntries(),
+    turns:      appState.session?.turnCount ?? 0,
+    live:       true,
+  };
+}
+
+// The ledger's durable claims, as "this is what happened here" lines. Mechanical
+// truth first — those are the things the dice decided, and they cannot be
+// contradicted by anything the narrator later said.
+function chronicleEntries(limit = 60) {
+  const events = recentEvents({ limit, minScope: 'local' });
+  return events.map(e => e.because).filter(Boolean);
+}
+
+export async function generateWorldBible(onProgress, { fromCampaign = hasLiveCampaign() } = {}) {
+  // A live campaign is documented, not replaced.
+  if (fromCampaign) {
+    const world = campaignWorld();
+    onProgress('detail', `Documenting the campaign in progress: "${world.seed.name}" after ${world.turns} turns.`);
+    const rawChapters = formatChapters(world);
+    let chapters;
+    try {
+      chapters = await polishChapters(rawChapters);
+      onProgress('detail', `Polished ${chapters.length} chapters.`);
+    } catch (e) {
+      console.warn('Polish pass failed, using raw chapters:', e.message);
+      chapters = rawChapters;
+    }
+    chapters.push(colophon(world));
+    return { world, chapters };
+  }
+
   // Step 0: Build blueprint from seeded RNG (instant, deterministic).
   const blueprintSeed = Math.floor(Math.random() * 2147483647);
   const blueprint = buildWorldBlueprint(blueprintSeed);
@@ -81,27 +148,40 @@ export async function generateWorldBible(onProgress) {
     chapters = rawChapters;
   }
 
-  // Add colophon (metadata page — not LLM-generated)
-  chapters.push({
+  chapters.push(colophon(world));
+  return { world, chapters };
+}
+
+// The metadata page — never LLM-generated, so it is the one part of the book
+// that is guaranteed to describe what actually exists.
+function colophon(world) {
+  const { seed, factions = [], beats = [], acts = [], region, regions, settlement, settlements, dungeon, dungeons } = world;
+  const regionList     = regions ?? (region ? [region] : []);
+  const settlementList = settlements ?? (settlement ? [settlement] : []);
+  const dungeonList    = dungeons ?? (dungeon ? [dungeon] : []);
+  const npcCount = settlementList.reduce((n, s) => n + (s?.npcs?.length ?? 0), 0);
+  const roomCount = dungeonList.reduce((n, d) => n + Object.keys(d?.rooms ?? {}).length, 0);
+
+  return {
     heading: 'Colophon',
     text: [
-      'Generation Metadata',
+      world.live ? 'Campaign Record' : 'Generation Metadata',
       '',
-      `World: ${seed.name}`,
-      `Tone: ${seed.tone}`,
-      `Generated: ${new Date().toISOString().slice(0, 10)}`,
+      `World: ${seed?.name ?? 'unknown'}`,
+      `Tone: ${seed?.tone ?? 'unknown'}`,
+      world.live ? `Turns played: ${world.turns}` : '',
+      `Written: ${new Date().toISOString().slice(0, 10)}`,
       '',
-      'Layers generated:',
-      `  World seed — ${seed.name} (${(seed.gods ?? []).length} gods)`,
-      `  Factions — ${factions.length} created`,
-      `  Red thread — ${beats.length} story beats`,
-      region ? `  Region — ${region.name} (${region.climate})` : '  Region — skipped',
-      settlement ? `  Settlement — ${settlement.name} (${(settlement.npcs ?? []).length} NPCs)` : '  Settlement — skipped',
-      dungeon ? `  Dungeon — ${dungeon.name} (${Object.keys(dungeon.rooms ?? {}).length} rooms, ${Object.keys(dungeon.npcs ?? {}).length} enemies)` : '  Dungeon — skipped',
-    ].join('\n'),
-  });
-
-  return { world, chapters };
+      world.live ? 'What this book documents:' : 'Layers generated:',
+      `  World — ${seed?.name ?? 'unknown'} (${(seed?.gods ?? []).length} gods)`,
+      `  Factions — ${factions.length}`,
+      acts.length ? `  Acts — ${acts.length}` : `  Red thread — ${beats.length} story beats`,
+      regionList.length     ? `  Regions — ${regionList.map(r => r?.name).filter(Boolean).join(', ')}` : '  Regions — none',
+      settlementList.length ? `  Settlements — ${settlementList.length} (${npcCount} NPCs)`            : '  Settlements — none',
+      dungeonList.length    ? `  Dungeons — ${dungeonList.length} (${roomCount} rooms)`                : '  Dungeons — none',
+      world.chronicle?.length ? `  Chronicle — ${world.chronicle.length} recorded events` : '',
+    ].filter(Boolean).join('\n'),
+  };
 }
 
 // ─── LLM prose polish ────────────────────────────────────────────────────────
@@ -131,7 +211,17 @@ async function polishChapters(rawChapters) {
 
 // ─── Chapter formatter ───────────────────────────────────────────────────────
 
-function formatChapters({ seed, factions, beats, region, settlement, dungeon }) {
+function formatChapters(world) {
+  const { seed, factions, beats, acts = [], chronicle = [] } = world;
+  // A generated world has one of each; a live campaign has as many as the
+  // player has been to. Normalising here is what lets both share every
+  // chapter below.
+  const regions     = world.regions     ?? (world.region     ? [world.region]     : []);
+  const settlements = world.settlements ?? (world.settlement ? [world.settlement] : []);
+  const dungeons    = world.dungeons    ?? (world.dungeon    ? [world.dungeon]    : []);
+  const region     = regions[0]     ?? null;
+  const settlement = settlements[0] ?? null;
+  const dungeon    = dungeons[0]    ?? null;
   const ch = [];
 
   // Chapter 1: The World
@@ -179,8 +269,9 @@ function formatChapters({ seed, factions, beats, region, settlement, dungeon }) 
     ch.push({ heading: 'The Red Thread', text: beatText });
   }
 
-  // Chapter 4: Region
-  if (region) {
+  // Chapter 4: Regions — one chapter each, so a campaign that crossed four of
+  // them gets four, instead of a book about wherever it started.
+  for (const region of regions) {
     ch.push({
       heading: region.name ?? 'The Region',
       text: [
@@ -200,8 +291,8 @@ function formatChapters({ seed, factions, beats, region, settlement, dungeon }) 
     });
   }
 
-  // Chapter 5: Settlement
-  if (settlement) {
+  // Chapter 5: Settlements — one each, for the same reason as the regions.
+  for (const settlement of settlements) {
   const npcText = (settlement.npcs ?? []).map(npc => {
     const lines = [
       `${npc.name} — ${npc.role} (${npc.attitude})`,
@@ -234,10 +325,10 @@ function formatChapters({ seed, factions, beats, region, settlement, dungeon }) 
       exitText,
     ].filter(Boolean).join('\n'),
   });
-  } // end settlement guard
+  } // end settlement loop
 
-  // Chapter 6: Dungeon
-  if (dungeon) {
+  // Chapter 6: Dungeons
+  for (const dungeon of dungeons) {
     const rooms = Object.values(dungeon.rooms ?? {});
     const enemies = Object.values(dungeon.npcs ?? {});
 
@@ -270,6 +361,34 @@ function formatChapters({ seed, factions, beats, region, settlement, dungeon }) 
         '',
         enemies.length ? `Enemies:\n${enemyText}` : 'No enemies.',
       ].join('\n'),
+    });
+  }
+
+  // Chapter 7: the acts, as they actually played. A generated world has beats
+  // it might follow; a played campaign has acts it did, with the beats it
+  // closed and the ones it never reached. The second is the more interesting
+  // book, and it only exists after someone has played.
+  if (acts.length) {
+    const actText = acts.map((act, i) => {
+      const done = (act.beats ?? []).filter(b => act.flags?.[`beat-done-${b.id}`]);
+      const open = (act.beats ?? []).filter(b => !act.flags?.[`beat-done-${b.id}`]);
+      return [
+        `Act ${i + 1}: ${act.title ?? act.id}`,
+        act.premise ?? '',
+        done.length ? `Resolved: ${done.map(b => b.dramaticPurpose).join(' · ')}` : '',
+        open.length ? `Left open: ${open.map(b => b.dramaticPurpose).join(' · ')}` : '',
+      ].filter(Boolean).join('\n');
+    }).join('\n\n');
+    ch.push({ heading: 'The Acts', text: actText });
+  }
+
+  // Chapter 8: the chronicle — what the ledger recorded, in the order it
+  // happened. This is the part no generated world can have: it is the record
+  // of a campaign, not a description of a place.
+  if (chronicle.length) {
+    ch.push({
+      heading: 'Chronicle',
+      text: chronicle.map(line => `· ${line}`).join('\n'),
     });
   }
 

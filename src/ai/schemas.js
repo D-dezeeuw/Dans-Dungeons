@@ -173,8 +173,13 @@ export const ACT_SCHEMA = {
           dramaticPurpose: { type: 'string' },
           location:        { type: ['string', 'null'] },
           requires:        { type: 'array', items: { type: 'string' } },
+          // Mechanical flags that complete this beat outright. When the dice
+          // already decided the beat happened, asking a model whether it did is
+          // a paid call to confirm something the game knows — and a judge that
+          // keeps answering "no" can freeze a campaign indefinitely.
+          completesOn:     { type: 'array', items: { type: 'string' } },
         },
-        required: ['id', 'title', 'dramaticPurpose', 'location', 'requires'],
+        required: ['id', 'title', 'dramaticPurpose', 'location', 'requires', 'completesOn'],
         additionalProperties: false,
       },
     },

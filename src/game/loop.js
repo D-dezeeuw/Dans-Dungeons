@@ -23,7 +23,7 @@ import { assembleScope }                     from './scope.js';
 import { extractCanon }                      from '../ai/canon.js';
 import { memoryContext, maybeRefreshDigest } from './chapters.js';
 import { commitCanon }                       from './canon-commit.js';
-import { nextActContext, adoptAct, TARGET_ACTS } from './acts-runtime.js';
+import { nextActContext, adoptAct, beatSatisfiedByFlags, TARGET_ACTS } from './acts-runtime.js';
 import { generateAct }                       from '../ai/acts.js';
 import { awardXp, xpForKill, announcementFor } from './progression.js';
 import { statBlockFor }                      from './bestiary.js';
@@ -217,8 +217,20 @@ export async function processTurn(playerInput, onNarrationChunk) {
   //    (Each self-ticks; maybeAdvanceBeat is best-effort.)
   if (killedNpc) {
     setStoryFlag('enemy-slain');
-    if (killedNpc.isBoss) setStoryFlag(`boss-${killedNpc.creatureId ?? 'boss'}-slain`);
+    // Both the specific and the generic flag: a beat can name the creature it
+    // is about, and an act generator that only knows "a boss dies" can still
+    // write a beat that ends when one does.
+    if (killedNpc.isBoss) {
+      setStoryFlag('boss-slain');
+      setStoryFlag(`boss-${killedNpc.creatureId ?? 'boss'}-slain`);
+    }
   }
+  // The other mechanical facts an act can turn on. These are what make
+  // flag-primary beat completion possible: the dice write them, so a beat about
+  // them never needs a model to confirm what already happened.
+  if (resolved.intent === 'take' && resolved.itemType === 'treasure') setStoryFlag('treasure-taken');
+  if (resolved.intent === 'unlock' && resolved.unlocked)                setStoryFlag('gate-unlocked');
+  if (resolved.intent === 'move' && resolved.newRoomId)                 setStoryFlag(`room-${resolved.newRoomId}-entered`);
 
   // 6b. Record this turn's mechanical changes in the world ledger, then extract
   //     the durable claims the narration just made. Together these are what
@@ -273,9 +285,12 @@ function recordTurnMechanics(resolved, goblinResult, killedNpc) {
       because: `${killedNpc.name} was slain by the party`,
     });
   }
-  if (resolved?.intent === 'take' && resolved.item?.name) {
-    recordMechanical(`${room}.item.${slugId(resolved.item.id ?? resolved.item.name)}`, 'taken', true, {
-      because: `the party took the ${resolved.item.name}`,
+  // The resolver returns itemId/itemName; this read `resolved.item`, which the
+  // take branch has never set — so no pickup has ever reached the ledger.
+  if (resolved?.intent === 'take' && resolved.itemName) {
+    recordMechanical(`${room}.item.${slugId(resolved.itemId ?? resolved.itemName)}`, 'taken', true, {
+      scope:   resolved.itemType === 'treasure' ? 'regional' : 'local',
+      because: `the party took the ${resolved.itemName}`,
     });
   }
   if (resolved?.intent === 'unlock' && resolved.unlocked) {
@@ -335,6 +350,16 @@ async function maybeAdvanceBeat(narration) {
   const beat = activeBeat();
   if (!beat || !narration) return false;
   try {
+    // Flags first. A beat whose mechanical conditions are met is over — the
+    // dice said so — and confirming it with a paid call would be both an
+    // expense and a way for the campaign to stall on a judge that says no.
+    const byFlags = beatSatisfiedByFlags();
+    if (byFlags) {
+      const { completed, actClosed } = completeBeatNow(byFlags);
+      if (actClosed) await onActClosed();
+      return completed;
+    }
+
     const res = await checkBeatFulfilled(beat.dramaticPurpose, narration);
     if (!res?.fulfilled) return false;
     const { completed, actClosed } = completeBeatNow(beat.id);

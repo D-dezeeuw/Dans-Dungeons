@@ -16,7 +16,7 @@ import { appState, setValue, tick } from '../core/state.js';
 import { adjustReputation, standingFor } from 'bag-of-holding-client';
 import {
   activeBeat as actsActiveBeat, completeBeat as actsCompleteBeat, raiseFlag,
-  progress as actsProgress, gmDirective,
+  progress as actsProgress, gmDirective, unpaidSetups,
 } from './acts-runtime.js';
 
 // ─── Story flags ──────────────────────────────────────────────────────────────
@@ -95,6 +95,12 @@ export function buildStoryContext() {
   if (factions.length) ctx.factions = factions;
   if (quests.length) ctx.activeQuests = quests;
   if (recentFlags.length) ctx.recentEvents = recentFlags;
+  // Clues that were planted and have not paid off yet. The narrator gets them
+  // so it can seed and echo them in passing — a foreshadow nobody ever mentions
+  // again is just a sentence, and the payoff ledger was tracking obligations
+  // that no prompt could act on.
+  const setups = unpaidSetups().map(p => p.clue).filter(Boolean).slice(0, 4);
+  if (setups.length) ctx.activeSetups = setups;
   return Object.keys(ctx).length ? ctx : null;
 }
 

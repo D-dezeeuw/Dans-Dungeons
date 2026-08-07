@@ -120,7 +120,7 @@ export function resolveRules(classified, roller = plainRoller()) {
     const loot   = (appState.world?.rooms?.[roomId]?.loot ?? []).filter(i => !i.taken);
     const item   = loot.find(i => i.id === targetId) ?? (loot.length === 1 ? loot[0] : null);
     if (!item) return { intent: 'impossible', reason: 'Nothing to take here.' };
-    return { intent: 'take', itemId: item.id, itemName: item.name };
+    return { intent: 'take', itemId: item.id, itemName: item.name, itemType: item.type ?? null };
   }
 
   // ── UNLOCK ────────────────────────────────────────────────────────────────
@@ -130,7 +130,7 @@ export function resolveRules(classified, roller = plainRoller()) {
     if (!locked)  return { intent: 'impossible', reason: 'Nothing to unlock here.' };
     const hasKey  = (appState.party?.inventory ?? []).some(i => i.id === locked.keyId);
     if (!hasKey)  return { intent: 'impossible', reason: "You don't have the right key." };
-    return { intent: 'unlock', exitDir: locked.dir, newRoomId: locked.roomId };
+    return { intent: 'unlock', exitDir: locked.dir, newRoomId: locked.roomId, unlocked: true };
   }
 
   // ── REST ──────────────────────────────────────────────────────────────────
@@ -351,6 +351,7 @@ export function resolveDownTurn(roller = plainRoller()) {
 // so the recorded history entry is the small record object, not the whole party.
 export function commitDownTurn(down) {
   const prev = appState.party.pc.record;
+  if (down.strike?.by) setValue('session.slainBy', down.strike.by);
   setValue('party.pc.record', { ...prev, hpCurrent: down.hp, deathSaves: down.deathSaves, conditions: down.conditions });
 }
 
@@ -561,6 +562,14 @@ export function commitAll(resolved, goblinResult) {
       alive:    !resolved.targetDead,
       attitude: resolved.targetDead ? 'dead' : npc.attitude,
     });
+  }
+
+  // Who actually did it. The defeat screen used to blame Grizzik the Goblin —
+  // a character who exists only in a dead data block nothing reads — no matter
+  // which of forty-eight creatures killed you, in whichever of twenty-four
+  // themed dungeons.
+  if (goblinResult?.hit && goblinResult.pcNewHp <= 0 && goblinResult.goblinName) {
+    setValue('session.slainBy', goblinResult.goblinName);
   }
 
   // PC HP after goblin attack

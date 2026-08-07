@@ -250,7 +250,10 @@ export async function exportWorldBible() {
   };
 
   try {
-    const { generateWorldBible } = await import('../game/worldbible.js');
+    const { generateWorldBible, hasLiveCampaign } = await import('../game/worldbible.js');
+    // A campaign in progress is documented, not replaced by a handsome book
+    // about a world the player has never been to.
+    appendEntry('system', t(hasLiveCampaign() ? 'worldbible.documenting' : 'worldbible.generating'));
     const { world, chapters } = await generateWorldBible(progress);
 
     // Structure hierarchically and expose for debugging.

@@ -169,3 +169,78 @@ describe('casting resolves through the engine, not the narrator', () => {
     assert.match(loopSrc, /\['attack', 'cast'\]\.includes\(resolved\.intent\) && resolved\.targetDead/);
   });
 });
+
+describe('a beat the dice already settled needs no model call', () => {
+  const actsSrc = fs.readFileSync(path.join(ROOT, 'src/game/acts-runtime.js'), 'utf8');
+
+  it('the act schema lets a beat name its mechanical completion flags', async () => {
+    const { ACT_SCHEMA } = await import('../src/ai/schemas.js');
+    const beat = ACT_SCHEMA.properties.beats.items;
+    assert.ok(beat.properties.completesOn, 'beats cannot say what would finish them mechanically');
+    assert.ok(beat.required.includes('completesOn'));
+  });
+
+  it('the act prompt lists only flags the game actually raises', () => {
+    const prompt = enPrompts.ai.actPrompt;
+    const offered = [...prompt.matchAll(/"([a-z][a-z-]+)"/g)].map(m => m[1])
+      .filter(f => f !== 'beat-done-');
+    const raised = ['enemy-slain', 'boss-slain', 'treasure-taken', 'gate-unlocked',
+                    'settlement-reached', 'region-reached'];
+    for (const f of offered) {
+      assert.ok(raised.includes(f), `the prompt offers '${f}', which nothing in the game raises`);
+    }
+    // …and the ones the turn loop raises are on offer.
+    for (const f of ['enemy-slain', 'boss-slain', 'treasure-taken', 'gate-unlocked']) {
+      assert.ok(prompt.includes(f), `the prompt never mentions '${f}', so no beat can use it`);
+    }
+  });
+
+  it('the turn loop raises each of them', () => {
+    for (const flag of ['enemy-slain', 'boss-slain', 'treasure-taken', 'gate-unlocked']) {
+      assert.match(loopSrc, new RegExp(`setStoryFlag\\('${flag}'\\)`),
+        `nothing raises '${flag}', so a beat that waits on it waits forever`);
+    }
+  });
+
+  it('flags are checked before the paid judge call', () => {
+    const flagIdx  = loopSrc.indexOf('beatSatisfiedByFlags()');
+    const judgeIdx = loopSrc.indexOf('checkBeatFulfilled(');
+    assert.ok(flagIdx > 0 && judgeIdx > 0, 'both paths must exist');
+    assert.ok(flagIdx < judgeIdx, 'the judge must be the fallback, not the first resort');
+    assert.match(actsSrc, /export function beatSatisfiedByFlags/);
+  });
+});
+
+describe('the ledger records what the resolver actually returns', () => {
+  it('a pickup reaches the ledger', () => {
+    // This read `resolved.item`, which the take branch has never set — so no
+    // item pickup had ever been recorded, for the repo's whole history.
+    assert.match(resolverSrc, /intent: 'take', itemId: item\.id, itemName: item\.name/);
+    assert.match(loopSrc, /resolved\??\.intent === 'take' && resolved\.itemName/);
+    assert.ok(!/resolved\.item\?\.name/.test(loopSrc), 'the ledger still reads a field the resolver never sets');
+  });
+
+  it('an unlocked gate reaches the ledger', () => {
+    assert.match(resolverSrc, /intent: 'unlock'.*unlocked: true/);
+    assert.match(loopSrc, /resolved\??\.intent === 'unlock' && resolved\.unlocked/);
+  });
+
+  it('a treasure is regional news, a rag is local', () => {
+    assert.match(loopSrc, /resolved\.itemType === 'treasure' \? 'regional' : 'local'/);
+  });
+});
+
+describe('planted clues reach the narrator', () => {
+  it('unpaid setups travel in the story context', () => {
+    const storySrc = fs.readFileSync(path.join(ROOT, 'src/game/story.js'), 'utf8');
+    assert.match(storySrc, /ctx\.activeSetups = setups/);
+    assert.match(storySrc, /unpaidSetups\(\)/);
+  });
+
+  it('the narrator prompt knows what to do with them', () => {
+    for (const [code, bundle] of [['en', enPrompts], ['nl', JSON.parse(fs.readFileSync(path.join(ROOT, 'src/i18n/nl.json'), 'utf8'))]]) {
+      assert.match(bundle.ai.narratorPrompt, /activeSetups/,
+        `${code}: the context carries clues the prompt never mentions`);
+    }
+  });
+});

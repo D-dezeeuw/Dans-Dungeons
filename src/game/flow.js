@@ -1732,7 +1732,14 @@ async function doVictory() {
 
 async function doDefeat() {
   setValue('session.phase', 'game-over');
-  const defeatText = t('defeat.text');
+  // Name the creature that actually killed you, and the room it happened in.
+  // A death should belong to the campaign it happened in, not to a goblin from
+  // a data block nothing has read since the game was a prototype.
+  const killer = appState.session?.slainBy;
+  const place  = appState.world?.rooms?.[appState.world?.currentRoom]?.name;
+  const defeatText = killer
+    ? t(place ? 'defeat.textByIn' : 'defeat.textBy', { killer, place })
+    : t('defeat.text');
   UI.appendEntry('system', '');
   UI.appendEntry('system', t('defeat.banner'));
   UI.appendEntry('gm', defeatText);
