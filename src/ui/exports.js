@@ -1,7 +1,7 @@
 // src/ui/exports.js — journal, screenshot, sketch gallery, and save file I/O.
 // All functions are triggered by user action; none interact with the game loop.
 
-import { appState, setValue, restoreState, commit, serializeSave, parseSave } from '../core/state.js';
+import { appState, setValue, restoreState, commit, serializeSave, parseSave, fullTranscript } from '../core/state.js';
 import { appendEntry, setThinking } from './transcript.js';
 import { getJournalLog } from '../game/flow.js';
 import { importTimeTravel } from '../game/undo.js';
@@ -117,9 +117,11 @@ export function handleImportFile(e) {
 export async function createJournal() {
   let journalLog = getJournalLog();
 
-  // If journalLog is empty (e.g. after a page refresh/resume), build from transcript.
+  // If journalLog is empty (e.g. after a page refresh/resume), build from the
+  // transcript — the FULL one, including everything the cold archive holds, so
+  // a long campaign's journal covers the campaign rather than its last 50 turns.
   if (!journalLog.length) {
-    const transcript = appState.transcript ?? [];
+    const transcript = await fullTranscript();
     const gmEntries  = transcript.filter(e => e.role === 'gm');
     if (gmEntries.length) {
       journalLog = gmEntries.map(e => ({ turn: e.turn ?? 0, narration: e.text, imageSrc: null }));
