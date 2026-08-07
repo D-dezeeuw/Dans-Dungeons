@@ -127,12 +127,17 @@ export function verifyLog({ seed, log, rules: rulesOpt }) {
           return { ok: false, divergedAt: i, expected: entry, actual };
         }
         break;
+      // Advantage and disadvantage draw TWO dice, so the verifier has to roll
+      // the same stance or every later entry shifts. The engine records the
+      // stance the check actually used.
       case 'abilityCheck':
         actual = abilityCheck({
           abilityScore: entry.abilityScore,
           proficient: entry.proficient,
           proficiencyBonus: entry.proficiencyBonus,
-          dc: entry.dc
+          dc: entry.dc,
+          advantage: entry.stance === 'advantage',
+          disadvantage: entry.stance === 'disadvantage'
         }, rng);
         if (actual.d20 !== entry.d20 || actual.success !== entry.success) {
           return { ok: false, divergedAt: i, expected: entry, actual };
@@ -143,12 +148,39 @@ export function verifyLog({ seed, log, rules: rulesOpt }) {
           abilityScore: entry.abilityScore,
           proficient: entry.proficient,
           proficiencyBonus: entry.proficiencyBonus,
-          dc: entry.dc
+          dc: entry.dc,
+          advantage: entry.stance === 'advantage',
+          disadvantage: entry.stance === 'disadvantage'
         }, rng);
         if (actual.d20 !== entry.d20 || actual.success !== entry.success) {
           return { ok: false, divergedAt: i, expected: entry, actual };
         }
         break;
+      // A death save draws exactly one d20 (the engine only records the entry
+      // when the save actually rolled), so it must consume a draw here or every
+      // subsequent roll in the log shifts and the whole verification diverges.
+      case 'deathSave':
+        actual = rollDie(20, rng);
+        if (actual !== entry.d20) {
+          return { ok: false, divergedAt: i, expected: entry.d20, actual };
+        }
+        break;
+
+      // Bookkeeping entries: recorded for the audit trail, but they consume no
+      // randomness, so replay walks past them. Before this, the engine's own
+      // output tripped its own forwards-incompatibility guard — a session
+      // containing a death save or any class-feature use could not be verified.
+      case 'mechanicApplied':
+      case 'hookFired':
+        break;
+
+      // Draws consumed by a namespace that does not log its own roll shape
+      // (Travel, Equipment, Movement, MagicItems). Advancing the stream by the
+      // recorded count keeps every later entry aligned.
+      case 'rngDraws':
+        for (let d = 0; d < (entry.count ?? 0); d++) rng();
+        break;
+
       default:
         throw new Error(`Cannot replay unknown roll op: ${entry.op}`);
     }

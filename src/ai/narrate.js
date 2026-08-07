@@ -6,6 +6,7 @@
 import { _callStream, repairJson, chatCompletion, aiConfig } from './client.js';
 import { generateImage } from 'bag-of-holding-client';
 import { NARRATOR_SCHEMA } from './schemas.js';
+import { salvageJson } from './parse.js';
 import { t, locale } from '../i18n/i18n.js';
 import { transcriptWindow } from '../game/chapters.js';
 
@@ -63,13 +64,23 @@ export async function narrate(resolvedFacts, sceneContext, recentTranscript, onC
     { role: 'user',   content: t('ai.narrateTurnPrompt') },
   ];
 
-  const raw = await _callStream({ tier: 'medium', messages }, onChunk);
+  // Schema-bound streaming: the narrator answering in prose or inside a markdown
+  // fence used to cost a second, paid repair call on top of the one the player
+  // already watched arrive.
+  const raw = await _callStream({ tier: 'medium', messages, schema: NARRATOR_SCHEMA }, onChunk);
 
   try {
     return JSON.parse(raw);
-  } catch {
-    return repairJson(raw, { tier: 'medium', schema: NARRATOR_SCHEMA }, messages);
-  }
+  } catch { /* fall through to local salvage */ }
+
+  // Salvage locally before paying anyone. Almost every "unparseable" narration
+  // is valid JSON wearing a markdown fence or trailing prose — and the player
+  // has ALREADY watched the streamed text, so a repair call that comes back
+  // with different words shows them one story and commits another.
+  const salvaged = salvageJson(raw);
+  if (salvaged) return salvaged;
+
+  return repairJson(raw, { tier: 'medium', schema: NARRATOR_SCHEMA }, messages);
 }
 
 // ─── Scene image generation ───────────────────────────────────────────────────
@@ -88,5 +99,8 @@ export async function generateSceneImage(sceneDescription) {
 
   // The library owns the transport + the multi-shape provider response parsing;
   // it resolves the image-tier model from config and returns null on any failure.
-  return generateImage(aiConfig(), { prompt });
+  return generateImage(aiConfig('image'), { prompt });
 }
+
+// Re-exported so callers that reached for it through narrate.js still can.
+export { salvageJson };

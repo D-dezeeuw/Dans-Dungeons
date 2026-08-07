@@ -5,8 +5,9 @@
 // commitAll() and appendTranscript() write the resolved state to Spektrum.
 
 import { appState, setValue, addValue } from '../core/state.js';
-import { Combat } from './rules.js';
+import { Combat, SRD, Spellcasting } from './rules.js';
 import { plainRoller } from './rng.js';
+import { casterProfile, findCastable, cantripDamage, rollSpec } from './spells.js';
 
 // ─── Rules resolver ───────────────────────────────────────────────────────────
 
@@ -58,6 +59,15 @@ export function resolveRules(classified, roller = plainRoller()) {
       hit: atk.hit, crit: atk.critical, fumble: atk.fumble, damage,
       targetPrevHp: target.hp, targetNewHp, targetDead,
     };
+  }
+
+  // ── CAST ──────────────────────────────────────────────────────────────────
+  // A caster used to be a fighter with a different sprite: "I cast fire bolt"
+  // reached the classifier as a skill check against a DC the model invented,
+  // and the slots, the save DC, and the scaling the engine had all along went
+  // unused for the repo's entire history.
+  if (intent === 'cast') {
+    return resolveCast(classified, record, sheet, roller);
   }
 
   // ── SKILL CHECK ───────────────────────────────────────────────────────────
@@ -133,7 +143,24 @@ export function resolveRules(classified, roller = plainRoller()) {
       return { intent: 'impossible', reason: 'You cannot rest with enemies nearby.' };
     }
     const max     = sheet?.hp?.max ?? record.hpCurrent;
+    const magic   = appState.party?.magic ?? null;
+
+    // A long rest is the only thing that gives a caster their slots back, and
+    // until now nothing in the game ever did. `classified.long` comes from the
+    // "make camp" action; a plain rest stays the short-rest hit-die recovery.
+    if (classified.long === true) {
+      const slotsAfter = magic?.slots ? Spellcasting.longRest(magic.slots) : null;
+      return {
+        intent: 'rest', long: true,
+        healed: max - (record.hpCurrent ?? max),
+        hpBefore: record.hpCurrent, hpAfter: max,
+        ...(slotsAfter ? { slotsAfter, slotsRestored: true } : {}),
+      };
+    }
+
     if (record.hpCurrent >= max) {
+      // A short rest returns no slots to a full caster (that is the long rest's
+      // job), so there is nothing else to give here.
       return { intent: 'rest', healed: 0, hpBefore: record.hpCurrent, hpAfter: record.hpCurrent, alreadyFull: true };
     }
     // One hit die of recovery, CON-modified, floored at 1 — the short-rest
@@ -327,6 +354,130 @@ export function commitDownTurn(down) {
   setValue('party.pc.record', { ...prev, hpCurrent: down.hp, deathSaves: down.deathSaves, conditions: down.conditions });
 }
 
+// ─── Spellcasting ─────────────────────────────────────────────────────────────
+
+// Resolve a cast end to end: slot spend (engine), attack roll or saving throw,
+// damage or healing, concentration. Returns mechanical facts only; commitAll
+// writes them. A refusal comes back as `impossible` with the engine's own
+// reason, so "you have no second-level slots left" is the reason the player
+// reads rather than a paragraph the narrator improvised.
+function resolveCast(classified, record, sheet, roller) {
+  const magic   = appState.party?.magic ?? null;
+  const profile = casterProfile(record, sheet);
+  if (!profile) return { intent: 'impossible', reason: 'You are not a spellcaster.' };
+  if (!magic)   return { intent: 'impossible', reason: 'You have not prepared any spells.' };
+
+  const wanted = classified.spellId ?? classified.target_id ?? classified.skill;
+  const chosen = findCastable(wanted, record, sheet, magic);
+  if (!chosen) return { intent: 'impossible', reason: `You do not have ${wanted ?? 'that spell'} prepared.` };
+
+  const spell = SRD.spells?.[chosen.id];
+  if (!spell)  return { intent: 'impossible', reason: 'That spell is not in the book.' };
+
+  // Spend the slot through the engine so preparation, component, and
+  // one-leveled-spell-per-turn rules all apply — and so a refusal cites SRD.
+  const actor = {
+    id:             record.id,
+    spellSlots:     magic.slots ?? [],
+    spellsPrepared: magic.prepared ?? [],
+  };
+  const slotLevel = spell.level === 0 ? undefined : (classified.slotLevel ?? chosen.slotLevel ?? spell.level);
+  const cast = Spellcasting.castSpell(actor, spell, slotLevel ? { slotLevel } : {});
+  if (!cast.ok) return { intent: 'impossible', reason: cast.reason };
+
+  const base = {
+    intent:     'cast',
+    spellId:    spell.id,
+    spellName:  spell.name,
+    spellLevel: spell.level,
+    castLevel:  cast.castLevel,
+    slotsAfter: cast.actor.spellSlots,
+    concentration: spell.concentration === true,
+    saveDC:     profile.saveDC,
+  };
+
+  // Healing: no target roll, no save — the spec resolves and the PC recovers.
+  if (spell.healing) {
+    const abilityMod = sheet.abilityScores?.mod?.[profile.ability] ?? 0;
+    const heal = rollSpec(spell.healing, abilityMod, roller);
+    const healed = heal?.total ?? 0;
+    const max = sheet?.hp?.max ?? record.hpCurrent;
+    const hpAfter = Math.min(max, (record.hpCurrent ?? 0) + healed);
+    return { ...base, healing: healed, hpBefore: record.hpCurrent, hpAfter, hpMax: max };
+  }
+
+  const target = appState.world?.npcs?.[classified.target_id]
+    ?? Object.values(appState.world?.npcs ?? {}).find(n => n.alive && n.attitude === 'hostile')
+    ?? null;
+
+  // Utility spells (Light, Mage Hand, Detect Magic…) have no damage and no
+  // target. The slot is still spent; the narrator gets colour and nothing else.
+  if (!spell.damage) {
+    return { ...base, utility: true, noEffect: !spell.concentration };
+  }
+  if (!target) return { intent: 'impossible', reason: 'There is nothing to target.' };
+
+  const damageSpec = spell.level === 0
+    ? cantripDamage(spell, profile.casterLevel)
+    : upcastSpec(spell, cast.castLevel);
+
+  // Three ways a damaging spell lands, and the engine already knows all three.
+  let hit = true, d20 = null, totalHit = null, save = null, crit = false;
+
+  if (spell.save) {
+    // Save-for-none (or half): the TARGET rolls, against the caster's save DC.
+    const ability = spell.save;
+    const score   = abilityScoreOf(target, ability);
+    const check   = roller.check({ abilityScore: score, proficient: false, proficiencyBonus: 0, dc: profile.saveDC });
+    save = { ability, d20: check.d20, total: check.total, dc: profile.saveDC, success: check.success };
+    hit  = !check.success;
+  } else if (!spell.autohit) {
+    // A spell attack roll — the caster's spell attack bonus vs the target's AC.
+    const atk = roller.attack({ attackBonus: profile.attackBonus, ac: target.ac });
+    d20 = atk.d20; totalHit = atk.total; hit = atk.hit; crit = atk.critical;
+  }
+  // autohit (Magic Missile) skips both: it simply strikes.
+
+  let damage = 0;
+  if (hit || (spell.save && spell.halfOnSave !== false)) {
+    const rolls = spell.projectiles ?? 1;
+    for (let i = 0; i < rolls; i++) {
+      const r = rollSpec(damageSpec, 0, roller);
+      damage += r?.total ?? 0;
+    }
+    // A failed save on a save-for-half spell still deals half, rounded down.
+    if (spell.save && save?.success) damage = Math.floor(damage / 2);
+    if (crit) damage *= 2;
+  }
+
+  const targetNewHp = Math.max(0, target.hp - damage);
+  return {
+    ...base,
+    targetId: target.id, targetName: target.name, targetAC: target.ac,
+    damageSpec, projectiles: spell.projectiles ?? 1,
+    d20, totalHit, hit, crit, save, damage,
+    targetPrevHp: target.hp, targetNewHp, targetDead: targetNewHp <= 0,
+  };
+}
+
+// A leveled spell cast from a higher slot. The SRD upcast rule this data
+// supports is "one extra damage die per level above the spell's own"; spells
+// with a bespoke upcast are left at their printed dice rather than guessed at.
+function upcastSpec(spell, castLevel) {
+  const extra = Math.max(0, (castLevel ?? spell.level) - spell.level);
+  if (!extra || !spell.damage) return spell.damage;
+  const m = /^(\d+)d(\d+)(.*)$/.exec(String(spell.damage));
+  if (!m) return spell.damage;
+  return `${Number(m[1]) + extra}d${m[2]}${m[3]}`;
+}
+
+// A monster's ability score for a saving throw. Stat blocks carry scores when
+// they can; 10 (a +0 modifier) is the honest default for one that does not,
+// and is what the engine's own encounter maths assumes.
+function abilityScoreOf(npc, ability) {
+  return npc?.abilityScores?.[ability] ?? npc?.abilities?.[ability] ?? 10;
+}
+
 // ─── State commits ────────────────────────────────────────────────────────────
 
 export function commitAll(resolved, goblinResult) {
@@ -376,6 +527,29 @@ export function commitAll(resolved, goblinResult) {
     const roomId = appState.world.currentRoom;
     const exits  = appState.world.rooms[roomId].exits;
     setValue('world.rooms.' + roomId + '.exits', exits.map(e => e.dir === resolved.exitDir ? { ...e, locked: false } : e));
+  }
+
+  // Slots recovered on a rest.
+  if (resolved.intent === 'rest' && resolved.slotsAfter) {
+    setValue('party.magic.slots', resolved.slotsAfter);
+  }
+
+  // Spell slots — spent whether or not the spell landed, which is the whole
+  // point of a slot. Written even for a miss, a save, or a utility cast.
+  if (resolved.intent === 'cast' && resolved.slotsAfter) {
+    setValue('party.magic.slots', resolved.slotsAfter);
+  }
+  if (resolved.intent === 'cast' && resolved.hpAfter != null) {
+    setValue('party.pc.record.hpCurrent', resolved.hpAfter);
+  }
+  if (resolved.intent === 'cast' && resolved.targetId && resolved.damage > 0) {
+    const npc = appState.world?.npcs?.[resolved.targetId];
+    setValue('world.npcs.' + resolved.targetId, {
+      ...npc,
+      hp:       resolved.targetNewHp,
+      alive:    !resolved.targetDead,
+      attitude: resolved.targetDead ? 'dead' : npc.attitude,
+    });
   }
 
   // NPC state

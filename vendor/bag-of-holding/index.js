@@ -65,6 +65,14 @@ export const Character = Object.freeze({
 // registries directly off the default export or an engine instance.
 export const SRD = Object.freeze({ species, classes, backgrounds, feats, spells, items, monsters });
 
+// Which classes may learn which spells — the half of the SRD spell data the
+// records themselves never carried. A host offering a player their real spell
+// list had to invent one from school and level, which gets a wizard casting
+// Cure Wounds.
+export {
+  CASTER_CLASSES, classesFor, isOnClassList, spellsFor, maxSpellLevel,
+} from './src/srd/spell-lists.js';
+
 // `Classes` was historically exported as the class-definition map.
 // Kept for compatibility — same content as `_default.classes`, just
 // under the old name.

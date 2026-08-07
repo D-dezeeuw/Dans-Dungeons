@@ -5,14 +5,14 @@ import { appState, setValue, bindDOM, initState, restoreState, loadFromStorage, 
          onSaveHealthChange, storagePressure, hasCorruptSaveBackup } from './core/state.js';
 import { registerReactiveSidebar }                                                           from './ui/reactive.js';
 import { createJournal, exportScreenshot, exportAllSketches, exportSave, importSave, handleImportFile, exportWorldBible } from './ui/exports.js';
-import { startNewGame, resumeGame, ensureKey, applySketchView, upgradeToDeluxe, requireDeluxe } from './game/flow.js';
+import { startNewGame, resumeGame, ensureKey, applySketchView, sketchThisScene, upgradeToDeluxe, requireDeluxe } from './game/flow.js';
 import { reconcilePc }                                                                        from './game/character.js';
 import { initSpeakHover }                                                                   from './ui/transcript.js';
 import { initMicButton }                                                                    from './ui/input.js';
 import { initTimeTravel, importTimeTravel }                                                 from './game/undo.js';
 import { initTimeline }                                                                     from './ui/timeline.js';
 import { verifyCombatLog }                                                                  from './game/rng.js';
-import { getSpend, onSpendChange }                                                          from './ai/spend.js';
+import { getSpend, onSpendChange, budgetWarningDue, setBudget, getBudget, TIERS }           from './ai/spend.js';
 import * as UI from './ui/console.js';
 import { locale, setLocale, t } from './i18n/i18n.js';
 
@@ -30,9 +30,31 @@ async function boot() {
     if (!el) return;
     el.textContent   = s.tokens > 0 ? '$' + s.costUsd.toFixed(4) + ' · ' + s.tokens.toLocaleString() + ' tok' : '';
     el.style.display = s.tokens > 0 ? '' : 'none';
+    // The per-tier split lives in the tooltip: the running total never showed
+    // that a sketch costs many times the paragraph it illustrates.
+    const parts = TIERS
+      .filter(k => (s.byTier?.[k]?.tokens ?? 0) > 0 || (s.byTier?.[k]?.costUsd ?? 0) > 0)
+      .map(k => `${k}: $${(s.byTier[k].costUsd).toFixed(4)}`);
+    el.title = parts.length ? parts.join(' · ') : '';
+
+    // Soft budget cap: warn once per threshold, never interrupt a campaign.
+    const warn = budgetWarningDue();
+    if (warn) UI.appendEntry('system', t(warn.level >= 100 ? 'budget.over' : 'budget.near', {
+      spent: warn.spentUsd.toFixed(2), cap: warn.capUsd.toFixed(2),
+    }));
   };
   onSpendChange(renderSpend);
   renderSpend(getSpend());
+
+  // Session budget: a soft cap the player sets, warned on at 80% and 100%.
+  const budgetInput = document.getElementById('budget-cap');
+  if (budgetInput) {
+    const cap = getBudget().capUsd;
+    if (cap > 0) budgetInput.value = String(cap);
+    budgetInput.placeholder = t('budget.none');
+    budgetInput.previousElementSibling && (budgetInput.previousElementSibling.textContent = t('budget.label'));
+    budgetInput.addEventListener('change', () => setBudget(budgetInput.value));
+  }
 
   document.getElementById('skeleton-loading')?.remove();
   document.documentElement.classList.add('styles-loaded');
@@ -58,6 +80,9 @@ async function boot() {
   document.getElementById('sketch-btn-min')?.addEventListener('click', () => applySketchView('minimized'));
   document.getElementById('sketch-btn-win')?.addEventListener('click', () => applySketchView('windowed'));
   document.getElementById('sketch-btn-max')?.addEventListener('click', () => applySketchView('maximized'));
+  // Sketches are rationed to room changes now, so the player needs a way to ask
+  // for one of a scene they care about.
+  document.getElementById('sketch-btn-now')?.addEventListener('click', () => sketchThisScene());
 
   const actionBarToggle = document.getElementById('action-bar-toggle');
   actionBarToggle?.addEventListener('click', () => {

@@ -27,6 +27,7 @@ import { nextActContext, adoptAct, TARGET_ACTS } from './acts-runtime.js';
 import { generateAct }                       from '../ai/acts.js';
 import { awardXp, xpForKill, announcementFor } from './progression.js';
 import { statBlockFor }                      from './bestiary.js';
+import { castableSpells, slotSummary }       from './spells.js';
 import { t }                                 from '../i18n/i18n.js';
 
 // ─── Scene context (pure snapshot for AI) ────────────────────────────────────
@@ -62,6 +63,22 @@ export function buildScene() {
       alive:    n.alive,
     })),
   };
+
+  // A caster's live spell list, so the classifier names ids that exist and the
+  // narrator knows a Fire Bolt is a Fire Bolt. Absent entirely for non-casters,
+  // which keeps a fighter's prompt exactly as small as it was.
+  const magic = appState.party?.magic;
+  if (record && magic) {
+    const list = castableSpells(record, sheet, magic);
+    if (list.length) {
+      scene.spells = list.map(s => ({
+        id: s.id, name: s.name, level: s.level, castable: s.castable,
+        ...(s.damage ? { damage: s.damage } : {}),
+        ...(s.healing ? { healing: s.healing } : {}),
+      }));
+      scene.spellSlots = slotSummary(magic.slots);
+    }
+  }
 
   // Leaf-to-root digest path for world context (if campaign mode)
   const loc = appState.world?.location;
@@ -151,14 +168,14 @@ export async function processTurn(playerInput, onNarrationChunk) {
 
   // Capture a slain enemy BEFORE commit (so we can raise story flags after) —
   // the npc object still carries isBoss / creatureId here.
-  const killedNpc = (resolved.intent === 'attack' && resolved.targetDead)
+  const killedNpc = (['attack', 'cast'].includes(resolved.intent) && resolved.targetDead)
     ? appState.world?.npcs?.[resolved.targetId] : null;
 
   // 3. Compute goblin retaliation BEFORE committing PC's attack.
   //    A killed goblin must not retaliate.
-  const goblinTurnTriggered = ['attack', 'skill', 'wait', 'look', 'talk', 'move', 'take',
+  const goblinTurnTriggered = ['attack', 'cast', 'skill', 'wait', 'look', 'talk', 'move', 'take',
                                'unlock', 'rest', 'use', 'flee'].includes(resolved.intent);
-  const goblinSurvived      = resolved.intent !== 'attack' || !resolved.targetDead;
+  const goblinSurvived      = !['attack', 'cast'].includes(resolved.intent) || !resolved.targetDead;
   // Getting away means getting away: a successful flight is not punished by the
   // enemy it just escaped. This is the same class of contradiction as a stealth
   // success narrated alongside the hit it was supposed to prevent.
@@ -218,10 +235,17 @@ export async function processTurn(playerInput, onNarrationChunk) {
     progression = awardXp(xpForKill(killedNpc.creatureId, block),
       t('progress.killReason', { name: killedNpc.name }));
   }
-  await absorbNarration(narratorResp.narration);
-  await maybeRefreshDigest();   // rolling chapter memory (Epic E4)
+  // Canon extraction and the beat check both read this turn's narration and
+  // write disjoint state (the ledger vs the red thread), so running them in
+  // series only ever cost the player latency — two tiny-tier round trips back
+  // to back at the end of every turn. Started together, awaited before the
+  // undo boundary so their writes still land INSIDE this turn.
+  const canonPass = absorbNarration(narratorResp.narration);
+  const beatPass  = maybeAdvanceBeat(narratorResp.narration);
 
-  await maybeAdvanceBeat(narratorResp.narration);
+  await canonPass;
+  await maybeRefreshDigest();   // rolling chapter memory (Epic E4)
+  await beatPass;
 
   // 7. Turn fully committed (mechanics + flags) — register the undo boundary (a
   //    throw above never reaches here) and autosave once.

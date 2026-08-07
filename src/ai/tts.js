@@ -35,7 +35,7 @@ export async function speakText(text) {
 
   // Library does the fetch + model fallback + PCM→WAV; cost is metered via the
   // config's onCost sink. Returns null when no TTS model is configured.
-  const result = await synthesizeSpeech(aiConfig(), text);
+  const result = await synthesizeSpeech(aiConfig('tts'), text);
   if (!result) return;
 
   const blob = new Blob([result.audio], { type: result.mimeType });

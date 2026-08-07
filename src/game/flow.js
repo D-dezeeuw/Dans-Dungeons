@@ -9,6 +9,7 @@ import { buildWorldBlueprint } from './worldseed.js';
 import { OVERWORLD_ENEMY_IDS } from './creatures.js';
 import { createCharacter } from './character.js';
 import { processTurn, checkApiKey, generateTurnImage, buildScene } from './loop.js';
+import { describeAiError } from '../ai/errors.js';
 import { clearTurnMarks, setScrubHandler } from './undo.js';
 import { enterEncounterState, exitEncounterState } from './encounter-state.js';
 import { cutChapter, shouldCutChapter, recap, chapterIndex } from './chapters.js';
@@ -105,8 +106,41 @@ function buildImagePrompt(narration) {
   return npcs.length ? `${base} ${npcs.join(', ')} present.` : base;
 }
 
-function requestSceneImage(narration, journalEntry = null) {
-  if ((appState.settings?.sketchView ?? 'windowed') === 'minimized') return Promise.resolve(null);
+// ─── Image rationing ─────────────────────────────────────────────────────────
+//
+// A sketch used to be generated EVERY turn, at roughly 47x the cost of the text
+// it illustrated — three turns of swinging at the same goblin in the same room
+// bought three near-identical drawings of that room. A sketch now costs
+// something only when the picture would actually change: a new room, a new
+// chapter, or the player asking for one. Nothing about the display changes;
+// the last image simply stays up until there is a reason for a new one.
+
+let _lastSketchRoom = null;
+
+// Should this turn pay for a sketch? `force` is the "sketch this" chip.
+function sketchIsDue({ force = false } = {}) {
+  if (!appState.settings?.sceneImage) return false;
+  if ((appState.settings?.sketchView ?? 'windowed') === 'minimized') return false;
+  if (force) return true;
+  const here = `${appState.world?.location?.regionId ?? ''}/${appState.world?.currentRoom ?? ''}`;
+  return here !== _lastSketchRoom;
+}
+
+// Called on every accepted sketch so the next turn in the same room is free.
+function markSketched() {
+  _lastSketchRoom = `${appState.world?.location?.regionId ?? ''}/${appState.world?.currentRoom ?? ''}`;
+}
+
+// The "sketch this" action: draw the current scene on demand, regardless of
+// whether the room changed.
+export function sketchThisScene() {
+  const last = journalLog[journalLog.length - 1] ?? null;
+  return requestSceneImage(last?.narration ?? null, last, { force: true });
+}
+
+function requestSceneImage(narration, journalEntry = null, { force = false } = {}) {
+  if (!sketchIsDue({ force })) return Promise.resolve(null);
+  markSketched();
   UI.showSceneImageLoading();
   return generateTurnImage(buildImagePrompt(narration))
     .then(src => {
@@ -347,9 +381,13 @@ export async function startNewGame() {
   setValue('session.turnCount', 0);
   setValue('session.phase', 'char-create');
 
-  const result = await createCharacter(UI);
-  if (!result) { UI.appendEntry('error', t('setup.createCancelled')); return; }
-  setValue('party.pc', result);
+  const { magic, ...pc } = (await createCharacter(UI)) ?? {};
+  if (!pc.record) { UI.appendEntry('error', t('setup.createCancelled')); return; }
+  setValue('party.pc', pc);
+  // Slots live beside the sheet, not inside it: the sheet is derived and
+  // re-derived on every level-up, and spent slots are the one thing that must
+  // survive that — a wizard who levels mid-dungeon should not get them back.
+  if (magic) setValue('party.magic', magic);
 
   // Deluxe: ask about paid features. Free: skip.
   if (isDeluxe) {
@@ -1411,7 +1449,7 @@ async function beginAdventure() {
 
   const openingEntry = { turn: 0, narration: room.description, imageSrc: null };
   journalLog.push(openingEntry);
-  if (appState.settings?.sceneImage) requestSceneImage(room.description, openingEntry);
+  requestSceneImage(room.description, openingEntry, { force: true });   // the opening scene always gets one
   if (appState.settings?.actionBar)  UI.updateActionBar(room.exits ?? []);
   _speak(room.description);
 
@@ -1605,14 +1643,14 @@ async function playLoop() {
       if (appState.settings?.roleplayMode) UI.showRoleplayOverlay(false);
       streamEl?.remove(); streamEl = null;
       UI.appendEntry('system', '');
-      if (/^AI 401:/.test(caughtErr.message)) {
-        UI.appendEntry('error', t('loop.authFail'));
-      } else if (/^AI 4\d\d:/.test(caughtErr.message)) {
-        UI.appendEntry('gm', t('loop.gmUnavailable'));
+      // Name the cause and the player's next move. Every failure used to
+      // collapse into "the Game Master was not available", which is a guess:
+      // waiting fixes a 429 and can never fix a 402.
+      const { key, retryable, status } = describeAiError(caughtErr);
+      UI.appendEntry('error', t(key, { status: status ?? '', detail: caughtErr.message }));
+      if (retryable) {
+        UI.appendEntry('system', t('error.retryHint'));
         pendingRetry = raw;
-      } else {
-        UI.appendEntry('error', t('loop.error', { msg: caughtErr.message }));
-        UI.appendEntry('system', t('loop.turnFail'));
       }
       continue;
     }
@@ -1626,7 +1664,7 @@ async function playLoop() {
 
     const journalEntry = { turn: appState.session?.turnCount ?? 0, narration: result?.narration ?? '', imageSrc: null };
     journalLog.push(journalEntry);
-    if (appState.settings?.sceneImage) requestSceneImage(result?.narration, journalEntry);
+    requestSceneImage(result?.narration, journalEntry);
 
     if (appState.settings?.roleplayMode) {
       UI.showRoleplayOverlay(false);

@@ -17,7 +17,10 @@ const APP_TITLE = "Dan's Dungeons";
 // so a mid-game tier/key change (Deluxe upgrade) propagates without rebuilds.
 // Exported as `aiConfig` so the media helpers (image/tts/stt) inject the same
 // config — referer, brand, token + cost sinks — into the library.
-export function aiConfig() {
+// `tier` is optional and only used to attribute spend: the meter's per-tier
+// breakdown is what makes an expensive habit (a sketch every turn) visible
+// instead of hiding inside one running total.
+export function aiConfig(tier = null) {
   const ai = appState.ai || {};
   return {
     key:           ai.key,
@@ -29,8 +32,8 @@ export function aiConfig() {
     referer:       location.origin,
     // addValue → per-timeline cost (recorded; rewound by undo). addSpend → real
     // cumulative spend (out of history; survives undo + reload; drives the meter).
-    onTokens:      (n)   => { addValue('ai.totalTokens', n);     addSpend(n, 0); },
-    onCost:        (usd) => { addValue('ai.totalCostUsd', usd);  addSpend(0, usd); },
+    onTokens:      (n)   => { addValue('ai.totalTokens', n);     addSpend(n, 0, tier); },
+    onCost:        (usd) => { addValue('ai.totalCostUsd', usd);  addSpend(0, usd, tier); },
   };
 }
 const cfg = aiConfig;
@@ -38,7 +41,7 @@ const cfg = aiConfig;
 // ─── Historical surface (kept stable for the other ai/* + game modules) ───────
 
 export function checkKey()                  { return libCheckKey(cfg()); }
-export function _call(opts)                 { return libCall(cfg(), opts); }
-export function _callStream(opts, onChunk)  { return chatStream(cfg(), opts, onChunk, { field: 'narration' }); }
-export function repairJson(raw, baseOpts, messages) { return libRepair(cfg(), raw, { ...baseOpts, messages }); }
-export function chatCompletion(opts)        { return libChat(cfg(), opts); }
+export function _call(opts)                 { return libCall(cfg(opts?.tier), opts); }
+export function _callStream(opts, onChunk)  { return chatStream(cfg(opts?.tier), opts, onChunk, { field: 'narration' }); }
+export function repairJson(raw, baseOpts, messages) { return libRepair(cfg(baseOpts?.tier), raw, { ...baseOpts, messages }); }
+export function chatCompletion(opts)        { return libChat(cfg(opts?.tier), opts); }

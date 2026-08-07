@@ -69,7 +69,9 @@ export default {
   // the mechanic helper reads the current `max` from the actor's
   // resources, so the level-up flow updates `indomitable.max`.
   resources: {
-    secondWind: { max: 1, refreshes: 'short' },
+    // SRD 5.2: two uses at level 1 (3 at 4th, 4 at 10th), all back on a long
+    // rest and one back on a short rest. This was the 2014 single use.
+    secondWind: { max: 2, refreshes: 'short' },
     actionSurge: { max: 1, refreshes: 'short' },
     indomitable: { max: 1, refreshes: 'long' }
   },

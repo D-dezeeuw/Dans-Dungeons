@@ -5,7 +5,7 @@
 // always predictable regardless of restore order.
 
 import { DEFAULT_MODELS } from '../ai/tiers.js';
-import { wrapEnvelope, saveEnvelope, loadEnvelope, makeCommit,
+import { wrapEnvelope, saveEnvelope, loadEnvelope, makeCommit, restoreBackup, LOAD_ERRORS,
          openCold, appendSegment, readSegments, splitSave } from 'bag-of-holding-client';
 
 import { createSpektrum } from 'spektrum';
@@ -171,9 +171,23 @@ const PERSIST_KEYS = ['session', 'ai', 'party', 'world', 'flags', 'transcript', 
 // Ordered v→v+1 migrations for saved-state shape changes. v1→v2 added the
 // optional `_timeTravel` blob; v1 saves simply lack it (load as no history), so
 // the migration is an identity pass — it just records that the bump is benign.
+// v0 is the legacy pre-versioning bare snapshot; it passes straight through.
+// Declaring it explicitly is not ceremony — the library refuses an undeclared
+// step now, because a silently skipped migration corrupts a save in a way that
+// only surfaces turns later.
 const SAVE_MIGRATIONS = {
+  0: (data) => data,
   1: (data) => data,
 };
+
+// Previous saves kept alongside the live one. Two is enough to step back past a
+// bad autosave without meaningfully competing for the localStorage quota.
+const SAVE_BACKUPS = 2;
+
+// Why the last load was refused, if it was — surfaced to the player rather than
+// silently starting a new game on top of a campaign that is still there.
+let _lastLoadError = null;
+export function lastLoadError() { return _lastLoadError; }
 
 // The persisted slice of appState (the single source of the save shape, shared
 // by the localStorage save and the downloadable save file). Optionally carries
@@ -240,7 +254,10 @@ function setSaveHealth(ok) {
 // this synchronous, quota-limited write costs stops growing with the campaign.
 export function saveToStorage() {
   const { hot, cold } = splitSave(buildSaveSnapshot(), HOT_LIMITS);
-  const ok = saveEnvelope(localStorage, SAVE_KEY, hot, SAVE_VERSION);
+  const ok = saveEnvelope(localStorage, SAVE_KEY, hot, SAVE_VERSION, {
+    backups:  SAVE_BACKUPS,
+    checksum: true,
+  });
   if (!ok) console.warn('[state] localStorage save failed (quota?)');
   setSaveHealth(ok);
   archiveCold(cold);          // fire-and-forget; never blocks a turn
@@ -293,18 +310,38 @@ export async function storagePressure() {
 
 export function loadFromStorage() {
   const raw = localStorage.getItem(SAVE_KEY);
+  _lastLoadError = null;
   const data = loadEnvelope(raw, {
     migrations:     SAVE_MIGRATIONS,
     currentVersion: SAVE_VERSION,
+    onError: (code, detail) => {
+      // A checksum warning is not a refusal — the save still loaded.
+      if (code !== LOAD_ERRORS.CHECKSUM) _lastLoadError = { code, detail };
+      console.warn(`[state] save ${code}: ${detail}`);
+    },
   });
-  // A save that exists but will not parse is a bug or a corrupted write, not a
-  // new game. Keep the bytes so the player (or a support request) can recover
-  // them instead of silently overwriting on the next autosave.
-  if (raw && !data) {
+  if (data) return data;
+
+  // A save that exists but will not load is a bug, a corrupted write, or a file
+  // from a newer build — not a new game. Keep the bytes so the player (or a
+  // support request) can recover them instead of silently overwriting on the
+  // next autosave, then try the rotated backups newest-first.
+  if (raw) {
     try { localStorage.setItem(`${SAVE_KEY}-corrupt`, raw); } catch { /* nothing to do */ }
-    console.error('[state] save could not be parsed — kept a copy at dans-dungeons-corrupt');
+    console.error(`[state] save could not be loaded (${_lastLoadError?.code ?? 'unknown'}) — kept a copy at ${SAVE_KEY}-corrupt`);
+
+    const recovered = restoreBackup(localStorage, SAVE_KEY, {
+      keep:           SAVE_BACKUPS,
+      migrations:     SAVE_MIGRATIONS,
+      currentVersion: SAVE_VERSION,
+    });
+    if (recovered) {
+      console.warn(`[state] recovered the save from backup slot ${recovered.slot}`);
+      _lastLoadError = { code: 'recovered-from-backup', detail: `slot ${recovered.slot}` };
+      return recovered.data;
+    }
   }
-  return data;
+  return null;
 }
 
 // Was a corrupt save quarantined on the last load?
@@ -323,7 +360,11 @@ export function serializeSave() {
 // envelopes and legacy bare snapshots (which load as version 0 and migrate
 // forward). Returns the unwrapped, migrated data, or null if unparseable.
 export function parseSave(raw) {
-  const data = loadEnvelope(raw, { migrations: SAVE_MIGRATIONS, currentVersion: SAVE_VERSION });
+  const data = loadEnvelope(raw, {
+    migrations:     SAVE_MIGRATIONS,
+    currentVersion: SAVE_VERSION,
+    onError: (code, detail) => console.warn(`[state] imported save ${code}: ${detail}`),
+  });
   return data ? sanitizeImported(data) : data;
 }
 
