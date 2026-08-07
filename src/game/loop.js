@@ -137,9 +137,14 @@ export async function processTurn(playerInput, onNarrationChunk) {
 
   // 3. Compute goblin retaliation BEFORE committing PC's attack.
   //    A killed goblin must not retaliate.
-  const goblinTurnTriggered = ['attack', 'skill', 'wait', 'look', 'talk', 'move', 'take', 'unlock'].includes(resolved.intent);
+  const goblinTurnTriggered = ['attack', 'skill', 'wait', 'look', 'talk', 'move', 'take',
+                               'unlock', 'rest', 'use', 'flee'].includes(resolved.intent);
   const goblinSurvived      = resolved.intent !== 'attack' || !resolved.targetDead;
-  const goblinResult        = (goblinTurnTriggered && goblinSurvived)
+  // Getting away means getting away: a successful flight is not punished by the
+  // enemy it just escaped. This is the same class of contradiction as a stealth
+  // success narrated alongside the hit it was supposed to prevent.
+  const escaped             = resolved.intent === 'flee' && resolved.success === true;
+  const goblinResult        = (goblinTurnTriggered && goblinSurvived && !escaped)
     ? goblinRetaliates(roller)
     : null;
 

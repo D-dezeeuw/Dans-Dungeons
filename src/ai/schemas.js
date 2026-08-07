@@ -10,7 +10,11 @@ export const CLASSIFIER_SCHEMA = {
   properties: {
     intent: {
       type: 'string',
-      enum: ['attack', 'skill', 'talk', 'move', 'take', 'unlock', 'look', 'inventory', 'wait', 'travel', 'rest', 'buy', 'impossible', 'meta'],
+      // 'flee' and 'use' are resolved mechanically (opposed check, consumables);
+      // every intent here either changes the world or is marked noEffect by the
+      // resolver, so the narrator is never left to improvise a state change.
+      enum: ['attack', 'skill', 'talk', 'move', 'take', 'unlock', 'look', 'inventory',
+             'wait', 'travel', 'rest', 'buy', 'flee', 'use', 'impossible', 'meta'],
     },
     target_id:  { type: ['string', 'null'] },
     direction:  { type: ['string', 'null'] },

@@ -99,6 +99,14 @@ function roller(engine, rng) {
       if (seeded) log.push({ op: 'abilityCheck', abilityScore: opts.abilityScore, proficient: opts.proficient ?? false, proficiencyBonus: opts.proficiencyBonus ?? 2, dc: opts.dc, d20: r.d20, success: r.success });
       return r;
     },
+    // A bare die, used by non-attack recovery (a short rest's hit die). Logged
+    // with the same rollDie op verifyLog already replays, so healing stays part
+    // of the auditable stream rather than an unrecorded draw that desyncs it.
+    rollDie(sides) {
+      const value = engine.Dice.roll(`1d${sides}`).total;
+      if (seeded) log.push({ op: 'rollDie', sides, value });
+      return value;
+    },
     deathSave(actor) {
       const r = engine.Combat.deathSave(actor);
       if (seeded && r.outcome !== 'noop') log.push({ op: 'rollDie', sides: 20, value: r.d20 });
