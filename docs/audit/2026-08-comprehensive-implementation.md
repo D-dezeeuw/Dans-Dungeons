@@ -94,6 +94,13 @@ Every story in this plan serves at least one. When two conflict, the lower numbe
 
 **Still open, deliberately:** E8.S2 (full spell wiring for casters — the engine's spell data needs its own correctness pass first, per the audit's engine findings), E11.S1's `flow.js` split and Playwright e2e, and the MCP re-sync (an owner decision: dev-time balance harness, or parked).
 
+> ⚠️ **This log overstates coverage — see [`2026-08-implementation-audit.md`](2026-08-implementation-audit.md)**
+> (2026-08-07), which verifies every story against the code. Of 49 stories: 18 complete,
+> 18 partial, 13 not started — **ten of which are not in the "still open" line above**,
+> including **E1.S5, a P0 showstopper absent from this log entirely**. Four capabilities
+> added in these passes are orphans (built, tested, exported, called by nothing): the
+> payoff ledger, digest invalidation, chapter titling and faction clocks.
+
 Test counts after the follow-up pass: game **427** (was 267), client **187** (was 92), engine **1,574** (was 1,561), MCP 99 — **2,287 passing, 0 failing** across four repos, all gated by CI.
 
 ### Milestones
