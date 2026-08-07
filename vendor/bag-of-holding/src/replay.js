@@ -127,12 +127,17 @@ export function verifyLog({ seed, log, rules: rulesOpt }) {
           return { ok: false, divergedAt: i, expected: entry, actual };
         }
         break;
+      // Advantage and disadvantage draw TWO dice, so the verifier has to roll
+      // the same stance or every later entry shifts. The engine records the
+      // stance the check actually used.
       case 'abilityCheck':
         actual = abilityCheck({
           abilityScore: entry.abilityScore,
           proficient: entry.proficient,
           proficiencyBonus: entry.proficiencyBonus,
-          dc: entry.dc
+          dc: entry.dc,
+          advantage: entry.stance === 'advantage',
+          disadvantage: entry.stance === 'disadvantage'
         }, rng);
         if (actual.d20 !== entry.d20 || actual.success !== entry.success) {
           return { ok: false, divergedAt: i, expected: entry, actual };
@@ -143,7 +148,9 @@ export function verifyLog({ seed, log, rules: rulesOpt }) {
           abilityScore: entry.abilityScore,
           proficient: entry.proficient,
           proficiencyBonus: entry.proficiencyBonus,
-          dc: entry.dc
+          dc: entry.dc,
+          advantage: entry.stance === 'advantage',
+          disadvantage: entry.stance === 'disadvantage'
         }, rng);
         if (actual.d20 !== entry.d20 || actual.success !== entry.success) {
           return { ok: false, divergedAt: i, expected: entry, actual };
@@ -153,12 +160,11 @@ export function verifyLog({ seed, log, rules: rulesOpt }) {
         // A death save is one d20 plus the tracker it lands in. The entry
         // snapshots the pre-roll tracker precisely so it is reconstructable
         // without external state, so replay rebuilds a synthetic actor from it
-        // and checks the outcome, not just the die.
+        // and checks the OUTCOME, not just the die — a log whose result was
+        // rewritten must not verify clean.
         //
-        // Until this case existed, verifyLog threw on any log containing one —
-        // and a downed character is not an edge case. Downstream hosts worked
-        // around it by re-encoding the save as a bare rollDie(20), which cost
-        // them the outcome check this now performs.
+        // Draw count is identical to rolling the d20 directly (deathSave calls
+        // rollDie(20) exactly once), so the stream stays aligned either way.
         actual = deathSave({
           deathSaves: {
             successes: entry.previousSuccesses ?? 0,
@@ -171,12 +177,19 @@ export function verifyLog({ seed, log, rules: rulesOpt }) {
         }
         break;
 
-      // Bookkeeping entries: recorded so a log reads as a narrative of the
-      // session, but they draw no dice. Skipping them is what makes verifyLog
-      // TOTAL over the logs the engine actually produces — a class mechanic or
-      // a fired hook must not make a session unverifiable.
+      // Bookkeeping entries: recorded for the audit trail, but they consume no
+      // randomness, so replay walks past them. Before this, the engine's own
+      // output tripped its own forwards-incompatibility guard — a session
+      // containing a death save or any class-feature use could not be verified.
       case 'mechanicApplied':
       case 'hookFired':
+        break;
+
+      // Draws consumed by a namespace that does not log its own roll shape
+      // (Travel, Equipment, Movement, MagicItems). Advancing the stream by the
+      // recorded count keeps every later entry aligned.
+      case 'rngDraws':
+        for (let d = 0; d < (entry.count ?? 0); d++) rng();
         break;
 
       default:

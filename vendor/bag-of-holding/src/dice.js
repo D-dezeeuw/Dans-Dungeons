@@ -17,10 +17,20 @@ const PATTERN = /^(\d+)d(\d+)([+-]\d+)?$/;
  * always a bug at the call site — silent fallback would hide it under
  * later "why is damage 0?" mysteries.
  */
+// Upper bounds on a parsed spec. Nothing in the SRD comes close, and the
+// parser is reachable from model-supplied text in an AI-driven host — an
+// unbounded "9999999d9999999" would allocate and roll millions of dice.
+export const MAX_DICE_COUNT = 1000;
+export const MAX_DIE_SIDES  = 1000;
+
 export function parse(spec) {
   const m = PATTERN.exec(String(spec).trim());
   if (!m) throw new Error(`Invalid dice spec: ${spec}`);
-  return { count: Number(m[1]), sides: Number(m[2]), modifier: m[3] ? Number(m[3]) : 0 };
+  const count = Number(m[1]);
+  const sides = Number(m[2]);
+  if (count > MAX_DICE_COUNT) throw new Error(`Dice spec exceeds ${MAX_DICE_COUNT} dice: ${spec}`);
+  if (sides > MAX_DIE_SIDES)  throw new Error(`Die size exceeds d${MAX_DIE_SIDES}: ${spec}`);
+  return { count, sides, modifier: m[3] ? Number(m[3]) : 0 };
 }
 
 /**

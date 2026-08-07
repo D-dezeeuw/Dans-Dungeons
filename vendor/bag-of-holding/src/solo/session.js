@@ -360,6 +360,9 @@ export function create({ engine, party, encounter, scene, seed, log: priorLog, o
     get log() { return log; },
     party: partyRecords,
     actor,
+    // Re-adopt a serialised non-party actor (see restore). Exposed because a
+    // snapshot's actor set is broader than its party records.
+    adoptActor: adoptParticipant,
     currentActor,
     startEncounter,
     endTurn,
@@ -409,7 +412,15 @@ export function restore(payload, engine) {
   // references with the payload (which the host might JSON-parse
   // and re-use elsewhere).
   if (Array.isArray(payload.partyState)) {
+    const partyIds = new Set((payload.partyRecords ?? []).map(r => r.id));
     for (const state of payload.partyState) {
+      // A snapshot's actor set is broader than its party records: any non-party
+      // participant adopted during an encounter is in here too. When the
+      // encounter had already ENDED, the restored session had no encounter to
+      // re-adopt them from, so actor() threw 'no actor with id' and EVERY save
+      // taken after a fight was unrestorable. Re-adopt them instead, which also
+      // preserves whatever state they carried.
+      if (!partyIds.has(state.id)) session.adoptActor(structuredClone(state));
       const a = session.actor(state.id);
       const cloned = structuredClone(state);
       // Keep the derived fields the session re-built from the
