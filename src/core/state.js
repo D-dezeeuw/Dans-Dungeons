@@ -39,7 +39,14 @@ const DEFAULTS = {
   session: {
     phase: 'loading',   // loading | key-setup | char-create | play | game-over
     turnCount: 0,
-    chapterId: 'ch-1',
+    // Chapters (Epic E4): the GM's long memory. `chapters` holds frozen digests
+    // of everything before the current one; `rollingDigest` is the live summary
+    // of the chapter in progress, refreshed every few turns.
+    chapterId:        'ch-1',
+    chapters:         [],
+    chapterStartTurn: 0,
+    rollingDigest:    null,
+    digestTurn:       0,
     skillCooldowns: {},  // { skillId: turnsRemaining }
     rng:     null,       // { seed, cursor } — epoch-seeded combat dice stream (game/rng.js)
     rollLog: [],         // verifyLog-compatible audit of this epoch's rolls

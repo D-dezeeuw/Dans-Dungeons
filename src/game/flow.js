@@ -11,6 +11,7 @@ import { createCharacter } from './character.js';
 import { processTurn, checkApiKey, generateTurnImage, buildScene } from './loop.js';
 import { clearTurnMarks, setScrubHandler } from './undo.js';
 import { enterEncounterState, exitEncounterState } from './encounter-state.js';
+import { cutChapter, shouldCutChapter, recap, chapterIndex } from './chapters.js';
 import { seedCombat }     from './rng.js';
 import {
   goldOf, resolvePurchase, addToInventory, resolveRest, DEFAULT_REST_COST,
@@ -1584,6 +1585,18 @@ async function playLoop() {
 
 // ─── End states ───────────────────────────────────────────────────────────────
 
+// Close the chapter at a real story boundary, with a ceremony line. Cheap AAA
+// texture, and the anchor the recap and the journal both hang off.
+async function markChapterBoundary(reason) {
+  if (!shouldCutChapter(reason)) return;
+  const n = chapterIndex();
+  const closed = await cutChapter(reason);
+  if (!closed) return;
+  UI.appendEntry('system', '');
+  UI.appendEntry('system', t('chapter.banner', { n, title: closed.title }));
+  UI.appendEntry('system', '');
+}
+
 async function doVictory() {
   const room     = appState.world?.rooms?.[appState.world?.exitRoomId];
   const treasure = (room?.loot ?? []).find(i => i.type === 'treasure');
@@ -1593,6 +1606,7 @@ async function doVictory() {
   UI.appendEntry('gm', victoryText);
   UI.appendEntry('system', '');
   _speak(victoryText);
+  await markChapterBoundary('dungeon-cleared');
 
   // Campaign mode: return to settlement (don't set game-over)
   if (appState.world?.location?.settlementId) {
@@ -1636,6 +1650,14 @@ async function awaitRestart() {
 export async function resumeGame() {
   UI.appendEntry('system', t('adventure.resumeBanner'));
   UI.appendEntry('system', '');
+
+  // "Previously on…" — built from stored chapter digests, no AI call.
+  const previously = recap();
+  if (previously) {
+    UI.appendEntry('system', t('chapter.recapHeader'));
+    UI.appendEntry('gm', previously);
+    UI.appendEntry('system', '');
+  }
 
   const entries = (appState.transcript ?? []).slice(-6);
   for (const e of entries) {

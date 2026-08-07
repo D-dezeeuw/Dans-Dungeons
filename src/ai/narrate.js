@@ -7,6 +7,7 @@ import { _callStream, repairJson, chatCompletion, aiConfig } from './client.js';
 import { generateImage } from 'bag-of-holding-client';
 import { NARRATOR_SCHEMA } from './schemas.js';
 import { t, locale } from '../i18n/i18n.js';
+import { transcriptWindow } from '../game/chapters.js';
 
 // ─── Travel narration (Phase 3) ───────────────────────────────────────────────
 //
@@ -36,13 +37,22 @@ export async function narrateTravel(context) {
 // arrives so the UI can display it progressively. Returns the full parsed
 // JSON object once the stream is complete.
 
-export async function narrate(resolvedFacts, sceneContext, recentTranscript, onChunk) {
-  const transcriptText = recentTranscript.slice(-3).map(e => `${e.role}: ${e.text}`).join('\n');
+export async function narrate(resolvedFacts, sceneContext, recentTranscript, onChunk, memory = null) {
+  // The window used to be 3 entries — 1.5 turns — while the prompt claimed "the
+  // last 3 turns". Everything older now arrives as chapter digests (memory),
+  // so this slice only has to cover the immediate exchange.
+  const transcriptText = transcriptWindow(recentTranscript).map(e => `${e.role}: ${e.text}`).join('\n');
 
   const system = t('ai.narratorPrompt', {
+    // Stable, oldest-first: frozen chapter digests sit at the front of the
+    // prompt where a provider's prefix cache can serve them cheaply.
+    memory:     memory ? JSON.stringify(memory) : '(no earlier chapters)',
     transcript: transcriptText,
-    scene:      JSON.stringify(sceneContext, null, 2),
-    resolved:   JSON.stringify(resolvedFacts, null, 2),
+    scene:      JSON.stringify(sceneContext),
+    resolved:   JSON.stringify(resolvedFacts),
+    // The generated world's own tone, instead of a hardcoded "gritty low
+    // fantasy" that contradicted whatever the blueprint had rolled.
+    tone:       sceneContext?.tone ?? t('ai.defaultTone'),
   });
 
   const messages = [

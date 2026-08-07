@@ -20,6 +20,7 @@ import { beginTurn, finalizeTurn }          from './undo.js';
 import { recordMechanical, currentPlaceId, currentRoomId, entitiesUnder,
          detailsAt, recentEvents }           from './ledger.js';
 import { extractCanon }                      from '../ai/canon.js';
+import { memoryContext, maybeRefreshDigest } from './chapters.js';
 import { commitCanon }                       from './canon-commit.js';
 import { t }                                 from '../i18n/i18n.js';
 
@@ -81,6 +82,11 @@ export function buildScene() {
   // active quests, recent flags — so the narrator weaves the red thread in.
   const story = buildStoryContext();
   if (story) scene.story = story;
+
+  // The generated world's tone travels with the scene so the narrator stops
+  // hardcoding one voice regardless of what the blueprint rolled.
+  const tone = appState.world?.tone;
+  if (tone) scene.tone = tone;
 
   // Ledger memory (Epic E2): what this place has accumulated, and what the world
   // has been doing lately. This is what stops the GM contradicting itself — the
@@ -149,6 +155,7 @@ export async function processTurn(playerInput, onNarrationChunk) {
     scene,
     appState.transcript ?? [],
     onNarrationChunk,
+    memoryContext(),          // chapter digests + rolling summary (Epic E4)
   );
 
   // 5. Commit the turn's mechanics, then tick so they're live in appState —
@@ -177,6 +184,7 @@ export async function processTurn(playerInput, onNarrationChunk) {
   //     colour, and colour may never overwrite truth.
   recordTurnMechanics(resolved, goblinResult, killedNpc);
   await absorbNarration(narratorResp.narration);
+  await maybeRefreshDigest();   // rolling chapter memory (Epic E4)
 
   await maybeAdvanceBeat(narratorResp.narration);
 
