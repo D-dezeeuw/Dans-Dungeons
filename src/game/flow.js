@@ -378,7 +378,7 @@ export async function startNewGame() {
 async function startQuickDungeon() {
   const seed = Math.floor(Math.random() * 2147483647);
   const blueprint = buildWorldBlueprint(seed);
-  const world = generateDungeon(seed, blueprint);
+  const world = generateDungeon(seed, blueprint, { partyLevel: appState.party?.pc?.record?.level ?? 1 });
   setValue('world', world);
   setValue('session.phase', 'play');
   seedCombat(seed);   // epoch-seeded combat dice — replayable + auditable (rng.js)
@@ -1334,6 +1334,9 @@ async function enterDungeon(exit, settlementId) {
       name:      exit.targetName,
       regionId:  appState.world?.location?.regionId ?? null,
       blueprint: appState.world?.blueprint ?? null,
+      // The vault boss is raised for the party's level, so a late-campaign
+      // dungeon is not guarded by something a level-8 party walks over.
+      partyLevel: appState.party?.pc?.record?.level ?? 1,
     });
     const dungeons = { ...(appState.world?.dungeons ?? {}), [dungeonId]: dungeon };
     setValue('world', { ...appState.world, dungeons });

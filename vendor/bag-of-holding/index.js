@@ -42,6 +42,12 @@ export const {
   species, classes, backgrounds, feats, spells, items, monsters
 } = _default;
 
+// Monster templates — derive higher-tier stat blocks (Elite / Champion /
+// Ancient) from verified SRD entries, so a campaign can reach CR 16-24 and give
+// the monster-mechanics module (multiattack, legendary actions and resistance)
+// something to consume, without transcribing stat blocks from memory.
+export { elevate, tiersFor, templateForTargetCr, TEMPLATES } from './src/monster-templates.js';
+
 // Character — exposed as a namespace so module-level callers can
 // derive sheets without going through the default singleton:
 //   import { Character, createEngine } from '@zeeuw/bag-of-holding';

@@ -5,7 +5,7 @@
 
 import { tRaw } from '../i18n/i18n.js';
 import { Dice } from './rules.js';
-import { statBlockFor, BESTIARY, DEFAULT_ENEMY_IDS } from './bestiary.js';
+import { statBlockFor, bossBlockFor, bossTierForLevel, BESTIARY, DEFAULT_ENEMY_IDS } from './bestiary.js';
 import { DUNGEON_OVERLAYS, DOMAIN_TREASURES, DOMAIN_KEYS } from './worldseed.js';
 import { generateDungeon as libGenerateDungeon } from 'bag-of-holding-client';
 
@@ -44,11 +44,19 @@ function dungeonContent() {
 // ─── Dungeon generator ────────────────────────────────────────────────────────
 // Returns { rooms, npcs, currentRoom, exitRoomId } for embedding in world.dungeons.
 
-export function generateDungeon(seed, blueprint) {
+export function generateDungeon(seed, blueprint, { partyLevel = 1 } = {}) {
+  // The vault boss is raised a tier for the party's level, so it brings
+  // multiattack, legendary actions and legendary resistance to the fight rather
+  // than just a bigger hit-point pool. The generator asks for the boss block by
+  // passing isBoss, so ordinary enemies are untouched.
+  const blockFor = (id, opts = {}) => (opts.isBoss
+    ? bossBlockFor(id, { tier: bossTierForLevel(partyLevel) })
+    : statBlockFor(id));
+
   return libGenerateDungeon(seed, {
     blueprint,
     rng:             seed != null ? Dice.seededRng(seed) : undefined,
-    statBlockFor,
+    statBlockFor:    blockFor,
     crOf:            (id) => BESTIARY[id]?.cr ?? 0,
     overlays:        DUNGEON_OVERLAYS,
     defaultEnemyIds: DEFAULT_ENEMY_IDS,
@@ -78,9 +86,9 @@ export function buildEnemy(creatureId, { npcId = 'enc-1', roomId = 'encounter', 
 
 const DUNGEON_THEMES = ['undead', 'goblin', 'cult', 'beast', 'arcane', 'ruin'];
 
-export function createDungeonEntry({ id, name, regionId, seed: entrySeed, blueprint = null }) {
+export function createDungeonEntry({ id, name, regionId, seed: entrySeed, blueprint = null, partyLevel = 1 }) {
   const dungeonSeed = entrySeed ?? Math.floor(Math.random() * 2147483647);
-  const dungeon     = generateDungeon(dungeonSeed, blueprint);
+  const dungeon     = generateDungeon(dungeonSeed, blueprint, { partyLevel });
   const roomCount   = Object.keys(dungeon.rooms).length;
   const enemyNames  = Object.values(dungeon.npcs).map(n => n.name);
   const theme       = blueprint?.dungeonTheme ?? DUNGEON_THEMES[Math.floor(Math.random() * DUNGEON_THEMES.length)];
