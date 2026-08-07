@@ -1,7 +1,8 @@
 // src/main.js — Boot entry point only.
 // Game lifecycle → flow.js  |  UI modules → ui/*  |  Reactive bindings → reactive.js
 
-import { appState, setValue, bindDOM, initState, restoreState, loadFromStorage, saveToStorage, run, tick } from './core/state.js';
+import { appState, setValue, bindDOM, initState, restoreState, loadFromStorage, saveToStorage, run, tick,
+         onSaveHealthChange, storagePressure, hasCorruptSaveBackup } from './core/state.js';
 import { registerReactiveSidebar }                                                           from './ui/reactive.js';
 import { createJournal, exportScreenshot, exportAllSketches, exportSave, importSave, handleImportFile, exportWorldBible } from './ui/exports.js';
 import { startNewGame, resumeGame, ensureKey, applySketchView, upgradeToDeluxe, requireDeluxe } from './game/flow.js';
@@ -190,6 +191,20 @@ async function boot() {
   tick();
   bindDOM(document.body);
   document.body.classList.add('spektrum-ready');
+
+  // Autosave failures (a full quota) used to be a console.warn: play carried on
+  // with nothing being written, and the loss only surfaced on the next reload.
+  // Say it in the transcript, and tell the player how to rescue the run.
+  onSaveHealthChange((ok) => {
+    UI.appendEntry(ok ? 'system' : 'error',
+      ok ? t('storage.autosaveRecovered') : t('storage.autosaveFailed'));
+  });
+  if (hasCorruptSaveBackup()) UI.appendEntry('error', t('storage.corruptSave'));
+  storagePressure().then((used) => {
+    if (used !== null && used > 0.8) {
+      UI.appendEntry('system', t('storage.nearlyFull', { pct: Math.round(used * 100) }));
+    }
+  });
 
   // STT defaults to on when a key is present (mic button shows via data-if="settings.stt")
   if (!appState.settings?.hasOwnProperty('stt')) {

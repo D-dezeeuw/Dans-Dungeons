@@ -128,8 +128,15 @@
     "upgraded": "Upgraded to Deluxe. All features unlocked.",
     "downgraded": "Key invalid — falling back to Free tier."
   },
+  "storage": {
+    "autosaveFailed": "Autosave has stopped working — browser storage is full. Everything from here on exists only in this tab. Export your game (Settings → Save) now.",
+    "autosaveRecovered": "Autosave is working again — your progress is being written to disk.",
+    "nearlyFull": "Browser storage is {{pct}}% full. Consider exporting your game as a backup.",
+    "corruptSave": "A previous save could not be read and was set aside. Import a save file to continue that run."
+  },
   "meta": {
     "saved": "Game saved to localStorage.",
+    "saveFailed": "Save FAILED — browser storage is full. Export your game (Settings → Save) before closing this tab.",
     "status": "{{name}} — HP {{hp}}/{{max}}, AC {{ac}}",
     "helpList": "/save · /status · /settings · /restart · /help",
     "unknownCmd": "Unknown command: {{cmd}}  (try /help)"

@@ -128,8 +128,15 @@
     "upgraded": "Geüpgraded naar Deluxe. Alle functies ontgrendeld.",
     "downgraded": "Sleutel ongeldig — terugvallen op Gratis versie."
   },
+  "storage": {
+    "autosaveFailed": "Automatisch opslaan werkt niet meer — de browseropslag is vol. Alles vanaf nu bestaat alleen in dit tabblad. Exporteer je spel (Instellingen → Opslaan) nu.",
+    "autosaveRecovered": "Automatisch opslaan werkt weer — je voortgang wordt weer weggeschreven.",
+    "nearlyFull": "De browseropslag is {{pct}}% vol. Overweeg je spel te exporteren als back-up.",
+    "corruptSave": "Een eerdere opgeslagen game kon niet gelezen worden en is apart gezet. Importeer een savebestand om die run voort te zetten."
+  },
   "meta": {
     "saved": "Spel opgeslagen in localStorage.",
+    "saveFailed": "Opslaan MISLUKT — de browseropslag is vol. Exporteer je spel (Instellingen → Opslaan) voordat je dit tabblad sluit.",
     "status": "{{name}} — HP {{hp}}/{{max}}, AC {{ac}}",
     "helpList": "/save · /status · /settings · /restart · /help",
     "unknownCmd": "Onbekend commando: {{cmd}}  (probeer /help)"

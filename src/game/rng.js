@@ -117,7 +117,10 @@ export function commitRoller(roller) {
   if (!roller?.seeded || !roller.draws()) return;
   const s = appState.session.rng;
   setValue('session.rng', { seed: s.seed, cursor: s.cursor + roller.draws() });
-  setValue('session.rollLog', [...(appState.session.rollLog ?? []), ...roller.log]);
+  // Narrow per-index appends, same rationale as appendTranscript: a whole-array
+  // rewrite records the entire log again on every combat turn.
+  let i = (appState.session.rollLog ?? []).length;
+  for (const entry of roller.log) setValue(`session.rollLog.${i++}`, entry);
 }
 
 // ─── Audit ───────────────────────────────────────────────────────────────────────

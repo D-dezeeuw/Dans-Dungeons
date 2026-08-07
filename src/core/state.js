@@ -166,17 +166,70 @@ function buildSaveSnapshot() {
   return snap;
 }
 
+// ─── Save health ─────────────────────────────────────────────────────────────
+//
+// localStorage writes fail silently once the quota is gone: saveEnvelope
+// swallows the QuotaExceededError and returns false. The old handler only
+// console.warn'd, so play continued with autosave dead and the player lost
+// everything since the last successful write — while /save still cheerfully
+// reported "saved". Health is tracked here and broadcast so the UI can say so.
+
+let _saveHealthy = true;
+const _saveHealthListeners = new Set();
+
+export function onSaveHealthChange(fn) {
+  _saveHealthListeners.add(fn);
+  return () => _saveHealthListeners.delete(fn);
+}
+
+export function isSaveHealthy() { return _saveHealthy; }
+
+function setSaveHealth(ok) {
+  if (ok === _saveHealthy) return;
+  _saveHealthy = ok;
+  for (const fn of _saveHealthListeners) { try { fn(ok); } catch { /* listener owns its errors */ } }
+}
+
+// Returns true when the write actually landed. Callers that tell the player
+// anything about saving MUST use the return value.
 export function saveToStorage() {
-  if (!saveEnvelope(localStorage, SAVE_KEY, buildSaveSnapshot(), SAVE_VERSION)) {
-    console.warn('[state] localStorage save failed');
+  const ok = saveEnvelope(localStorage, SAVE_KEY, buildSaveSnapshot(), SAVE_VERSION);
+  if (!ok) console.warn('[state] localStorage save failed (quota?)');
+  setSaveHealth(ok);
+  return ok;
+}
+
+// Fraction of the storage quota in use (0–1), or null when the browser will not
+// say. Used to warn BEFORE writes start failing rather than after.
+export async function storagePressure() {
+  try {
+    const est = await navigator.storage?.estimate?.();
+    if (!est?.quota) return null;
+    return (est.usage ?? 0) / est.quota;
+  } catch {
+    return null;
   }
 }
 
 export function loadFromStorage() {
-  return loadEnvelope(localStorage.getItem(SAVE_KEY), {
+  const raw = localStorage.getItem(SAVE_KEY);
+  const data = loadEnvelope(raw, {
     migrations:     SAVE_MIGRATIONS,
     currentVersion: SAVE_VERSION,
   });
+  // A save that exists but will not parse is a bug or a corrupted write, not a
+  // new game. Keep the bytes so the player (or a support request) can recover
+  // them instead of silently overwriting on the next autosave.
+  if (raw && !data) {
+    try { localStorage.setItem(`${SAVE_KEY}-corrupt`, raw); } catch { /* nothing to do */ }
+    console.error('[state] save could not be parsed — kept a copy at dans-dungeons-corrupt');
+  }
+  return data;
+}
+
+// Was a corrupt save quarantined on the last load?
+export function hasCorruptSaveBackup() {
+  try { return localStorage.getItem(`${SAVE_KEY}-corrupt`) !== null; } catch { return false; }
 }
 
 // Serialize the persisted state as a versioned-envelope JSON string for a

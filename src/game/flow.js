@@ -300,7 +300,13 @@ export function requireDeluxe(featureKey) {
 async function handleMeta(raw) {
   const cmd = raw.slice(1).toLowerCase().trim();
   if (cmd === 'restart') { clearSave(); location.reload(); return; }
-  if (cmd === 'save') { saveToStorage(); UI.appendEntry('system', t('meta.saved')); return; }
+  if (cmd === 'save') {
+    // Report what actually happened — this used to claim success unconditionally,
+    // including when the write had failed on a full quota.
+    if (saveToStorage()) UI.appendEntry('system', t('meta.saved'));
+    else                 UI.appendEntry('error',  t('meta.saveFailed'));
+    return;
+  }
   if (cmd === 'status') {
     const pc = appState.party?.pc;
     if (pc) UI.appendEntry('system', t('meta.status', { name: pc.record.name, hp: pc.record.hpCurrent, max: pc.sheet.hp.max, ac: pc.sheet.ac.value }));

@@ -296,11 +296,16 @@ export function commitAll(resolved, goblinResult) {
   }
 }
 
+// Append the turn's two transcript entries as NARROW per-index writes.
+//
+// Rewriting the whole array (the previous `setValue('transcript', [...])`) made
+// every turn record a full copy of the entire transcript in Spektrum's history,
+// and the persisted time-travel spine stores those entries verbatim — so save
+// bytes grew with turns × epoch-turns. Writing one index per entry keeps the
+// recorded delta the size of the entry, and the merged result is identical.
 export function appendTranscript(playerText, gmText) {
   const turn = appState.session?.turnCount ?? 0;
-  setValue('transcript', [
-    ...(appState.transcript ?? []),
-    { role: 'player', text: playerText, turn },
-    { role: 'gm',     text: gmText,     turn },
-  ]);
+  const i    = (appState.transcript ?? []).length;
+  setValue(`transcript.${i}`,     { role: 'player', text: playerText, turn });
+  setValue(`transcript.${i + 1}`, { role: 'gm',     text: gmText,     turn });
 }
