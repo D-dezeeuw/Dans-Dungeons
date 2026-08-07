@@ -88,7 +88,12 @@ function halfHitDiceRecovered(total) {
  *   - `'none'` — gritty packs (matches the optional "Slow Natural
  *                Healing" variant in the DMG).
  */
-export function longRest(actor, rules = DEFAULT_RULES) {
+export function longRest(actor, rules = DEFAULT_RULES, opts = {}) {
+  // SRD 5.2 § Long Rest: a rest interrupted by 1+ hour of strenuous
+  // activity yields no benefit. The host passes `{ interrupted: true }`
+  // when their narrative engine flags the break; the actor returns
+  // unchanged so callers see hp/slots/exhaustion stay where they were.
+  if (opts.interrupted === true) return actor;
   const total = actor.hitDiceTotal ?? actor.level ?? 0;
   const used = actor.hitDiceUsed ?? 0;
   const mode = rules.longRestHitDiceRecovery;

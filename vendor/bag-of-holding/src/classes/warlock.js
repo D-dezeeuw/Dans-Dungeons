@@ -180,7 +180,19 @@ export default {
       name: 'Patron: The Fiend',
       features: {
         1: ["Dark One's Blessing", 'Expanded Spell List'],
-        3: ["Dark One's Own Luck"]
+        3: ["Dark One's Own Luck"],
+        6: ['Fiendish Resilience'],
+        10: ['Hurl Through Hell'],
+        14: ['Demonic Soul']
+      },
+      mechanics: {
+        // Dark One's Blessing: gain CHA mod + Warlock level THP when
+        // reducing a hostile to 0 HP.
+        darkOnesBlessing: (actor) => {
+          const chaMod = Math.floor(((actor.abilityScores?.cha ?? 10) - 10) / 2);
+          const level = actor.level ?? 1;
+          return { tempHp: Math.max(1, chaMod + level), actor };
+        }
       }
     }
   },
@@ -194,7 +206,17 @@ export default {
     7: ['Eldritch Invocation (additional)'],
     8: ['Ability Score Improvement'],
     9: ['Eldritch Invocation (additional)'],
-    10: ['Subclass Feature']
+    10: ['Subclass Feature'],
+    11: ['Mystic Arcanum (6th level)'],
+    12: ['Ability Score Improvement'],
+    13: ['Mystic Arcanum (7th level)'],
+    14: ['Subclass Feature'],
+    15: ['Mystic Arcanum (8th level)'],
+    16: ['Ability Score Improvement'],
+    17: ['Subclass Feature'],
+    18: ['Mystic Arcanum (9th level)'],
+    19: ['Epic Boon'],
+    20: ['Eldritch Master']
   },
   mechanics: {
     /**

@@ -54,7 +54,19 @@ export default {
       id: 'open-hand',
       name: 'Warrior of the Open Hand',
       features: {
-        3: ['Open Hand Technique']
+        3: ['Open Hand Technique'],
+        6: ['Wholeness of Body'],
+        11: ['Fleet Step'],
+        17: ['Quivering Palm']
+      },
+      mechanics: {
+        // Open Hand Technique: on a Flurry of Blows hit, optionally
+        // knock prone, push 15 ft, or impose disadvantage. Pure
+        // dispatch — host applies the chosen rider.
+        openHandTechnique: (actor, args) => {
+          const choice = args?.choice ?? 'prone';
+          return { ok: true, rider: choice, actor };
+        }
       }
     }
   },
@@ -68,7 +80,17 @@ export default {
     7: ['Evasion'],
     8: ['Ability Score Improvement'],
     9: ['Acrobatic Movement'],
-    10: ['Heightened Focus']
+    10: ['Heightened Focus'],
+    11: ['Subclass Feature'],
+    12: ['Ability Score Improvement'],
+    13: ['Deflect Energy'],
+    14: ['Disciplined Survivor'],
+    15: ['Perfect Focus'],
+    16: ['Ability Score Improvement'],
+    17: ['Subclass Feature'],
+    18: ['Empty Body'],
+    19: ['Epic Boon'],
+    20: ['Body and Mind']
   },
   // Resource-bearing features (since 1.3.5). Focus Points refresh
   // fully on a Short Rest — the canonical short-rest resource.

@@ -1,7 +1,7 @@
 import { rollDie, roll as rollDice, rollExplosive } from './dice.js';
 import { modFromScore } from './checks.js';
 import { DEFAULT_RULES } from './rules.js';
-import { attackStance, apply as applyCondition, remove as removeCondition, effectsFor } from './conditions.js';
+import { attackStance, apply as applyCondition, remove as removeCondition, effectsFor, has as hasCondition } from './conditions.js';
 
 /**
  * Initiative is mechanically just `d20 + DEX mod`, but it lives in
@@ -409,6 +409,20 @@ export function stabilize(actor) {
 }
 
 /**
+ * SRD 5.2 § Damage and Healing (Stabilizing): "A stable creature
+ * that isn't healed regains 1 HP after 1d4 hours." Returns the d4
+ * roll the host stamps onto the actor (or a host-side timer) so the
+ * scene clock can deliver the 1 HP tick when the time elapses.
+ *
+ * The engine doesn't own the clock — the host calls this once on
+ * stabilization, schedules the tick, and applies the 1 HP via
+ * `Combat.heal` (or `reviveTo`) when the timer fires.
+ */
+export function rollStableRegenHours(rng = Math.random) {
+  return rollDie(4, rng);
+}
+
+/**
  * Revive an actor to a positive HP value. Clears the tracker and
  * removes the Unconscious condition. Throws on non-positive HP
  * because "revive to 0" is a contradiction — use `stabilize` if you
@@ -706,7 +720,7 @@ export function heal(actor, amount) {
   const healed = hpAfter - hpBefore;
   let next = { ...actor, hp: hpAfter };
   if (hpBefore <= 0 && hpAfter > 0) {
-    if ((actor.conditions ?? []).includes('unconscious')) {
+    if (hasCondition(actor, 'unconscious')) {
       next = removeCondition(next, 'unconscious');
     }
     if (next.deathSaves) next = { ...next, deathSaves: freshDeathSaves() };

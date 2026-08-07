@@ -51,7 +51,18 @@ export default {
       id: 'life-domain',
       name: 'Life Domain',
       features: {
-        3: ['Disciple of Life', 'Preserve Life']
+        3: ['Disciple of Life', 'Preserve Life'],
+        6: ['Blessed Healer'],
+        10: ['Divine Strike'],
+        14: ['Supreme Healing']
+      },
+      mechanics: {
+        // Disciple of Life: healing spells restore an extra
+        // 2 + spell level HP to the target.
+        discipleOfLife: (actor, args) => {
+          const spellLevel = args?.spellLevel ?? 1;
+          return { bonusHealing: 2 + spellLevel, actor };
+        }
       }
     }
   },
@@ -65,7 +76,17 @@ export default {
     7: ['Blessed Strikes'],
     8: ['Ability Score Improvement'],
     9: [],
-    10: ['Divine Intervention']
+    10: ['Divine Intervention'],
+    11: ['Destroy Undead (CR 2)'],
+    12: ['Ability Score Improvement'],
+    13: [],
+    14: ['Improved Blessed Strikes'],
+    15: [],
+    16: ['Ability Score Improvement'],
+    17: ['Subclass Feature'],
+    18: ['Divine Intervention Improvement'],
+    19: ['Epic Boon'],
+    20: ['Greater Divine Intervention']
   },
   // Resource-bearing features (since 1.3.3). Channel Divinity in
   // 2024 SRD: full refresh on Long Rest, one use back on Short Rest.

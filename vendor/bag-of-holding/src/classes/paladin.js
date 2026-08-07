@@ -42,7 +42,18 @@ export default {
       id: 'oath-of-devotion',
       name: 'Oath of Devotion',
       features: {
-        3: ['Oath Spells', 'Channel Divinity: Sacred Weapon']
+        3: ['Oath Spells', 'Channel Divinity: Sacred Weapon'],
+        7: ['Aura of Devotion'],
+        15: ['Smite of Protection'],
+        20: ['Holy Nimbus']
+      },
+      mechanics: {
+        // Sacred Weapon: spend Channel Divinity to enchant a weapon
+        // with +CHA mod to attack and emit bright light for 10 min.
+        sacredWeapon: (actor) => {
+          const chaMod = Math.floor(((actor.abilityScores?.cha ?? 10) - 10) / 2);
+          return { ok: true, attackBonus: Math.max(1, chaMod), durationMinutes: 10, actor };
+        }
       }
     }
   },
@@ -56,7 +67,17 @@ export default {
     7: ['Subclass Feature'],
     8: ['Ability Score Improvement'],
     9: ['Abjure Foes'],
-    10: ['Aura of Courage']
+    10: ['Aura of Courage'],
+    11: ['Radiant Strikes'],
+    12: ['Ability Score Improvement'],
+    13: [],
+    14: ['Restoring Touch'],
+    15: ['Subclass Feature'],
+    16: ['Ability Score Improvement'],
+    17: ['Subclass Feature'],
+    18: ['Aura Improvements (30 ft)'],
+    19: ['Epic Boon'],
+    20: ['Subclass Feature']
   },
   // Resource-bearing features (since 1.3.6). Lay on Hands is an HP
   // pool sized to 5 × level; Divine Smite Once gives one free Smite

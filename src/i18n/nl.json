@@ -106,7 +106,9 @@
     "connectTry": "Probeer zonder account (gedeeld, kan traag zijn)",
     "connectingOAuth": "Doorverwijzen naar OpenRouter…",
     "oauthSuccess": "Verbonden! Je persoonlijke API-sleutel is opgeslagen.",
-    "oauthFail": "Verbinding mislukt. Je kunt handmatig een sleutel plakken met /settings."
+    "oauthFail": "Verbinding mislukt. Je kunt handmatig een sleutel plakken met /settings.",
+    "demoNotice": "Demomodus: deze sleutel wordt door alle spelers gedeeld, dus er geldt een limiet en je tekst loopt via het account van de host. Verbind je eigen sleutel voor een volledige campagne.",
+    "modelHealed": "Het '{{tier}}'-model ({{from}}) is niet meer beschikbaar — overgeschakeld naar {{to}}."
   },
   "tier": {
     "upgradeQuestion": "Wil je upgraden naar de Deluxe versie?",

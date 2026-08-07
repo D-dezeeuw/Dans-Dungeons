@@ -35,6 +35,8 @@
  * Returns 0 when the caster doesn't have access yet. Throws on
  * out-of-range inputs so a typo'd lookup is loud at the call site.
  */
+import { rollDie } from './dice.js';
+
 export function fullCasterSlots(casterLevel, spellLevel) {
   if (!Number.isInteger(casterLevel) || casterLevel < 1 || casterLevel > 20) {
     throw new Error(`casterLevel out of range: ${casterLevel}`);
@@ -471,6 +473,90 @@ export function castAsRitual(actor, spell, args = {}) {
   return castSpell(actor, spell, { ...args, ritual: true });
 }
 
+/**
+ * SRD 5.2 § Spells — Components: an explicit per-component check
+ * the host can call before `castSpell` to know if the actor can
+ * actually fulfil the spell's component requirements.
+ *
+ *   - V: blocked when `actor.silenced === true`.
+ *   - S: blocked when `actor.somaticBlocked === true`.
+ *   - M with cost: blocked unless `actor.materials[spell.id] === true`.
+ *   - M without cost: requires a component pouch OR spellcasting
+ *     focus per SRD 5.2 ("A character can use a component pouch or
+ *     a spellcasting focus in place of the components specified for
+ *     a spell").
+ *
+ * Returns `{ ok, missing? }`. `castSpell` itself stays permissive
+ * (the host is trusted to provide a valid caster); call this first
+ * when you want the SRD-strict check.
+ */
+export function hasComponents(actor, spell) {
+  const components = spell?.components ?? {};
+  if (components.v && actor.silenced === true) return { ok: false, missing: 'verbal' };
+  if (components.s && actor.somaticBlocked === true) return { ok: false, missing: 'somatic' };
+  if (components.m?.cost) {
+    if (actor.materials?.[spell.id] !== true) return { ok: false, missing: `material:${spell.id}` };
+  } else if (components.m) {
+    const hasPouch = actor.componentPouch === true;
+    const hasFocus = actor.spellcastingFocus !== undefined && actor.spellcastingFocus !== null;
+    if (!hasPouch && !hasFocus) return { ok: false, missing: 'pouch-or-focus' };
+  }
+  return { ok: true };
+}
+
+/**
+ * SRD 5.2 § Magic Items — Spell Scroll: cast a spell from a consumable
+ * scroll without consuming a spell slot or material components.
+ *
+ *   - If the spell is on the caster's class spell list, no check is
+ *     needed.
+ *   - If the spell's level is higher than the caster can normally
+ *     cast (`caster.maxCastableLevel < spell.level`), an ability
+ *     check at DC `10 + spell.level` is required; on failure, the
+ *     spell disappears with no effect.
+ *   - The scroll is consumed either way (`scrollConsumed: true`).
+ *
+ * Returns `{ ok, scrollConsumed, check?, reason?, ... castSpellResult }`.
+ * The host removes the scroll item from inventory after the call.
+ */
+export function castFromScroll(actor, spell, args = {}, rng = Math.random) {
+  if (!spell || typeof spell !== 'object') {
+    return { ok: false, reason: 'invalid spell record', scrollConsumed: false };
+  }
+  // Compute the would-be DC for any higher-level scroll check.
+  const maxCastable = args.maxCastableLevel ?? actor.maxCastableLevel ?? 0;
+  const onClassList = args.onClassList !== false; // host defaults to true
+  let check = null;
+  if (onClassList && spell.level > 0 && spell.level > maxCastable) {
+    const dc = 10 + spell.level;
+    const abilityScore = args.abilityScore ?? actor.abilityScores?.[args.ability ?? 'int'] ?? 10;
+    const d20 = rollDie(20, rng);
+    const mod = Math.floor((abilityScore - 10) / 2);
+    const total = d20 + mod;
+    check = { d20, mod, total, dc, success: total >= dc };
+    if (!check.success) {
+      return { ok: false, scrollConsumed: true, check, reason: 'scroll check failed' };
+    }
+  }
+  // Cast without consuming a slot or M-components (per SRD).
+  // We bypass component checks by stamping a temporary `materials`
+  // entry and synthetic pouch flag onto a shallow copy.
+  const castActor = {
+    ...actor,
+    componentPouch: true,
+    materials: { ...(actor.materials ?? {}), [spell.id]: true }
+  };
+  // Synthetic spell with the slot consumption suppressed: cast as a
+  // ritual (no slot) when not on class list; otherwise consume a
+  // notional slot of the spell's own level from a temporary array.
+  const slotArr = [{ level: spell.level, used: 0, max: 1 }];
+  const castResult = castSpell({ ...castActor, spellSlots: slotArr, spellsPrepared: [spell.id] }, spell, {
+    ...args,
+    slotLevel: spell.level
+  });
+  return { ...castResult, scrollConsumed: true, check };
+}
+
 // === Area-of-effect targeting (since 1.8.0) ===
 //
 // SRD § Spells — Areas of Effect: six shapes (sphere, cube, cone,
@@ -584,4 +670,67 @@ export function castSpellSave(results, { halfOnSuccess = true } = {}) {
       ? (halfOnSuccess ? Math.floor((r.damage ?? 0) / 2) : 0)
       : (r.damage ?? 0)
   }));
+}
+
+/**
+ * SRD 5.2 § Classes (Rogue / Monk — Evasion): when forced to make a
+ * Dexterity saving throw to take half damage from an area effect,
+ * a creature with Evasion takes no damage on a successful save and
+ * only half damage on a failed save. Apply this AFTER castSpellSave
+ * to upgrade the result for targets that have `actor.evasion: true`.
+ *
+ * `results: [{ targetId, saved, appliedDamage, damage }]` (the
+ *  output of castSpellSave). Returns the same array with updated
+ *  `appliedDamage` for any target carrying `evasion: true`.
+ */
+export function applyEvasion(results, targetsById) {
+  if (!Array.isArray(results)) {
+    throw new Error('applyEvasion: results must be an array');
+  }
+  return results.map((r) => {
+    const target = targetsById?.[r.targetId];
+    if (!target || target.evasion !== true) return r;
+    if (r.saved) {
+      return { ...r, appliedDamage: 0, evasion: true };
+    }
+    // Half damage on a failed save instead of full.
+    const halved = Math.floor((r.damage ?? r.appliedDamage * 2) / 2);
+    return { ...r, appliedDamage: halved, evasion: true };
+  });
+}
+
+/**
+ * SRD 5.2 § Monsters (Magic Resistance): a creature with Magic
+ * Resistance has advantage on saving throws against spells and
+ * other magical effects. Returns the DC the host should use against
+ * a magic-resistant target — modelled as a -5 effective DC, since
+ * the engine's bound `savingThrow` doesn't yet take an `advantage`
+ * argument. Equivalent to the engine's standard advantage proxy.
+ */
+export function magicResistanceDcFor(target, baseDc) {
+  if (!target || target.magicResistance !== true) return baseDc;
+  return Math.max(0, baseDc - 5);
+}
+
+/**
+ * SRD 5.2 § Wizard (Evoker, Sculpt Spells): when an Evoker casts an
+ * evocation spell that affects an area, they can choose `1 + spell
+ * level` creatures in that area to be unaffected by the spell.
+ * Those creatures take no damage and don't suffer the spell's
+ * effects. Returns the `results` array with chosen targets pruned
+ * to `appliedDamage: 0` and a `sculpted: true` flag.
+ *
+ * `chosenIds` is the host-picked list of target ids to protect.
+ */
+export function applySculptSpells(results, { spellLevel, chosenIds = [] } = {}) {
+  if (!Array.isArray(results)) {
+    throw new Error('applySculptSpells: results must be an array');
+  }
+  const cap = 1 + Math.max(0, spellLevel ?? 0);
+  const protectedSet = new Set(chosenIds.slice(0, cap));
+  return results.map((r) =>
+    protectedSet.has(r.targetId)
+      ? { ...r, appliedDamage: 0, saved: true, sculpted: true }
+      : r
+  );
 }

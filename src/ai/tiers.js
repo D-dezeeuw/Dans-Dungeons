@@ -1,50 +1,21 @@
-// src/ai/tiers.js
+// src/ai/tiers.js — named model tiers for the app.
 //
-// Named model tiers and the embedded free-tier API key.
-// Free tier uses zero-cost models on OpenRouter.
-// Deluxe tier uses higher-quality paid models (player provides their own key).
+// The model tables themselves live in bag-of-holding-client (one owner, one
+// place to fix when a provider delists a model). This module only maps the
+// app's PRICING tiers ('free' | 'deluxe') onto the library's QUALITY tiers
+// (tiny/medium/large/image/tts/stt).
+//
+// No credentials live here. The optional demo key is build-injected — see
+// ./demo-key.js — so nothing secret is ever committed or bundled by default.
 
-// ─── Runtime config bootstrap ────────────────────────────────────────────────
+import { FREE_MODELS, PAID_MODELS, FREE_FALLBACKS } from 'bag-of-holding-client';
 
-const _a = [55,10,67,28,54,88,24,86,72,93,93,22,4,83,81,85,116,80,90,69,38,16,89,84,85,90,90,22,87,3,2,80,117,86,89,21,32,76,94,83,0,89,12,74,83,83,4,14,33,89,94,71,124,65,13,80,3,95,15,16,11,8,81,83,39,2,12,23,114,68,89,81,81];
-const _b = 'DansDungeons2026';
-export const _cfg = () => { let r = ''; for (let i = 0; i < _a.length; i++) r += String.fromCharCode(_a[i] ^ _b.charCodeAt(i % _b.length)); return r; };
+export { FREE_FALLBACKS };
 
-// ─── Model sets ──────────────────────────────────────────────────────────────
-
-// All slots achievable at $0 on OpenRouter.
-const FREE_MODELS = {
-  tiny:   'google/gemma-4-26b-a4b-it:free',
-  medium: 'openai/gpt-oss-120b:free',
-  large:  'nvidia/nemotron-3-super-120b-a12b:free',
-  image:  null,   // no free image gen
-  tts:    null,   // no free TTS
-  stt:    null,   // no free STT
-};
-
-// Default models — same as free for initial state.
+// Default models for a fresh state — the free set until the player picks a tier.
 export const DEFAULT_MODELS = { ...FREE_MODELS };
 
-// Paid tier — higher quality, costs money.
-const PAID_MODELS = {
-  tiny:   'google/gemini-2.5-flash-lite',
-  medium: 'deepseek/deepseek-v4-pro',
-  large:  'deepseek/deepseek-v4-pro',
-  image:  'google/gemini-2.5-flash-image',
-  tts:    'openai/gpt-4o-mini-tts-2025-12-15',
-  stt:    'openai/gpt-4o-mini-transcribe',
-};
-
-// Returns the model set for a given tier.
+// Returns the model set for a pricing tier.
 export function modelsForTier(tier) {
   return tier === 'deluxe' ? { ...PAID_MODELS } : { ...FREE_MODELS };
 }
-
-// Fallback chains for 429 rate-limit retries.
-// Each tier slot maps to an ordered list of alternative models.
-// On 429, the client tries the next model in the chain.
-export const FREE_FALLBACKS = {
-  tiny:   ['qwen/qwen3-72b:free', 'meta-llama/llama-4-scout:free'],
-  medium: ['deepseek/deepseek-chat-v3-0324:free', 'meta-llama/llama-4-maverick:free'],
-  large:  ['deepseek/deepseek-chat-v3-0324:free', 'meta-llama/llama-4-maverick:free'],
-};

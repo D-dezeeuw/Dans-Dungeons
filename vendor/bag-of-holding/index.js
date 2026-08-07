@@ -29,14 +29,16 @@ import * as Classes from './src/classes/index.js';
 import * as CharacterModule from './src/character.js';
 import { createEngine, HOOK_EVENTS } from './src/engine.js';
 import { verifyLog } from './src/replay.js';
+import { STARTER_PARTY } from './src/solo/starter.js';
 
-export { createEngine, verifyLog, HOOK_EVENTS };
+export { createEngine, verifyLog, HOOK_EVENTS, STARTER_PARTY };
 
 const _default = createEngine();
 export default _default;
 
 export const {
-  Dice, Checks, Combat, Conditions, XP, Movesets, Beats, Spellcasting, Rest, Mechanics, SceneClock, MagicItems, Monsters, Movement, Multiclass, Inspiration, EncounterDesign,
+  Dice, Checks, Combat, Conditions, XP, Movesets, Beats, Spellcasting, Rest, Mechanics, SceneClock, MagicItems, Monsters, Movement, Multiclass, Inspiration, EncounterDesign, Hazards, Equipment, Travel, MountedCombat,
+  Solo, Session, Replay,
   species, classes, backgrounds, feats, spells, items, monsters
 } = _default;
 
@@ -48,7 +50,8 @@ export const {
 // common case ("just give me the sheet").
 export const Character = Object.freeze({
   deriveSheet: CharacterModule.deriveSheet,
-  SKILL_ABILITY: CharacterModule.SKILL_ABILITY
+  SKILL_ABILITY: CharacterModule.SKILL_ABILITY,
+  encumbranceLevel: CharacterModule.encumbranceLevel
 });
 
 // Back-compat `SRD` namespace: groups the data registries the way

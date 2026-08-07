@@ -72,7 +72,22 @@ export default {
       name: 'Draconic Sorcery',
       features: {
         1: ['Draconic Resilience', 'Draconic Ancestry'],
-        3: ['Elemental Affinity']
+        3: ['Elemental Affinity'],
+        6: ['Draconic Wings'],
+        14: ['Dragon Wings'],
+        18: ['Draconic Presence']
+      },
+      mechanics: {
+        // Elemental Affinity: when casting a spell of the ancestry's
+        // damage type, add CHA mod to one damage roll. Pure dispatch.
+        elementalAffinity: (actor, args) => {
+          const chaMod = Math.floor(((actor.abilityScores?.cha ?? 10) - 10) / 2);
+          const ancestryType = actor.draconicAncestryType ?? args?.ancestryType ?? 'fire';
+          if (args?.spellDamageType !== ancestryType) {
+            return { applies: false, bonus: 0, actor };
+          }
+          return { applies: true, bonus: chaMod, actor };
+        }
       }
     }
   },
@@ -86,7 +101,17 @@ export default {
     7: [],
     8: ['Ability Score Improvement'],
     9: [],
-    10: ['Metamagic (third option)']
+    10: ['Metamagic (third option)'],
+    11: ['Sorcery Incarnate'],
+    12: ['Ability Score Improvement'],
+    13: [],
+    14: ['Subclass Feature'],
+    15: [],
+    16: ['Ability Score Improvement'],
+    17: ['Subclass Feature'],
+    18: ['Sorcerous Body'],
+    19: ['Epic Boon'],
+    20: ['Arcane Apotheosis']
   },
   // Resource-bearing features (since 1.3.8). Sorcery Points refresh
   // on Long Rest only.

@@ -203,6 +203,15 @@ export function attackStance({ attacker = {}, target = {}, attackerDistanceFt = 
   // `dodging` is set by `Encounter.dodge`.
   if (target.dodging === true) dis = true;
 
+  // SRD 5.2 § Combat — Unseen Attackers and Targets (since 1.30.0):
+  // an attacker the target can't see has Advantage. A target the
+  // attacker can't see imposes Disadvantage. The host flags this
+  // via `attacker.unseenBy[target.id]` and `target.unseenBy[attacker.id]`,
+  // or the simpler `attacker.unseen` / `target.unseen` booleans for
+  // generic invisibility/darkness.
+  if (attacker.unseen === true) adv = true;
+  if (target.unseen === true) dis = true;
+
   if (adv && dis) return 'normal';
   if (adv) return 'advantage';
   if (dis) return 'disadvantage';

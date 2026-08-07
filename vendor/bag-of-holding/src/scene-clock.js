@@ -17,6 +17,8 @@
 
 /** Default Dawn boundary in minutes-from-midnight (06:00). */
 export const DEFAULT_DAWN_MINUTE = 360;
+/** Minutes per exploration turn (SRD § Adventuring — Exploration). */
+export const MINUTES_PER_EXPLORATION_TURN = 10;
 /** Default Dusk boundary in minutes-from-midnight (18:00). */
 export const DEFAULT_DUSK_MINUTE = 1080;
 /** Minutes in a full day cycle. */
@@ -28,11 +30,11 @@ export const MINUTES_PER_DAY = 1440;
  * Plugin-overridable Dawn / Dusk boundaries land on the scene
  * record itself; advancers read them from there.
  */
-export function freshScene({ startMinute = DEFAULT_DAWN_MINUTE, dawnMinute = DEFAULT_DAWN_MINUTE, duskMinute = DEFAULT_DUSK_MINUTE } = {}) {
+export function freshScene({ startMinute = DEFAULT_DAWN_MINUTE, dawnMinute = DEFAULT_DAWN_MINUTE, duskMinute = DEFAULT_DUSK_MINUTE, minutesPerTurn = MINUTES_PER_EXPLORATION_TURN } = {}) {
   if (!Number.isInteger(startMinute) || startMinute < 0) {
     throw new Error('freshScene: startMinute must be a non-negative integer');
   }
-  return { minutes: startMinute, dawnMinute, duskMinute };
+  return { minutes: startMinute, dawnMinute, duskMinute, minutesPerTurn };
 }
 
 /**
@@ -54,7 +56,8 @@ export function advanceTime(scene, delta = {}) {
     (delta.minutes ?? 0) +
     (delta.hours ?? 0) * 60 +
     (delta.days ?? 0) * MINUTES_PER_DAY +
-    Math.floor((delta.rounds ?? 0) / 10);
+    Math.floor((delta.rounds ?? 0) / 10) +
+    (delta.turns ?? 0) * (scene.minutesPerTurn ?? MINUTES_PER_EXPLORATION_TURN);
   if (minutesDelta < 0) {
     throw new Error('advanceTime: scene clocks only move forward');
   }
@@ -96,6 +99,44 @@ export function advanceTime(scene, delta = {}) {
  * Wraps the input mod 1440 so an arbitrarily-large minute count
  * still renders as a time-of-day.
  */
+/**
+ * Convenience: advance by whole exploration turns. Equivalent to
+ * `advanceTime(scene, { turns })`.
+ */
+export function advanceTurn(scene, turns = 1) {
+  return advanceTime(scene, { turns });
+}
+
+/**
+ * Returns `true` when the current time-of-day falls between Dawn and
+ * Dusk (inclusive of Dawn, exclusive of Dusk). Wraps at midnight.
+ */
+export function isDaytime(scene) {
+  const tod = (scene.minutes ?? 0) % MINUTES_PER_DAY;
+  const dawn = scene.dawnMinute ?? DEFAULT_DAWN_MINUTE;
+  const dusk = scene.duskMinute ?? DEFAULT_DUSK_MINUTE;
+  return tod >= dawn && tod < dusk;
+}
+
+/**
+ * Human-readable time-of-day bucket. Dawn and Dusk are 30-minute
+ * windows centred on the respective boundaries; `'day'` and `'night'`
+ * fill the rest.
+ */
+export function timeOfDayLabel(scene) {
+  const tod = (scene.minutes ?? 0) % MINUTES_PER_DAY;
+  const dawn = scene.dawnMinute ?? DEFAULT_DAWN_MINUTE;
+  const dusk = scene.duskMinute ?? DEFAULT_DUSK_MINUTE;
+  const WINDOW = 30;
+  // Transition windows sit *inside* the day/night periods so the label
+  // never contradicts isDaytime: 'dawn' is the opening 30 min of day,
+  // 'dusk' is the closing 30 min of day.
+  if (tod >= dawn && tod < dawn + WINDOW) return 'dawn';
+  if (tod >= dusk - WINDOW && tod < dusk) return 'dusk';
+  if (tod >= dawn && tod < dusk) return 'day';
+  return 'night';
+}
+
 export function formatTimeOfDay(minutes) {
   const m = ((minutes ?? 0) % MINUTES_PER_DAY + MINUTES_PER_DAY) % MINUTES_PER_DAY;
   const hh = Math.floor(m / 60).toString().padStart(2, '0');

@@ -106,7 +106,9 @@
     "connectTry": "Try without an account (shared, may be slow)",
     "connectingOAuth": "Redirecting to OpenRouter…",
     "oauthSuccess": "Connected! Your personal API key has been saved.",
-    "oauthFail": "Connection failed. You can paste a key manually with /settings."
+    "oauthFail": "Connection failed. You can paste a key manually with /settings.",
+    "demoNotice": "Demo mode: this key is shared by everyone playing, so it is rate-limited and your text passes through the host's account. Connect your own key for a full campaign.",
+    "modelHealed": "The '{{tier}}' model ({{from}}) is no longer available — switched to {{to}}."
   },
   "tier": {
     "upgradeQuestion": "Do you want to upgrade to the Deluxe tier?",

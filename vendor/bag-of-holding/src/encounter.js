@@ -30,12 +30,20 @@ const DEFAULT_ACTION_BUDGET = Object.freeze({
   action: 1,
   bonus: 1,
   reaction: 1,
-  movement: null   // overridden per-actor from speed
+  movement: null,  // overridden per-actor from speed
+  // SRD 5.2 § Other Activity on Your Turn: one free object
+  // interaction per turn (open a door, draw a weapon, retrieve a
+  // stowed item). Anything beyond uses the Utilize action.
+  freeInteraction: 1,
+  // null = Attack action not yet opened; set to a positive integer by
+  // `beginAttackAction`. Grapple / Shove spend from this pool so a
+  // Fighter with Extra Attack can grapple + attack in the same turn.
+  attacksLeft: null
 });
 
 /** Cost vocabulary the engine accepts. Mirrors the moveset chip
  *  costs so the same string moves end-to-end without re-mapping. */
-export const ACTION_COSTS = Object.freeze(['action', 'bonus', 'reaction', 'movement', 'free']);
+export const ACTION_COSTS = Object.freeze(['action', 'bonus', 'reaction', 'movement', 'free', 'freeInteraction', 'attacksLeft']);
 
 /**
  * Compute a fresh action-budget snapshot for an actor. Movement is
@@ -45,6 +53,36 @@ export const ACTION_COSTS = Object.freeze(['action', 'bonus', 'reaction', 'movem
  */
 export function freshBudget(speed) {
   return { ...DEFAULT_ACTION_BUDGET, movement: speed };
+}
+
+/**
+ * SRD 5.2 § Combat — Attack action (multi-attack opening).
+ * Spends the `action` budget slot and sets `budget.attacksLeft` to
+ * `numAttacks` so that Grapple / Shove (and any other per-attack
+ * manoeuvres) can consume individual attack slots without burning a
+ * second action. A Fighter with Extra Attack calls this with
+ * `numAttacks: 2`, granting them two attack slots to distribute
+ * across attacks, grapples, and shoves in any order.
+ *
+ * Must be called before `grapple` / `shove`; those verbs refuse with
+ * `{ allowed: false, reason: 'call beginAttackAction first' }` when
+ * `attacksLeft` is still `null`.
+ */
+export function beginAttackAction(state, actorId, numAttacks) {
+  if (!Number.isInteger(numAttacks) || numAttacks < 1) {
+    return { allowed: false, reason: 'numAttacks must be a positive integer' };
+  }
+  const r = spend(state, actorId, 'action');
+  if (!r.allowed) return r;
+  const budget = r.state.budgets[actorId];
+  const nextState = {
+    ...r.state,
+    budgets: {
+      ...r.state.budgets,
+      [actorId]: { ...budget, attacksLeft: numAttacks }
+    }
+  };
+  return { allowed: true, state: nextState };
 }
 
 // === Initiative & turn order ===
@@ -62,7 +100,18 @@ export function freshBudget(speed) {
  */
 export function rollOrder(participants, rng = Math.random, onInitiativeRoll) {
   const rolled = participants.map((p) => {
-    const d20 = rollDie(20, rng);
+    // SRD 5.2 § Combat (Initiative): a combatant surprised by combat
+    // starting has Disadvantage on their initiative roll. The host
+    // sets `p.surprised = true` before calling startEncounter; the
+    // engine rolls 2d20 and keeps the lower.
+    let d20;
+    if (p.surprised === true) {
+      const a = rollDie(20, rng);
+      const b = rollDie(20, rng);
+      d20 = Math.min(a, b);
+    } else {
+      d20 = rollDie(20, rng);
+    }
     const initiative = d20 + modFromScore(p.dexterity);
     // Optional per-roll callback — engine wrapper passes one that
     // appends a `rollInitiative` entry to the engine's roll log so
@@ -425,10 +474,14 @@ export function help(state, actor, args = {}) {
  * helper just consumes the action and reports that a Stealth check
  * is owed.
  */
-export function hide(state, actor) {
+export function hide(state, actor, args = {}) {
+  if (args.canHide === false) {
+    return { allowed: false, reason: 'no cover available' };
+  }
+  const stealthDisadvantage = actor.skills?.stealth?.disadvantage ?? false;
   return spendAndReturn(state, actor.id, 'action', 1, {
     actor,    // unchanged — host applies `hidden: true` on a successful check
-    result: { needsStealthCheck: true }
+    result: { needsStealthCheck: true, stealthDisadvantage }
   });
 }
 
@@ -496,7 +549,7 @@ export function grapple(state, actor, args = {}) {
   const proficiencyBonus = actor.proficiencyBonus ?? 2;
   const strMod = modFromScore(actor.abilityScores?.str ?? 10);
   const dc = 8 + strMod + proficiencyBonus;
-  const r = spend(state, actor.id, 'action');
+  const r = spend(state, actor.id, 'attacksLeft');
   if (!r.allowed) return r;
   return {
     allowed: true,
@@ -523,7 +576,7 @@ export function shove(state, actor, args = {}) {
   const proficiencyBonus = actor.proficiencyBonus ?? 2;
   const strMod = modFromScore(actor.abilityScores?.str ?? 10);
   const dc = 8 + strMod + proficiencyBonus;
-  const r = spend(state, actor.id, 'action');
+  const r = spend(state, actor.id, 'attacksLeft');
   if (!r.allowed) return r;
   const onFail = choice === 'prone'
     ? { condition: 'prone' }
@@ -582,4 +635,74 @@ export function improvisedAttack({ damageDie = 'd4', damageType = 'bludgeoning',
     damageType,
     proficient
   };
+}
+
+/**
+ * SRD § Equipment — Utilize action. Spend an action to interact with
+ * an item in a way that would normally require more than a free
+ * interaction (e.g., administer a potion to an unconscious ally,
+ * use a magic item). `args.item` names the item for the log.
+ */
+export function utilize(state, actor, args = {}) {
+  const r = spend(state, actor.id, 'action');
+  if (!r.allowed) return r;
+  return {
+    allowed: true,
+    state: {
+      ...r.state,
+      log: [...r.state.log, { kind: 'utilize', actorId: actor.id, item: args.item }]
+    },
+    actor,
+    result: { kind: 'utilize', item: args.item }
+  };
+}
+
+/**
+ * Generic bonus-action escape hatch for class features not modelled
+ * as dedicated verbs (Cunning Action, Second Wind, etc.).
+ * `args.kind` is required (non-empty string) to identify the feature
+ * in the log so replays remain interpretable.
+ */
+export function bonusAction(state, actor, args = {}) {
+  const kind = args.kind;
+  if (typeof kind !== 'string' || kind.length === 0) {
+    return { allowed: false, reason: 'args.kind required' };
+  }
+  const r = spend(state, actor.id, 'bonus');
+  if (!r.allowed) return r;
+  return {
+    allowed: true,
+    state: {
+      ...r.state,
+      log: [...r.state.log, { kind: 'bonus-action', subKind: kind, actorId: actor.id }]
+    },
+    actor,
+    result: { kind }
+  };
+}
+
+/**
+ * Clear the `hidden` flag when the engine or host determines the
+ * actor is no longer concealed (e.g., after attacking). Does NOT
+ * spend a budget slot — revealing is not a player choice, it is an
+ * automatic consequence of other actions.
+ */
+export function reveal(state, actor) {
+  return {
+    state: {
+      ...state,
+      log: [...state.log, { kind: 'reveal', actorId: actor.id }]
+    },
+    actor: { ...actor, hidden: false }
+  };
+}
+
+/**
+ * Pure actor transform: strip the `readied` flag after the readied
+ * action fires (or the actor's turn begins without the trigger
+ * occurring). No state needed — the host owns when to call this.
+ */
+export function clearReady(actor) {
+  const { readied: _, ...rest } = actor;
+  return rest;
 }

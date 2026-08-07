@@ -274,6 +274,28 @@ function deriveInitiative(allFeats, profBonus, dexMod) {
 }
 
 /**
+ * SRD 5.2 § Character Origins: each background grants its named
+ * Origin Feat with full mechanical effects (cantrips, +5 ft
+ * initiative, weapon reroll, etc.). Folding the feats' `grants`
+ * blocks into a flat `featGrants` map on the sheet lets the host
+ * read every active grant without re-walking the feats list.
+ *
+ * Conflict policy: last-write-wins (the player's chosen feats can
+ * override an origin feat's defaults). Repeatable feats with
+ * `variant` selectors collect under the feat id with `_<variant>`.
+ */
+function deriveFeatGrants(allFeats, feats) {
+  const merged = {};
+  for (const featRef of allFeats) {
+    const def = feats[featRef.id];
+    if (!def || !def.grants) continue;
+    const key = featRef.variant ? `${featRef.id}_${featRef.variant}` : featRef.id;
+    merged[key] = def.grants;
+  }
+  return merged;
+}
+
+/**
  * Walking speed after exhaustion and movement-cancelling conditions.
  * Per SRD 5.2, Exhaustion subtracts 5 ft per level (handled by
  * `Conditions.exhaustion.speedPenalty`). Grappled / Paralyzed /
@@ -281,12 +303,55 @@ function deriveInitiative(allFeats, profBonus, dexMod) {
  * — we hard-zero on any of them so a paralyzed PC's sheet doesn't
  * misleadingly show "25 ft (exhausted from 30)".
  */
-function deriveSpeed(species, conditions, exhaustionLevel) {
+function deriveSpeed(species, conditions, exhaustionLevel, extraPenalty = 0) {
+  const effects = species.effects ?? {};
+  const extras = effects.extraSpeeds ?? {};
   if (conditions.some((c) => SPEED_ZERO_CONDITIONS.includes(c))) {
-    return { walk: 0 };
+    const zeroed = { walk: 0 };
+    for (const mode of Object.keys(extras)) zeroed[mode] = 0;
+    return zeroed;
   }
-  const penalty = Exhaustion.speedPenalty({ exhaustion: exhaustionLevel });
-  return { walk: Math.max(0, species.speed - penalty) };
+  const penalty = Exhaustion.speedPenalty({ exhaustion: exhaustionLevel }) + extraPenalty;
+  const speeds = { walk: Math.max(0, species.speed - penalty) };
+  for (const [mode, base] of Object.entries(extras)) {
+    speeds[mode] = Math.max(0, base - penalty);
+  }
+  return speeds;
+}
+
+/**
+ * Senses block per SRD 5.2 § Vision and Light. Pulls darkvision /
+ * blindsight / truesight ranges off the species effects map; the
+ * host stamps the same shape onto any actor for `Movement` helpers
+ * to read.
+ */
+function deriveSenses(species) {
+  const effects = species.effects ?? {};
+  return {
+    darkvision: effects.darkvisionFt ?? 0,
+    blindsight: effects.blindsightFt ?? 0,
+    truesight: effects.truesightFt ?? 0
+  };
+}
+
+/**
+ * Pull damage resistances off the species effects map. Returned as a
+ * fresh array so the sheet's `damageResistances` is host-mutable
+ * (after the host melts the frozen sheet with a copy) without
+ * leaking into the SRD species record.
+ */
+function deriveDamageResistances(species) {
+  const list = species.effects?.damageResistances ?? [];
+  return [...list];
+}
+
+/**
+ * Species trait flags surfaced as a flat object so 1.6 hook handlers
+ * and host UIs can read them without parsing strings. Empty object
+ * for a species with no flags set.
+ */
+function deriveTraitFlags(species) {
+  return { ...(species.effects?.flags ?? {}) };
 }
 
 /**
@@ -318,7 +383,7 @@ function deriveSaves(classDef, extraSaves, profBonus, abilityMods) {
  * rather than throwing — a host editor mid-edit shouldn't crash on a
  * half-written record.
  */
-function deriveSkills(background, extraSkills, expertise, profBonus, abilityMods) {
+function deriveSkills(background, extraSkills, expertise, profBonus, abilityMods, stealthDisadvantage = false) {
   const proficientSet = new Set([
     ...(background.skillProficiencies ?? []),
     ...(extraSkills ?? [])
@@ -329,12 +394,20 @@ function deriveSkills(background, extraSkills, expertise, profBonus, abilityMods
     const proficient = proficientSet.has(skillId);
     const isExpert = proficient && expertiseSet.has(skillId);
     const profPortion = isExpert ? profBonus * 2 : (proficient ? profBonus : 0);
-    skills[skillId] = {
+    const skill = {
       ability,
       mod: abilityMods[ability] + profPortion,
       proficient,
       expertise: isExpert
     };
+    // Heavy / armored disadvantage rides through to the host as a
+    // flag the UI can render alongside the mod, instead of folding
+    // into the mod itself (advantage / disadvantage are roll-time
+    // mechanics in 5e, not flat penalties).
+    if (skillId === 'stealth' && stealthDisadvantage) {
+      skill.disadvantage = true;
+    }
+    skills[skillId] = skill;
   }
   return skills;
 }
@@ -453,6 +526,7 @@ export function deriveSheet(record, registries) {
   const classDef = registries.classes[record.classId];
   const background = registries.backgrounds[record.backgroundId];
   const items = registries.items;
+  const feats = registries.feats ?? {};
 
   const profBonus = registries.XP.PROFICIENCY_BY_LEVEL[record.level]
     ?? Math.ceil(record.level / 4) + 1;   // graceful fallback past tier 1
@@ -465,14 +539,28 @@ export function deriveSheet(record, registries) {
   const hp = { max: deriveMaxHp(record, classDef, abilityMods.con) };
   const ac = deriveAc(record, items, abilityMods.dex);
   const initiative = deriveInitiative(allFeats, profBonus, abilityMods.dex);
-  const speed = deriveSpeed(species, conditions, exhaustionLevel);
+  const featGrants = deriveFeatGrants(allFeats, feats);
+  // Armor metadata governs both stealth disadvantage (per SRD § Armor)
+  // and a 10 ft speed penalty when a heavy armor's strRequired isn't
+  // met. The host can also stamp `record.encumbrance` for the variant
+  // rule, which routes through the same speed-penalty pipeline.
+  const armor = record.equipment?.armorId ? items[record.equipment.armorId] : null;
+  const armorStealthDisadvantage = Boolean(armor?.stealthDisadvantage);
+  const armorSpeedPenalty = armor && armor.strRequired && abilityFinal.str < armor.strRequired ? 10 : 0;
+  const encumbranceSpeed = (record.encumbrance === 'encumbered') ? 10
+    : (record.encumbrance === 'heavily-encumbered') ? 20 : 0;
+  const speed = deriveSpeed(species, conditions, exhaustionLevel, armorSpeedPenalty + encumbranceSpeed);
+  const senses = deriveSenses(species);
+  const damageResistances = deriveDamageResistances(species);
+  const traitFlags = deriveTraitFlags(species);
   const saves = deriveSaves(classDef, record.proficiencies?.saves, profBonus, abilityMods);
   const skills = deriveSkills(
     background,
     record.proficiencies?.skills,
     record.proficiencies?.expertise,
     profBonus,
-    abilityMods
+    abilityMods,
+    armorStealthDisadvantage
   );
   const attacks = deriveAttacks(record, items, profBonus, abilityMods);
   const spellcasting = deriveSpellcasting(classDef, profBonus, abilityMods);
@@ -509,11 +597,15 @@ export function deriveSheet(record, registries) {
     ac,
     initiative,
     speed,
+    senses,
+    damageResistances,
+    traitFlags,
     saves,
     skills,
     attacks,
     spellcasting,
     passives,
+    featGrants,
     carryingCapacity,
     activeEffects: {
       conditions: [...conditions],
@@ -522,6 +614,35 @@ export function deriveSheet(record, registries) {
   };
 
   return deepFreeze(sheet);
+}
+
+/**
+ * Encumbrance level per SRD 5.2 variant rule (§ Equipment — Carrying
+ * Capacity). Three tiers based on the character's STR score and the
+ * total weight currently carried:
+ *
+ *   `'none'`              — weight ≤ STR × 5, no penalty.
+ *   `'encumbered'`        — STR × 5 < weight ≤ STR × 10:
+ *                           speed –10 ft, disadvantage on STR / DEX /
+ *                           CON ability checks and attack rolls.
+ *   `'heavily-encumbered'`— weight > STR × 10:
+ *                           speed –20 ft, disadvantage on all ability
+ *                           checks, attack rolls, and saves.
+ *
+ * This is a variant rule — hosts opt into it by calling this function
+ * and enforcing the speed / disadvantage consequences themselves.
+ * The standard-rule carry limit (STR × 15) is already on the sheet as
+ * `carryingCapacity`.
+ *
+ * @param {number} str        The character's STR score (final, after
+ *                            background bumps).
+ * @param {number} weightLbs  Total carried weight in pounds.
+ * @returns {'none' | 'encumbered' | 'heavily-encumbered'}
+ */
+export function encumbranceLevel(str, weightLbs) {
+  if (weightLbs > str * 10) return 'heavily-encumbered';
+  if (weightLbs > str * 5)  return 'encumbered';
+  return 'none';
 }
 
 /**

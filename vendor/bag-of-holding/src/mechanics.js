@@ -183,10 +183,10 @@ export function refreshResources(actor, kind) {
  * because the host shouldn't have offered the chip in the first
  * place.
  */
-export function applyMechanic({ actor, classDef, id, args = {} }, rng = Math.random) {
+export function applyMechanic({ actor, classDef, id, args = {} }, rng = Math.random, saver) {
   const handlers = classDef?.mechanics;
   if (!handlers || !handlers[id]) {
     throw new Error(`Unknown class mechanic: ${classDef?.id ?? '?'}.${id}`);
   }
-  return handlers[id](actor, args, { rng, rollDie, modFromScore });
+  return handlers[id](actor, args, { rng, rollDie, modFromScore, saver });
 }
