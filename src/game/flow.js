@@ -105,6 +105,25 @@ function buildImagePrompt(narration) {
   return npcs.length ? `${base} ${npcs.join(', ')} present.` : base;
 }
 
+// Has the player moved somewhere the current sketch does not depict? Tracks the
+// last room a sketch was drawn for, so re-entering a room later redraws it (the
+// place has changed by then) while standing still does not.
+let _sketchedRoom = null;
+function sceneImageIsDue() {
+  const here = `${appState.world?.location?.dungeonId ?? appState.world?.location?.settlementId ?? ''}:${appState.world?.currentRoom ?? ''}`;
+  if (here === _sketchedRoom) return false;
+  _sketchedRoom = here;
+  return true;
+}
+
+// Draw one on demand, wherever the player is — the escape hatch that makes
+// rationing acceptable: a player who wants a picture of this moment can have it.
+export function sketchThisScene() {
+  const room = appState.world?.rooms?.[appState.world?.currentRoom];
+  const last = journalLog.at(-1);
+  return requestSceneImage(last?.narration || room?.description, last ?? null);
+}
+
 function requestSceneImage(narration, journalEntry = null) {
   if ((appState.settings?.sketchView ?? 'windowed') === 'minimized') return Promise.resolve(null);
   UI.showSceneImageLoading();
@@ -320,6 +339,13 @@ async function handleMeta(raw) {
   if (cmd === 'settings') { UI.appendEntry('system', t('setup.reRunSetup')); await setupKey(); return; }
   if (cmd === 'map')   { renderRegionMap(); return; }
   if (cmd === 'story') { renderStoryView(); return; }
+  // The other half of image rationing: sketches come on arrival, and on demand
+  // any time the player wants one of this moment.
+  if (cmd === 'sketch') {
+    if (!appState.settings?.sceneImage) { UI.appendEntry('system', t('meta.sketchOff')); return; }
+    await sketchThisScene();
+    return;
+  }
   if (cmd === 'help') { UI.appendEntry('system', t('meta.helpList')); return; }
   UI.appendEntry('system', t('meta.unknownCmd', { cmd: raw }));
 }
@@ -1632,7 +1658,13 @@ async function playLoop() {
 
     const journalEntry = { turn: appState.session?.turnCount ?? 0, narration: result?.narration ?? '', imageSrc: null };
     journalLog.push(journalEntry);
-    if (appState.settings?.sceneImage) requestSceneImage(result?.narration, journalEntry);
+    // Sketch on arrival, not on every breath. An image costs ~47x a turn's
+    // text, and generating one per turn meant most of a campaign's bill bought
+    // near-identical drawings of the same room. A new room earns a new sketch;
+    // anywhere else the player asks (the "sketch this" chip).
+    if (appState.settings?.sceneImage && sceneImageIsDue()) {
+      requestSceneImage(result?.narration, journalEntry);
+    }
 
     if (appState.settings?.roleplayMode) {
       UI.showRoleplayOverlay(false);

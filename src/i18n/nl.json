@@ -155,7 +155,8 @@
     "saveFailed": "Opslaan MISLUKT — de browseropslag is vol. Exporteer je spel (Instellingen → Opslaan) voordat je dit tabblad sluit.",
     "status": "{{name}} — HP {{hp}}/{{max}}, AC {{ac}}",
     "helpList": "/save · /status · /settings · /restart · /help",
-    "unknownCmd": "Onbekend commando: {{cmd}}  (probeer /help)"
+    "unknownCmd": "Onbekend commando: {{cmd}}  (probeer /help)",
+    "sketchOff": "Scèneschetsen staan uit — zet ze aan bij Instellingen."
   },
   "newgame": {
     "modeQuestion": "Hoe wil je spelen?",
@@ -622,7 +623,8 @@
     "waitCmd": "Ik wacht en observeer",
     "attackWith": "Ik val aan met mijn {{name}}",
     "useSkill": "Ik gebruik {{name}}",
-    "spellInfo": "Spreuk DC {{dc}} · spreukaanval +{{bonus}}"
+    "spellInfo": "Spreuk DC {{dc}} · spreukaanval +{{bonus}}",
+    "sketch": "Schets dit"
   },
   "skills": {
     "athletics": {

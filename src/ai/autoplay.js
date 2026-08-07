@@ -9,7 +9,7 @@ import { t } from '../i18n/i18n.js';
 
 export async function generateAutoAction(scene, availableActions, transcript, navigationHint) {
   const system = t('ai.autoplayPrompt', {
-    scene:      JSON.stringify(scene, null, 2),
+    scene:      JSON.stringify(scene),
     actions:    JSON.stringify(availableActions),
     transcript: JSON.stringify(transcript.slice(-6)),
     navigation: navigationHint ?? '',

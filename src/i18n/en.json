@@ -155,7 +155,8 @@
     "saveFailed": "Save FAILED — browser storage is full. Export your game (Settings → Save) before closing this tab.",
     "status": "{{name}} — HP {{hp}}/{{max}}, AC {{ac}}",
     "helpList": "/save · /status · /settings · /restart · /help",
-    "unknownCmd": "Unknown command: {{cmd}}  (try /help)"
+    "unknownCmd": "Unknown command: {{cmd}}  (try /help)",
+    "sketchOff": "Scene sketches are off — turn them on in Settings."
   },
   "newgame": {
     "modeQuestion": "How would you like to play?",
@@ -644,7 +645,8 @@
     "waitCmd": "I wait and watch",
     "attackWith": "I attack with my {{name}}",
     "useSkill": "I use {{name}}",
-    "spellInfo": "Spell save DC {{dc}} · spell atk +{{bonus}}"
+    "spellInfo": "Spell save DC {{dc}} · spell atk +{{bonus}}",
+    "sketch": "Sketch this"
   },
   "skills": {
     "athletics": {

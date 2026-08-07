@@ -12,7 +12,7 @@ import { t, locale } from '../i18n/i18n.js';
 // ─── Settlement intent classifier ────────────────────────────────────────────
 
 export async function classifySettlement(playerInput, context) {
-  const system = t('ai.settlementClassifierPrompt', { context: JSON.stringify(context, null, 2) });
+  const system = t('ai.settlementClassifierPrompt', { context: JSON.stringify(context) });
   return chatCompletion({
     tier: 'tiny',
     messages: [

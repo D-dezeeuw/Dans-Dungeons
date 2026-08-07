@@ -218,6 +218,19 @@ export async function processTurn(playerInput, onNarrationChunk) {
     progression = awardXp(xpForKill(killedNpc.creatureId, block),
       t('progress.killReason', { name: killedNpc.name }));
   }
+  // The memory writes stay INSIDE the undo boundary, deliberately.
+  //
+  // The plan (E2.S3) asked for canon extraction to run after finalizeTurn, to
+  // keep it off the critical path. That is no longer safe: finalizeTurn stamps
+  // the undo boundary at the CURRENT history length, so anything written after
+  // it lands outside this turn's boundary — an undo to this turn would scrub
+  // the minted entities and canon patches, and the story flags above already
+  // carry a comment explaining why they must land before it. Latency is worth
+  // less than a save that survives time travel.
+  //
+  // The per-turn round trips this pass DID remove are the ones that cost
+  // nothing to remove: the classifier no longer runs on structured chip input,
+  // and prompts no longer ship pretty-printed JSON.
   await absorbNarration(narratorResp.narration);
   await maybeRefreshDigest();   // rolling chapter memory (Epic E4)
 
