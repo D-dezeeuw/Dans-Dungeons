@@ -10,6 +10,7 @@ import { OVERWORLD_ENEMY_IDS } from './creatures.js';
 import { createCharacter } from './character.js';
 import { processTurn, checkApiKey, generateTurnImage, buildScene } from './loop.js';
 import { clearTurnMarks, setScrubHandler } from './undo.js';
+import { enterEncounterState, exitEncounterState } from './encounter-state.js';
 import { seedCombat }     from './rng.js';
 import {
   goldOf, resolvePurchase, addToInventory, resolveRest, DEFAULT_REST_COST,
@@ -1066,31 +1067,46 @@ async function narrateTravelBeat(kind, ctx) {
 async function runEncounter(enemyId) {
   if (!enemyId) return 'flee';
   // Snapshot the active dungeon-combat fields so travel doesn't corrupt them.
-  const snap = {
-    currentRoom: appState.world.currentRoom,
-    exitRoomId:  appState.world.exitRoomId,
-    rooms:       appState.world.rooms,
-    npcs:        appState.world.npcs,
-    location:    appState.world.location,
-  };
-
+  // The snapshot is PERSISTED (world.encounterReturn), not just held in a local:
+  // every encounter turn autosaves, so a reload mid-fight used to resume into a
+  // world whose real rooms/npcs existed only in a dead closure.
   const enemy = buildEnemy(enemyId, { npcId: 'enc-1', roomId: 'encounter' });
-  setValue('world', {
-    ...appState.world,
-    currentRoom: 'encounter',
-    // currentRoom === exitRoomId so that a reload mid-encounter resolves through
-    // playLoop's vault-guarded victory gate (fight the enemy, then win) instead
-    // of soft-locking in an exit-less room.
-    exitRoomId:  'encounter',
-    rooms:       { encounter: { id: 'encounter', name: t('travel.encounterRoom'), description: enemy.intro, exits: [], loot: [] } },
-    npcs:        { 'enc-1': enemy },
-    location:    { ...appState.world.location, type: 'encounter' },
-  });
+  // currentRoom === exitRoomId so that a reload mid-encounter resolves through
+  // playLoop's vault-guarded victory gate (fight the enemy, then win) instead
+  // of soft-locking in an exit-less room.
+  setValue('world', enterEncounterState(appState.world, {
+    room: { id: 'encounter', name: t('travel.encounterRoom'), description: enemy.intro, exits: [], loot: [] },
+    npcs: { 'enc-1': enemy },
+  }));
   tick();
 
   UI.appendEntry('gm', enemy.intro);
   _speak(enemy.intro);
 
+  return await runEncounterLoop();
+}
+
+// Re-enter an encounter that was interrupted by a reload. The enemy, the PC and
+// the return snapshot all live in the save, so the fight simply continues.
+export async function resumeEncounter() {
+  const enemy = appState.world?.npcs?.['enc-1'];
+  if (!enemy) {                       // nothing to fight — just put the world back
+    restoreFromEncounter();
+    return 'flee';
+  }
+  UI.appendEntry('system', t('travel.encounterResume'));
+  UI.appendEntry('gm', enemy.intro ?? '');
+  return await runEncounterLoop();
+}
+
+// Restore the pre-encounter world fields from the persisted snapshot.
+function restoreFromEncounter() {
+  if (!appState.world?.encounterReturn) return;
+  setValue('world', exitEncounterState(appState.world));
+  commit();
+}
+
+async function runEncounterLoop() {
   let outcome = 'win';
   while (true) {
     if (!appState.world.npcs['enc-1']?.alive) { outcome = 'win'; break; }
@@ -1134,9 +1150,7 @@ async function runEncounter(enemyId) {
   }
 
   UI.clearChips();
-  // Restore the pre-encounter world fields.
-  setValue('world', { ...appState.world, ...snap });
-  commit();
+  restoreFromEncounter();
 
   if (outcome === 'win')      UI.appendEntry('system', t('travel.encounterWin'));
   else if (outcome === 'flee') UI.appendEntry('gm', t('travel.encounterFlee'));
@@ -1631,8 +1645,22 @@ export async function resumeGame() {
   }));
   UI.appendEntry('system', '');
 
-  // Resume into the right context
+  // Resume into the right context.
   const locType = appState.world?.location?.type;
+
+  // A save written mid-journey-encounter used to fall through to playLoop, whose
+  // victory path returns to no caller — leaving no active prompt on this and
+  // every later reload. Finish the fight, then hand back to the town loop (the
+  // journey itself is not resumable, so the traveller returns where they set out).
+  if (locType === 'encounter') {
+    const outcome = await resumeEncounter();
+    if (outcome === 'defeat') { await doDefeat(); return; }
+    const back = appState.world?.location?.settlementId;
+    if (back && appState.world?.settlements?.[back]) { await enterSettlement(back, true); return; }
+    await playLoop();
+    return;
+  }
+
   if (locType === 'settlement' && appState.world?.location?.settlementId) {
     await enterSettlement(appState.world.location.settlementId, true);
   } else {

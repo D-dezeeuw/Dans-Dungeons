@@ -448,6 +448,7 @@
     "segment": "De weg kronkelt verder door het {{climate}}. De uren verstrijken zonder voorval.",
     "arrive": "Eindelijk komt {{destination}} aan de horizon in zicht.",
     "encounterRoom": "Onderweg",
+    "encounterResume": "Je komt bij je positieven midden in het gevecht — het gevaar is niet verdwenen.",
     "encounterWin": "De dreiging afgehandeld, vervolg je je weg.",
     "encounterFlee": "Je breekt los en schept afstand tussen jezelf en het gevaar, en hervat de weg.",
     "fleeChip": "Vluchten",

@@ -448,6 +448,7 @@
     "segment": "The road winds on through the {{climate}}. Hours pass without incident.",
     "arrive": "At last {{destination}} comes into view on the horizon.",
     "encounterRoom": "On the road",
+    "encounterResume": "You come back to yourself mid-fight — the danger has not moved on.",
     "encounterWin": "The threat dealt with, you press on.",
     "encounterFlee": "You break away and put distance between yourself and the danger, rejoining the road.",
     "fleeChip": "Flee",
