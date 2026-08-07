@@ -82,9 +82,19 @@ Every story in this plan serves at least one. When two conflict, the lower numbe
 | 2026-08-07 | **E10** presentation | Staged thinking indicator with elapsed time; stick-to-bottom scrolling; web app manifest + theme colour + apple-touch-icon; iOS input-zoom fix; focus-visible outlines; contrast/size floors; reduced-motion honoured. |
 | 2026-08-07 | **E11** quality | Prompt-contract regression suite (locale parity, placeholder parity, prompt↔schema agreement, strict-mode exhaustiveness) — which immediately caught `beatCheckPrompt` not asking for the `reason` its schema required. CI added to all three sibling repos; MCP peer dep corrected to ^2.1.0. |
 
-**Deliberately deferred** (documented rather than half-built): E3's IndexedDB cold store — the narrow-write fix in E1.S4 moved the storage wall from ~5 hours to well beyond the current content ceiling, so the split is no longer the binding constraint; E8.S2–S4 (spell wiring, loot economy, CR 16–24 bestiary) which are content production rather than architecture; E11.S1's `flow.js` split and Playwright e2e.
+#### Follow-up pass — the deferrals, closed
 
-Test counts after this pass: game **391** (was 267), client **170** (was 92), engine **1,564** (was 1,561), MCP 99 — **2,224 passing, 0 failing** across four repos, all now gated by CI.
+| Landed | Status |
+|---|---|
+| **Wiring** | The previous pass reproduced the audit's own antipattern: the scope assembler, acts runtime, geography graph and threat clocks were built, tested, exported — and called by nothing. All four now have consumers, and `tests/wiring.test.js` asserts that 19 capabilities each have a caller so a system can never regress into an orphan again. |
+| **E3** storage | IndexedDB cold store with segmented archives; every turn writes a bounded hot slice (live world + last 50 transcript entries + 200 ledger patches) and hands the rest to the archive. Degrades to hot-only where IndexedDB is refused. The journal reads through `fullTranscript()` so a long campaign's export still covers the campaign. |
+| **E7** wiring | `story.js` runs on the acts runtime (migrating a legacy `redThread` on read); an act closing generates the next from what actually happened; a stalled thread nudges instead of freezing. |
+| **E8.S3** loot | Items carry mechanical fields (heals / gold / value / lore) in both locales; the resolver honours them and refuses to invent effects for the rest. |
+| **E8.S4** bestiary | Engine **v2.2.0** (the roadmap's reserved "Bestiary I" slot): Elite/Champion/Ancient templates *derive* CR 16–24 opponents from verified SRD entries rather than transcribing stat blocks from memory, and grant the multiattack/legendary blocks the monster-mechanics module had no data for. The vault boss now scales with party level — a CR 3 wight becomes a CR 11 Champion Wight. |
+
+**Still open, deliberately:** E8.S2 (full spell wiring for casters — the engine's spell data needs its own correctness pass first, per the audit's engine findings), E11.S1's `flow.js` split and Playwright e2e, and the MCP re-sync (an owner decision: dev-time balance harness, or parked).
+
+Test counts after the follow-up pass: game **427** (was 267), client **187** (was 92), engine **1,574** (was 1,561), MCP 99 — **2,287 passing, 0 failing** across four repos, all gated by CI.
 
 ### Milestones
 
