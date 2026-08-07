@@ -150,3 +150,31 @@ export const CANON_SCHEMA = {
   required: ['facts', 'mint'],
   additionalProperties: false,
 };
+
+// Act generation (Epic E7.S2). The next act is generated at the transition,
+// conditioned on what actually happened — so a memorable side thread can be
+// promoted into the main line, and planted clues get paid off.
+export const ACT_SCHEMA = {
+  type: 'object',
+  properties: {
+    title:   { type: 'string' },
+    premise: { type: 'string' },
+    beats: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          id:              { type: 'string' },
+          title:           { type: 'string' },
+          dramaticPurpose: { type: 'string' },
+          location:        { type: ['string', 'null'] },
+          requires:        { type: 'array', items: { type: 'string' } },
+        },
+        required: ['id', 'title', 'dramaticPurpose', 'location', 'requires'],
+        additionalProperties: false,
+      },
+    },
+  },
+  required: ['title', 'premise', 'beats'],
+  additionalProperties: false,
+};

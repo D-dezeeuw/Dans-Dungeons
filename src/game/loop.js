@@ -8,7 +8,7 @@
 // flow.js calls checkApiKey() and generateTurnImage() here so those modules
 // never import AI layers directly either.
 
-import { appState, addValue, tick, commit } from '../core/state.js';
+import { appState, addValue, setValue, tick, commit } from '../core/state.js';
 import { classify, checkBeatFulfilled }       from '../ai/classify.js';
 import { narrate, generateSceneImage }       from '../ai/narrate.js';
 import { checkKey }                          from '../ai/client.js';
@@ -18,10 +18,13 @@ import { beginRoller, commitRoller }          from './rng.js';
 import { buildStoryContext, setStoryFlag, activeBeat, completeBeatNow } from './story.js';
 import { beginTurn, finalizeTurn }          from './undo.js';
 import { recordMechanical, currentPlaceId, currentRoomId, entitiesUnder,
-         detailsAt, recentEvents }           from './ledger.js';
+         detailsAt, recentEvents, encounterKey } from './ledger.js';
+import { assembleScope }                     from './scope.js';
 import { extractCanon }                      from '../ai/canon.js';
 import { memoryContext, maybeRefreshDigest } from './chapters.js';
 import { commitCanon }                       from './canon-commit.js';
+import { nextActContext, adoptAct, TARGET_ACTS } from './acts-runtime.js';
+import { generateAct }                       from '../ai/acts.js';
 import { awardXp, xpForKill, announcementFor } from './progression.js';
 import { statBlockFor }                      from './bestiary.js';
 import { t }                                 from '../i18n/i18n.js';
@@ -99,7 +102,21 @@ export function buildScene() {
   const events = recentEvents({ limit: 5, minScope: 'local' });
   if (events.length) scene.recentEvents = events.map(e => e.because);
 
+  // Scope tiers (Epic E5.S1): what is one step away, and what THIS character
+  // has actually learned. Merged into the scene rather than replacing it so the
+  // classifier's contract is unchanged.
+  const packet = assembleScope();
+  if (packet.nearby?.length) scene.nearby = packet.nearby;
+  if (packet.known?.length)  scene.known  = packet.known;
+
   return scene;
+}
+
+// GM-private material — the beat directive and any unrevealed NPC secrets.
+// Kept OUT of buildScene so it never reaches the UI, the save, or an export;
+// only the narrator's system prompt sees it.
+export function buildGmContext() {
+  return assembleScope({ includeGmOnly: true }).gmOnly ?? null;
 }
 
 // ─── Lifecycle AI helpers (called by flow.js — never by UI) ──────────────────
@@ -163,6 +180,7 @@ export async function processTurn(playerInput, onNarrationChunk) {
     appState.transcript ?? [],
     onNarrationChunk,
     memoryContext(),          // chapter digests + rolling summary (Epic E4)
+    buildGmContext(),         // secrets + directive, system prompt only (E5.S1)
   );
 
   // 5. Commit the turn's mechanics, then tick so they're live in appState —
@@ -253,6 +271,7 @@ async function absorbNarration(narration) {
     const place = currentPlaceId();
     const known = knownSceneIds(place);
     if (!known.length) return;
+    markEncountered(known);
     const proposed = await extractCanon(narration, { knownIds: known, placeId: place });
     if (!proposed.facts.length && !proposed.mint.length) return;
     const res = commitCanon(proposed, { knownIds: known });
@@ -262,6 +281,17 @@ async function absorbNarration(narration) {
 
 // The entity ids the extractor is allowed to attach facts to: this room, this
 // place, the NPCs present, and anything the ledger already knows here.
+// Record that the player has now seen these entities. The scope assembler's
+// `known` tier filters on this, which is what stops the GM referring to things
+// this character has never encountered.
+function markEncountered(ids) {
+  const seen = appState.world?.encountered ?? {};
+  for (const id of ids) {
+    const key = encounterKey(id);
+    if (!seen[key]) setValue(`world.encountered.${key}`, true);
+  }
+}
+
 function knownSceneIds(place) {
   const room = currentRoomId();
   const ids  = new Set([place, room, `${place}.pc`]);
@@ -282,9 +312,24 @@ async function maybeAdvanceBeat(narration) {
   if (!beat || !narration) return false;
   try {
     const res = await checkBeatFulfilled(beat.dramaticPurpose, narration);
-    if (res?.fulfilled) return completeBeatNow(beat.id);
+    if (!res?.fulfilled) return false;
+    const { completed, actClosed } = completeBeatNow(beat.id);
+    // An act closing is the campaign's biggest structural moment: the next act
+    // is written from what actually happened, so the story bends toward the
+    // campaign the player is really having.
+    if (actClosed) await onActClosed();
+    return completed;
   } catch { /* narration check is best-effort */ }
   return false;
+}
+
+// Generate and adopt the next act, unless the campaign is over.
+export async function onActClosed() {
+  const ctx = nextActContext();
+  if (ctx.actNumber > TARGET_ACTS) return null;   // the finale has been played
+  const generated = await generateAct(ctx);
+  if (!generated) return null;
+  return adoptAct(generated);
 }
 
 // ─── Down turn (deterministic, no AI) ────────────────────────────────────────

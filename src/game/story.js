@@ -13,36 +13,45 @@
 // narrow write identical in result to the old whole-world spread.
 
 import { appState, setValue, tick } from '../core/state.js';
+import { adjustReputation, standingFor } from 'bag-of-holding-client';
 import {
-  currentBeat, completeBeat, setFlag as setBeatFlag, storyProgress,
-  adjustReputation, standingFor,
-} from 'bag-of-holding-client';
-
-const emptyRT = () => ({ beats: [], currentIndex: 0, flags: {} });
+  activeBeat as actsActiveBeat, completeBeat as actsCompleteBeat, raiseFlag,
+  progress as actsProgress, gmDirective,
+} from './acts-runtime.js';
 
 // ─── Story flags ──────────────────────────────────────────────────────────────
 
+// Flags are the PRIMARY completion signal: mechanical events raise them, so a
+// beat finishes because something happened rather than because a language model
+// was asked whether the scene felt finished.
 export function setStoryFlag(flag) {
-  const rt = appState.world?.redThread ?? emptyRT();
-  const next = setBeatFlag(rt, flag);
-  if (next === rt) return;
-  setValue('world.redThread', next);
-  tick();
+  raiseFlag(flag);
+  autoCompleteFlaggedBeats();
+}
+
+// A beat whose dramatic purpose names a flag that is now raised is done. This is
+// what demotes the LLM judge to a fallback.
+function autoCompleteFlaggedBeats() {
+  const beat = actsActiveBeat();
+  if (!beat) return;
+  const need = beat.completesOn ?? beat.flag ?? null;
+  if (need && appState.world?.thread?.flags?.[need]) actsCompleteBeat(beat.id);
 }
 
 // ─── Beats ──────────────────────────────────────────────────────────────────
 
+// The red thread now runs on ACTS (src/game/acts-runtime.js), which the library
+// ships and the game previously ignored in favour of a flat beat list. The acts
+// runtime migrates a legacy `redThread` on read, so an in-flight campaign keeps
+// its progress. These wrappers keep the old call sites working.
 export function activeBeat() {
-  return currentBeat(appState.world?.redThread);
+  return actsActiveBeat();
 }
 
+// Returns { completed, actClosed } — flow.js runs the act-transition ceremony
+// (and generates the next act) when an act closes.
 export function completeBeatNow(beatId) {
-  const rt = appState.world?.redThread ?? emptyRT();
-  const next = completeBeat(rt, beatId);
-  if (next === rt) return false;
-  setValue('world.redThread', next);
-  tick();
-  return true;
+  return actsCompleteBeat(beatId);
 }
 
 // ─── Faction reputation ───────────────────────────────────────────────────────
@@ -64,8 +73,8 @@ export function reputationStanding(factionId) {
 // narrator continuity. Kept small on purpose.
 
 export function buildStoryContext() {
-  const rt = appState.world?.redThread;
-  const beat = currentBeat(rt);
+  const rt = appState.world?.thread ?? appState.world?.redThread;
+  const beat = actsActiveBeat();
   const repMap = appState.world?.factionReputation ?? {};
   const factions = Object.keys(repMap)
     .map(id => ({ faction: appState.world?.factions?.[id]?.name ?? id, standing: standingFor(repMap, id) }))
@@ -80,8 +89,9 @@ export function buildStoryContext() {
     .slice(-6);
 
   const ctx = {};
-  if (beat?.dramaticPurpose) ctx.directive = beat.dramaticPurpose; // GM-only: steer toward this, don't state it outright
-  if (beat?.preferredLocation) ctx.preferredLocation = beat.preferredLocation;
+  const d = gmDirective();
+  if (d?.purpose)  ctx.directive = d.purpose;   // GM-only: steer toward this, never state it
+  if (d?.location) ctx.preferredLocation = d.location;
   if (factions.length) ctx.factions = factions;
   if (quests.length) ctx.activeQuests = quests;
   if (recentFlags.length) ctx.recentEvents = recentFlags;
@@ -91,5 +101,5 @@ export function buildStoryContext() {
 // ─── Story progress (for the /story view) ─────────────────────────────────────
 
 export function progress() {
-  return storyProgress(appState.world?.redThread);
+  return actsProgress();
 }

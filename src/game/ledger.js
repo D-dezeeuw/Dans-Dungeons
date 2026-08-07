@@ -81,6 +81,15 @@ export function recordCanon(target, path, to, { scope = 'local', because = null,
   return recordPatch({ target, path, to, scope, because, source, kind: 'canon' });
 }
 
+// Entity ids are dotted paths and setValue treats dots as path separators, so
+// an id cannot be a state key verbatim. One helper, used by both the writer and
+// the reader, keeps the two from drifting.
+export const encounterKey = (id) => String(id).replace(/\./g, '_');
+
+export function hasEncountered(id) {
+  return !!appState.world?.encountered?.[encounterKey(id)];
+}
+
 // ─── Reading ─────────────────────────────────────────────────────────────────
 
 export function entity(id) {

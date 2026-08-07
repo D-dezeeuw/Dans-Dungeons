@@ -37,7 +37,7 @@ export async function narrateTravel(context) {
 // arrives so the UI can display it progressively. Returns the full parsed
 // JSON object once the stream is complete.
 
-export async function narrate(resolvedFacts, sceneContext, recentTranscript, onChunk, memory = null) {
+export async function narrate(resolvedFacts, sceneContext, recentTranscript, onChunk, memory = null, gmOnly = null) {
   // The window used to be 3 entries — 1.5 turns — while the prompt claimed "the
   // last 3 turns". Everything older now arrives as chapter digests (memory),
   // so this slice only has to cover the immediate exchange.
@@ -53,6 +53,9 @@ export async function narrate(resolvedFacts, sceneContext, recentTranscript, onC
     // The generated world's own tone, instead of a hardcoded "gritty low
     // fantasy" that contradicted whatever the blueprint had rolled.
     tone:       sceneContext?.tone ?? t('ai.defaultTone'),
+    // GM-private: the beat directive and unrevealed secrets. Injected here, in
+    // the system prompt, and nowhere the player or the save can see.
+    gm:         gmOnly ? JSON.stringify(gmOnly) : '(nothing private this turn)',
   });
 
   const messages = [
