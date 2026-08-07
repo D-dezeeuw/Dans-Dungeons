@@ -207,12 +207,19 @@
 .muted { color: var(--system); font-size: 12px; }
 
 /* ─── Action chips ───────────────────────────────────────── */
+/* Contextual actions live in the footer, directly above the input: a wrapping
+   row so a player can click their way through a turn without typing. Collapses
+   to nothing between turns so the footer doesn't jump. */
 #action-chips {
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
   gap: 0.3rem;
-  padding-top: 0.5rem;
+  padding: 0.4rem 0.6rem 0;
+  max-height: 5.5rem;
+  overflow-y: auto;
 }
+
+#action-chips:empty { display: none; }
 
 /* ─── Character chips (weapons + class abilities) ────────── */
 #character-chips {
@@ -926,6 +933,12 @@ body.roleplay-mode #brand-bar   { display: none !important; }
 }
 
 /* ─── Export zone ────────────────────────────────────────── */
+#character-zone {
+  padding: 0.3rem 0.5rem 0.4rem;
+  border-bottom: 1px solid var(--border);
+}
+#character-zone:has(#character-chips:empty):has(#skill-chips:empty) { display: none; }
+
 #export-zone {
   padding: 0.3rem 0.5rem 0.4rem;
   border-bottom: 1px solid var(--border);

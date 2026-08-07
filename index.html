@@ -259,6 +259,13 @@ html.styles-loaded #brand-bar {
           <span class="ab-toggle-label">Seeded rolls</span>
           <button id="verify-rolls-btn" aria-label="Verify seeded combat rolls" title="Replay the recorded combat rolls from the seed and confirm they all reproduce">Verify</button>
         </div>
+        <div id="character-zone">
+          <div class="export-zone-label">Character</div>
+          <!-- Weapons + class abilities, then skills with cooldowns. Both are
+               click-to-prefill; rendered by src/ui/chips.js. -->
+          <div id="character-chips" role="group" aria-label="Weapons and class abilities"></div>
+          <div id="skill-chips" role="group" aria-label="Skills"></div>
+        </div>
         <div id="export-zone">
           <div class="export-zone-label">Export / Import</div>
           <div id="export-tiles">
@@ -296,6 +303,9 @@ html.styles-loaded #brand-bar {
           <div id="ab-skills-list" data-each="ui.skillWords" data-as="word"><span :class="word.cls" :data-tip="word.tip">{{word.label}}</span></div>
         </div>
       </div>
+      <!-- Contextual actions for the current moment (exits, loot, attack, retry,
+           flee, restart). Rendered by src/ui/chips.js; empty between turns. -->
+      <div id="action-chips" role="group" aria-label="Suggested actions"></div>
       <div id="debug-bar" data-cloak data-if="ui.debugBarVisible" aria-label="Last turn debug info">
         <span>Last turn</span>
       </div>

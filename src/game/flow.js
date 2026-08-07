@@ -494,6 +494,15 @@ function renderSettlement(settlement, settlementId) {
     UI.appendEntry('system', '');
   }
 
+  // Places already visited — naming one travels straight back there.
+  const known = Object.entries(appState.world?.settlements ?? {})
+    .filter(([sid, s]) => sid !== settlement.id && s?.name);
+  if (known.length) {
+    UI.appendEntry('system', t('settlement.knownList'));
+    for (const [, s] of known) UI.appendEntry('system', `  ${s.name}`);
+    UI.appendEntry('system', '');
+  }
+
   UI.appendEntry('system', t('settlement.goldLine', { gold: goldOf(appState.party?.pc?.record) }));
   UI.appendEntry('system', '');
 
@@ -678,10 +687,35 @@ function findExit(settlement, target) {
       ?? exits[0] ?? null;
 }
 
+// A discovered settlement the player names directly ("go back to Saltmarch").
+// Fast travel previously existed ONLY as a chip value, so with chips missing it
+// was unreachable by any means; matching here gives it a real free-text path.
+function findKnownSettlement(currentId, target) {
+  if (!target) return null;
+  const tl = String(target).toLowerCase();
+  for (const [sid, s] of Object.entries(appState.world?.settlements ?? {})) {
+    if (sid === currentId || !s?.name) continue;
+    const name = s.name.toLowerCase();
+    if (sid === target || name === tl || name.includes(tl) || tl.includes(name)) return sid;
+  }
+  return null;
+}
+
 function normalizeSettlementAction(r, settlement) {
   const intent = r?.intent ?? 'look';
   if (intent === 'talk')   return { type: 'talk',   npc:  findNpc(settlement, r?.target) };
-  if (intent === 'travel') return { type: 'travel', exit: findExit(settlement, r?.target) };
+  if (intent === 'travel') {
+    // Prefer a real exit; otherwise fast-travel to a settlement already visited.
+    const exits = settlement.exits ?? [];
+    const tl    = String(r?.target ?? '').toLowerCase();
+    const named = tl && exits.some(e =>
+      e.targetId === r?.target || e.targetName.toLowerCase().includes(tl) || tl.includes(e.targetName.toLowerCase()));
+    if (!named) {
+      const sid = findKnownSettlement(settlement.id, r?.target);
+      if (sid) return { type: 'fasttravel', settlementId: sid };
+    }
+    return { type: 'travel', exit: findExit(settlement, r?.target) };
+  }
   if (intent === 'buy')    return { type: 'buy' };
   if (intent === 'rest')   return { type: 'rest' };
   if (intent === 'quest')  return { type: 'quest' };
@@ -704,6 +738,8 @@ function fallbackSettlementAction(raw, settlement) {
   for (const exit of (settlement.exits ?? [])) {
     if (lower.includes(exit.targetName.toLowerCase()) || lower.includes(exit.direction.toLowerCase())) return { type: 'travel', exit };
   }
+  const knownId = findKnownSettlement(settlement.id, lower);
+  if (knownId) return { type: 'fasttravel', settlementId: knownId };
   if (/(travel|go|leave|reis|ga|vertrek)/.test(lower)) return { type: 'travel', exit: settlement.exits?.[0] ?? null };
   return { type: 'look' };
 }
@@ -723,6 +759,8 @@ async function handleSettlementAction(action, settlementId) {
     case 'travel':
       if (!action.exit) { UI.appendEntry('system', t('settlement.noPath')); return; }
       return await doTravel(action.exit, settlementId);
+    case 'fasttravel':
+      return await fastTravelTo(action.settlementId);
     default:
       UI.appendEntry('gm', t('settlement.lookResult', { name: settlement.name }));
   }
@@ -822,6 +860,13 @@ async function openShop(settlementId) {
     }
     if (!wares.length) { UI.appendEntry('system', t('settlement.shopRefused')); return; }
     UI.appendEntry('system', t('settlement.shopBanner', { gold: goldOf(appState.party?.pc?.record) }));
+    // Print the wares as transcript text as well as chips. The banner ends in a
+    // colon and used to be followed by nothing at all whenever chips were not
+    // rendered — a shop the player could neither see nor use.
+    wares.forEach((w, i) => {
+      UI.appendEntry('system', `  ${i + 1}. ${w.item.name} — ${w.item.price} ${t('settlement.goldWord')} (${w.npc})`);
+    });
+    UI.appendEntry('system', '');
     const chips = wares.map((w, i) => ({
       label: t('settlement.buyChip', { name: w.item.name, price: w.item.price }),
       value: `buy:${i}`,
@@ -836,7 +881,13 @@ async function openShop(settlementId) {
     let chosen = null;
     if (m) chosen = wares[Number(m[1])];
     else if (/(leave|done|exit|weg|klaar)/i.test(pick) || pick === t('settlement.leaveShopCmd')) break;
-    else chosen = wares.find(w => pick.toLowerCase().includes(w.item.name.toLowerCase()));
+    else {
+      // Accept the printed list number ("3", "buy 3") as well as the item name.
+      const byIndex = pick.trim().match(/^(?:buy\s+|koop\s+)?(\d+)$/i);
+      chosen = byIndex
+        ? wares[Number(byIndex[1]) - 1]
+        : wares.find(w => pick.toLowerCase().includes(w.item.name.toLowerCase()));
+    }
 
     if (!chosen) { UI.appendEntry('system', t('settlement.noSuchItem')); continue; }
 
