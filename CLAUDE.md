@@ -7,10 +7,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ```bash
 npm run serve   # serves the repo root; open: http://localhost:3000
 node build.js   # esbuild bundle → vendor/app.bundle.js + version stamp
-npm test        # node --test tests/ — zero-dep test runner (Node 20+)
+npm test        # node --test — zero-dep test runner (Node 20+)
 ```
 
-Run a single test file: `node --test tests/dnd/dice.test.js`
+Run a single test file: `node --test tests/seeded-rolls.test.js`
+
+(The runner is invoked with no path argument: `--test` with a glob needs Node 22+,
+while bare `--test` discovers tests recursively on Node 20 too — and CI pins 20.)
 
 ## Development workflow
 
