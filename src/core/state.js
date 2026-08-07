@@ -5,7 +5,8 @@
 // always predictable regardless of restore order.
 
 import { DEFAULT_MODELS } from '../ai/tiers.js';
-import { wrapEnvelope, saveEnvelope, loadEnvelope, makeCommit } from 'bag-of-holding-client';
+import { wrapEnvelope, saveEnvelope, loadEnvelope, makeCommit,
+         openCold, appendSegment, readSegments, splitSave } from 'bag-of-holding-client';
 
 import { createSpektrum } from 'spektrum';
 
@@ -233,11 +234,49 @@ function setSaveHealth(ok) {
 
 // Returns true when the write actually landed. Callers that tell the player
 // anything about saving MUST use the return value.
+//
+// Only the HOT slice is written here — a bounded tail of transcript and ledger
+// plus the live world. Everything older is handed to the cold archive, so what
+// this synchronous, quota-limited write costs stops growing with the campaign.
 export function saveToStorage() {
-  const ok = saveEnvelope(localStorage, SAVE_KEY, buildSaveSnapshot(), SAVE_VERSION);
+  const { hot, cold } = splitSave(buildSaveSnapshot(), HOT_LIMITS);
+  const ok = saveEnvelope(localStorage, SAVE_KEY, hot, SAVE_VERSION);
   if (!ok) console.warn('[state] localStorage save failed (quota?)');
   setSaveHealth(ok);
+  archiveCold(cold);          // fire-and-forget; never blocks a turn
   return ok;
+}
+
+// ─── Cold archive (IndexedDB) ────────────────────────────────────────────────
+
+const HOT_LIMITS = { keepTranscript: 50, keepLedger: 200 };
+
+let _coldDb = null;
+let _coldReady = null;
+
+// Opened lazily and at most once. Resolves to null where IndexedDB is missing
+// or refused, in which case archiving silently no-ops and the game keeps
+// running on the hot tier alone.
+function coldDb() {
+  if (!_coldReady) _coldReady = openCold().then(db => (_coldDb = db));
+  return _coldReady;
+}
+
+function archiveCold(cold) {
+  if (!cold?.transcript?.length && !cold?.ledger?.length) return;
+  coldDb().then((db) => {
+    if (!db) return;
+    if (cold.transcript.length) appendSegment(db, 'transcript', 'run', cold.transcript);
+    if (cold.ledger.length)     appendSegment(db, 'ledger', 'run', cold.ledger);
+  }).catch(() => { /* the cold tier is best-effort by design */ });
+}
+
+// The full transcript, hot tail included — for the journal and the world bible,
+// which are the only things that need the whole campaign at once.
+export async function fullTranscript() {
+  const db = await coldDb();
+  const archived = db ? await readSegments(db, 'transcript', 'run') : [];
+  return [...archived, ...(appState.transcript ?? [])];
 }
 
 // Fraction of the storage quota in use (0–1), or null when the browser will not

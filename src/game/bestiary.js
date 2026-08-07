@@ -10,7 +10,7 @@
 // and places weaker creatures near the entrance, stronger ones near the vault
 // (see world.js / the client lib's generateDungeon).
 
-import { SRD, Dice } from './rules.js';
+import { SRD, Dice, elevate } from './rules.js';
 import { CUSTOM_MONSTERS, DEFAULT_ENEMY_IDS } from './creatures.js';
 
 export { CUSTOM_MONSTERS, DEFAULT_ENEMY_IDS };
@@ -35,9 +35,33 @@ function parseDamage(spec) {
   return { count: 1, sides: 1, modifier: flat - 1 };
 }
 
+// A boss is not just a bigger monster: the tier template gives it multiattack,
+// legendary actions and legendary resistance, so a solo fight plays differently
+// instead of merely lasting longer. `tier` picks how far above its base the
+// creature is raised (see the engine's monster-templates).
+export function bossBlockFor(monsterId, { tier = 'elite' } = {}) {
+  const base = BESTIARY[monsterId];
+  if (!base) throw new Error(`Unknown monster: ${monsterId}`);
+  const raised = elevate({ ...base, id: monsterId }, tier);
+  return { ...statBlockFrom(raised), boss: true, template: tier, name: raised.name };
+}
+
+// Pick the tier a boss should be raised to for a party of this level, so a
+// late-campaign vault is not guarded by something a level-8 party walks over.
+export function bossTierForLevel(level = 1) {
+  if (level >= 9) return 'ancient';
+  if (level >= 5) return 'champion';
+  return 'elite';
+}
+
 export function statBlockFor(monsterId) {
   const m = BESTIARY[monsterId];
   if (!m) throw new Error(`Unknown monster: ${monsterId}`);
+  return statBlockFrom(m);
+}
+
+// Shared shaping: the resolver/world expect flat combat fields.
+function statBlockFrom(m) {
   const attack = m.attacks?.[0] ?? { attackBonus: 0, damage: '1d4', damageType: 'bludgeoning' };
   const { count, sides, modifier } = parseDamage(attack.damage);
   return {
@@ -49,6 +73,10 @@ export function statBlockFor(monsterId) {
     damageBonus: modifier,
     damageType:  attack.damageType,
     cr:          m.cr ?? 0,
+    // Carried through so the encounter layer can use the mechanics module.
+    multiattack:         m.multiattack ?? null,
+    legendaryActions:    m.legendaryActions ?? null,
+    legendaryResistance: m.legendaryResistance ?? null,
   };
 }
 

@@ -1,0 +1,138 @@
+// src/game/acts-runtime.js — the red thread, running on acts (Epic E7 wiring).
+//
+// The library ships an acts runtime (successors, stalls, payoffs) and the game
+// ran a simpler linear beat list beside it — the exact "machinery without a
+// consumer" split the audit named. This module is the consumer.
+//
+// It adapts in both directions so no save is stranded: an existing campaign's
+// flat `world.redThread.beats` is read as act 1, and everything from here on is
+// stored as acts. When an act completes, the next one is generated from what
+// ACTUALLY happened — the ledger, the faction standings, the unpaid setups —
+// which is what lets a memorable side thread be promoted into the main line.
+
+import {
+  emptyThread, pushAct, makeAct, currentAct, activeActBeat, completeActBeat,
+  setActFlag, isStalled, plantSetup, paySetup, duePayoffs, threadProgress, directive,
+} from 'bag-of-holding-client';
+import { appState, setValue, tick } from '../core/state.js';
+import { recentEvents } from './ledger.js';
+import { reputationStanding } from './story.js';
+
+// How many acts a campaign runs before its finale. Five acts of six-ish beats
+// is the shape the plan targets for 80 hours; the last one is the climax.
+export const TARGET_ACTS = 5;
+
+// ─── Thread access (migrating legacy saves on read) ──────────────────────────
+
+export function thread() {
+  const stored = appState.world?.thread;
+  if (stored?.acts) return stored;
+
+  // Legacy: a flat beat list with no act structure. Read it as act 1 so an
+  // in-flight campaign keeps its progress instead of restarting its story.
+  const rt = appState.world?.redThread;
+  if (!rt?.beats?.length) return emptyThread();
+  const act = makeAct({
+    id: 'act-1',
+    title: rt.title ?? 'Act One',
+    premise: rt.premise ?? appState.world?.digest ?? '',
+    beats: rt.beats,
+  });
+  const migrated = pushAct(emptyThread(), act);
+  return { ...migrated, flags: { ...rt.flags } };
+}
+
+function save(next) {
+  setValue('world.thread', next);
+  tick();
+  return next;
+}
+
+// ─── The turn-loop surface ───────────────────────────────────────────────────
+
+export function activeBeat()      { return activeActBeat(thread()); }
+export function gmDirective()     { return directive(thread()); }
+export function progress()        { return threadProgress(thread()); }
+export function actNumber()       { return thread().actIndex + 1; }
+
+export function raiseFlag(flag) {
+  const t = thread();
+  const next = setActFlag(t, flag);
+  return next === t ? false : (save(next), true);
+}
+
+// Complete a beat. Returns { completed, actClosed } so the caller can run the
+// act-transition ceremony (and generate the next act) at the right moment.
+export function completeBeat(beatId) {
+  const before = thread();
+  const turn   = appState.session?.turnCount ?? 0;
+  const after  = completeActBeat(before, beatId, { turn });
+  if (after === before) return { completed: false, actClosed: false };
+  save(after);
+  return { completed: true, actClosed: after.actIndex > before.actIndex };
+}
+
+// ─── Foreshadowing ───────────────────────────────────────────────────────────
+
+export function plantClue({ id, clue, paysInto = null, dueByAct = null }) {
+  const next = plantSetup(thread(), { id, clue, paysInto, dueByAct, turn: appState.session?.turnCount ?? 0 });
+  return next === thread() ? false : (save(next), true);
+}
+
+export function payClue(id) {
+  save(paySetup(thread(), id, { turn: appState.session?.turnCount ?? 0 }));
+}
+
+export function unpaidSetups() { return duePayoffs(thread()); }
+
+// ─── Stalls ──────────────────────────────────────────────────────────────────
+
+// Has the story stopped moving? The caller escalates — the world comes to the
+// player — rather than letting a thread freeze, which judge-only progression
+// used to allow indefinitely.
+export function storyStalled({ patience = 60 } = {}) {
+  return isStalled(thread(), { turn: appState.session?.turnCount ?? 0, patience });
+}
+
+// ─── Act generation context ──────────────────────────────────────────────────
+
+// What the next act must be built from: the campaign so far, in facts. This is
+// the difference between a story that reacts to the player and one that ignores
+// them — the generator sees what actually happened, including anything the
+// Game Master invented along the way.
+export function nextActContext() {
+  const t = thread();
+  const world = appState.world ?? {};
+  const factions = Object.keys(world.factionReputation ?? {})
+    .map(id => ({ faction: world.factions?.[id]?.name ?? id, standing: reputationStanding(id) }))
+    .filter(f => f.standing !== 'neutral');
+
+  return {
+    actNumber:   t.actIndex + 1,
+    finalAct:    t.actIndex + 1 >= TARGET_ACTS,
+    worldDigest: world.digest ?? '',
+    tone:        world.tone ?? null,
+    previousActs: t.acts.map(a => ({ title: a.title, premise: a.premise })),
+    whatHappened: recentEvents({ limit: 12, minScope: 'regional' }).map(e => e.because),
+    factions,
+    // Clues planted and never paid off — the next act has to use or abandon them.
+    unpaidSetups: duePayoffs(t).map(p => p.clue),
+    // Named things the world has acquired, so a generated act can cast people
+    // and places the player already cares about.
+    knownPlaces: Object.values(world.settlements ?? {}).map(s => s.name).filter(Boolean).slice(0, 6),
+  };
+}
+
+// Store a generated act and make it current.
+export function adoptAct(generated) {
+  if (!generated?.beats?.length) return null;
+  const t = thread();
+  const act = makeAct({
+    id:      `act-${t.acts.length + 1}`,
+    title:   generated.title   ?? `Act ${t.acts.length + 1}`,
+    premise: generated.premise ?? '',
+    beats:   generated.beats,
+  });
+  save(pushAct(t, act));
+  return act;
+}

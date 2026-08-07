@@ -22,7 +22,7 @@
 // on the bill.
 
 import { appState } from '../core/state.js';
-import { entitiesUnder, detailsAt, recentEvents, currentPlaceId, currentRoomId } from './ledger.js';
+import { entitiesUnder, detailsAt, recentEvents, currentPlaceId, currentRoomId, hasEncountered } from './ledger.js';
 import { memoryContext } from './chapters.js';
 import { buildStoryContext } from './story.js';
 import { BUDGET, estimateTokens, scopeCost } from './scope-budget.js';
@@ -105,10 +105,9 @@ export function assembleScope({ includeGmOnly = false } = {}) {
 // encounter is what stops the GM referring to things the character has never
 // seen — the information-asymmetry model doc 08 asked for, at v1 scale.
 function knownToPlayer(place) {
-  const seen = appState.world?.encountered ?? {};
   const out = [];
   for (const [id, rec] of Object.entries(entitiesUnder(place))) {
-    if (!seen[id]) continue;
+    if (!hasEncountered(id)) continue;
     const note = rec.note ?? rec.description ?? rec.condition ?? null;
     if (note) out.push(`${rec.name ?? id.split('.').pop()}: ${note}`);
     if (out.length >= 8) break;

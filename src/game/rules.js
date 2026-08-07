@@ -17,6 +17,8 @@ export {
   Character,
   SRD,
   Monsters,
+  elevate,
+  templateForTargetCr,
   Beats,
   createEngine,
   verifyLog,

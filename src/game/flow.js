@@ -13,6 +13,9 @@ import { clearTurnMarks, setScrubHandler } from './undo.js';
 import { enterEncounterState, exitEncounterState } from './encounter-state.js';
 import { cutChapter, shouldCutChapter, recap, chapterIndex } from './chapters.js';
 import { awardMilestone, announcementFor, xpProgress } from './progression.js';
+import { storyStalled, gmDirective, raiseFlag, progress as storyProgress, actNumber } from './acts-runtime.js';
+import { armThreatClocks, rumours } from './world-clocks.js';
+import { initAtlas, initialAtlas, stubToward, hydrateRegion, mapView } from './atlas.js';
 import { seedCombat }     from './rng.js';
 import {
   goldOf, resolvePurchase, addToInventory, resolveRest, DEFAULT_REST_COST,
@@ -375,7 +378,7 @@ export async function startNewGame() {
 async function startQuickDungeon() {
   const seed = Math.floor(Math.random() * 2147483647);
   const blueprint = buildWorldBlueprint(seed);
-  const world = generateDungeon(seed, blueprint);
+  const world = generateDungeon(seed, blueprint, { partyLevel: appState.party?.pc?.record?.level ?? 1 });
   setValue('world', world);
   setValue('session.phase', 'play');
   seedCombat(seed);   // epoch-seeded combat dice — replayable + auditable (rng.js)
@@ -444,6 +447,9 @@ async function startCampaign() {
     settlements: { [settlement.id]: { ...settlement, regionId: region.id } },
     dungeons: {},
     location: { type: 'settlement', regionId: region.id, settlementId: settlement.id, dungeonId: null },
+    // Seed the map: this region, plus three neighbours minted as stubs. They
+    // cost nothing until visited, but they already know what they will be.
+    geography: initialAtlas(region.id, region.name, appState.world?.seed),
   };
   setValue('world', worldState);
 
@@ -465,14 +471,14 @@ async function enterSettlement(settlementId, skipFirstRender = false) {
     const settlement = appState.world?.settlements?.[currentId];
     if (!settlement) { await startQuickDungeon(); return; }
     // Resume keeps its own banner/transcript on screen — skip the first render.
-    if (!(first && skipFirstRender)) renderSettlement(settlement, currentId);
+    if (!(first && skipFirstRender)) await renderSettlement(settlement, currentId);
     first = false;
     currentId = await settlementLoop(currentId);
   }
 }
 
 // Render the town banner, NPCs, exits, and gold; set the location pointer.
-function renderSettlement(settlement, settlementId) {
+async function renderSettlement(settlement, settlementId) {
   clearTurnMarks();   // entering town — dungeon turn marks must not be undoable from a settlement
   setValue('world', { ...appState.world, location: { ...appState.world.location, type: 'settlement', settlementId, dungeonId: null } });
   tick();
@@ -512,8 +518,21 @@ function renderSettlement(settlement, settlementId) {
     UI.appendEntry('system', '');
   }
 
+  // Anything the Game Master invented here that counts as a threat starts its
+  // clock now, and whatever the region is already worried about is talked about.
+  armThreatClocks();
+  const talk = rumours({ limit: 2 });
+  if (talk.length) {
+    UI.appendEntry('system', t('settlement.rumourHeader'));
+    for (const line of talk) UI.appendEntry('gm', `  ${line}`);
+    UI.appendEntry('system', '');
+  }
+
   UI.appendEntry('system', t('settlement.goldLine', { gold: goldOf(appState.party?.pc?.record) }));
   UI.appendEntry('system', '');
+
+  // A drifting player gets found by the story rather than losing it.
+  await nudgeIfStalled();
 
   _speak(settlement.description ?? settlement.name);
 }
@@ -649,6 +668,18 @@ function renderRegionMap() {
     }
     if (r.adjacentRegions?.length) {
       UI.appendEntry('system', t('map.connectsLine', { names: r.adjacentRegions.join(', ') }));
+    }
+  }
+
+  // Places the map knows about but the player has never walked to. These are
+  // real destinations with their own seeds, not scenery — going there hydrates
+  // exactly the place that was always promised.
+  const rumoured = mapView().rumoured;
+  if (rumoured.length) {
+    UI.appendEntry('system', '');
+    UI.appendEntry('system', t('map.rumouredHeader'));
+    for (const n of rumoured) {
+      UI.appendEntry('system', t('map.rumouredLine', { name: n.name, hook: n.hook ?? '' }));
     }
   }
   UI.appendEntry('system', '');
@@ -1243,7 +1274,12 @@ async function arriveAtDestination(exit, fromSettlementId) {
 
 async function generateNeighbourRegion(exit) {
   const base = appState.world.blueprint;
-  const seed = Math.floor(Math.random() * 2147483647);
+  // The neighbour was already minted as a stub when this region was generated,
+  // carrying its own seed. Hydrating from that seed is what makes the world a
+  // graph rather than a star: the place beyond this road was always going to be
+  // this place, and walking back returns to somewhere that still exists.
+  const stub = stubToward(appState.world?.location?.regionId, exit.targetName);
+  const seed = stub?.seed ?? Math.floor(Math.random() * 2147483647);
   const fresh = buildWorldBlueprint(seed);
   // Keep world identity; vary climate/settlement/dungeon/buildings/landmarks.
   const bp = { ...fresh, tone: base.tone, worldArchetype: base.worldArchetype, threatType: base.threatType,
@@ -1254,7 +1290,9 @@ async function generateNeighbourRegion(exit) {
     const parentDigest = appState.world?.digest ?? appState.world?.name ?? 'the known world';
     const region = await generateRegion(parentDigest, bp);
     if (!region) return null;
-    region.id ??= `region-${seed}`;
+    region.id = stub?.id ?? region.id ?? `region-${seed}`;
+    // Record the real name on the map and push the frontier one hop further out.
+    hydrateRegion(region.id, region.name);
     if (!region.digest) region.digest = `${region.name} — ${region.climate}.`;
 
     const settlement = await generateSettlement(region.digest, region.id, bp);
@@ -1296,6 +1334,9 @@ async function enterDungeon(exit, settlementId) {
       name:      exit.targetName,
       regionId:  appState.world?.location?.regionId ?? null,
       blueprint: appState.world?.blueprint ?? null,
+      // The vault boss is raised for the party's level, so a late-campaign
+      // dungeon is not guarded by something a level-8 party walks over.
+      partyLevel: appState.party?.pc?.record?.level ?? 1,
     });
     const dungeons = { ...(appState.world?.dungeons ?? {}), [dungeonId]: dungeon };
     setValue('world', { ...appState.world, dungeons });
@@ -1602,6 +1643,18 @@ async function playLoop() {
 
 // Close the chapter at a real story boundary, with a ceremony line. Cheap AAA
 // texture, and the anchor the recap and the journal both hang off.
+// The world reaches for a player who has drifted: when the red thread has not
+// moved for a long time, the current beat's business finds them instead of the
+// campaign quietly freezing (which judge-only progression used to allow).
+async function nudgeIfStalled() {
+  if (!storyStalled({ patience: 60 })) return;
+  const d = gmDirective();
+  if (!d?.purpose) return;
+  UI.appendEntry('system', '');
+  UI.appendEntry('gm', t('story.stallNudge'));
+  raiseFlag('story-nudged');
+}
+
 async function markChapterBoundary(reason) {
   if (!shouldCutChapter(reason)) return;
   const n = chapterIndex();
