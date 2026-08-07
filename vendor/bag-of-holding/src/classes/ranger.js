@@ -44,7 +44,18 @@ export default {
       id: 'hunter',
       name: 'Hunter',
       features: {
-        3: ["Hunter's Lore", "Hunter's Prey"]
+        3: ["Hunter's Lore", "Hunter's Prey"],
+        7: ['Defensive Tactics'],
+        11: ['Superior Hunter\'s Defense'],
+        15: ['Superior Hunter\'s Prey']
+      },
+      mechanics: {
+        // Hunter's Prey: marked target takes +1d8 weapon damage once
+        // per turn. Pure dispatch; host adds the bonus die roll.
+        huntersPrey: (actor, args) => {
+          if (!args?.targetMarked) return { ok: false, reason: 'target-not-marked', actor };
+          return { ok: true, bonusDamageDice: '1d8', actor };
+        }
       }
     }
   },
@@ -58,7 +69,17 @@ export default {
     7: ['Subclass Feature'],
     8: ['Ability Score Improvement'],
     9: ['Expertise'],
-    10: ['Tireless']
+    10: ['Tireless'],
+    11: ['Subclass Feature'],
+    12: ['Ability Score Improvement'],
+    13: ['Relentless Hunter'],
+    14: ['Nature\'s Veil'],
+    15: ['Subclass Feature'],
+    16: ['Ability Score Improvement'],
+    17: ['Subclass Feature'],
+    18: ['Feral Senses'],
+    19: ['Epic Boon'],
+    20: ['Foe Slayer']
   },
   // Resource-bearing features (since 1.3.7). Free Hunter's Mark
   // casts refresh on Long Rest only.

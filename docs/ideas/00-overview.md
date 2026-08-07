@@ -1,5 +1,9 @@
 # 00 — Overview
 
+> **IMPLEMENTATION STATUS (PARTIAL)** — audited 2026-08-07.
+> The pillars still hold, but details are stale: the shared-key "free tier" replaced BYOK-only (now reverted to BYOK by default), and image generation, voice I/O and a service worker all shipped despite being listed as non-goals. The "coherent 100-hour world" is the goal, not the state — see the audit.
+> Full evidence: [`docs/audit/2026-08-comprehensive-audit.md`](../audit/2026-08-comprehensive-audit.md).
+
 > **Status:** rough idea, pre-implementation. Living doc.
 
 ## Vision

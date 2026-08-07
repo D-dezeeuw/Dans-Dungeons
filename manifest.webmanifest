@@ -1,0 +1,15 @@
+{
+  "name": "Dan's Dungeons",
+  "short_name": "Dungeons",
+  "description": "A text-based fantasy roleplaying game with an AI Game Master, playable entirely in the browser.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#1a1a1a",
+  "theme_color": "#1a1a1a",
+  "categories": ["games", "entertainment"],
+  "icons": [
+    { "src": "favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

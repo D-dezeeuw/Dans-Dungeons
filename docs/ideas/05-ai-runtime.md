@@ -1,5 +1,9 @@
 # 05 — AI runtime
 
+> **IMPLEMENTATION STATUS (PARTIAL)** — audited 2026-08-07.
+> Tiers, streaming, retries and fallbacks shipped. The tier vocabulary differs from this doc, the cost meter only recently began reading real spend, and none of the budget caps or prompt caching described here exist. The doc correctly warned that the provider hosts no TTS/STT models — that warning was not heeded until the 2026-08 audit.
+> Full evidence: [`docs/audit/2026-08-comprehensive-audit.md`](../audit/2026-08-comprehensive-audit.md).
+
 > **Status:** rough sketch.
 
 ## Provider: OpenRouter (BYOK)

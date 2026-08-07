@@ -1,0 +1,24 @@
+# Model-rot canary.
+#
+# Provider model ids are delisted without notice: the shipped default narrator
+# model disappeared from the catalog and every fallback with it, so a stock
+# install could not play a single turn — and nothing noticed until a player did.
+# This checks the configured ids against the live catalog once a week.
+
+name: Model canary
+
+on:
+  schedule:
+    - cron: '17 6 * * 1'
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Check configured model ids against the live catalog
+        run: node scripts/check-models.js

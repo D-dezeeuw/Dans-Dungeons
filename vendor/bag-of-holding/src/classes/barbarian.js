@@ -66,7 +66,19 @@ export default {
       id: 'berserker',
       name: 'Path of the Berserker',
       features: {
-        3: ['Frenzy']
+        3: ['Frenzy'],
+        6: ['Mindless Rage'],
+        10: ['Retaliation'],
+        14: ['Intimidating Presence']
+      },
+      mechanics: {
+        // Frenzy: while raging, the Berserker can make a single bonus
+        // weapon attack each turn. Pure metadata flag; the host adds
+        // the extra attack to the encounter bonus-action budget.
+        frenzy: (actor) => ({ ok: true, bonusAttackThisTurn: true, actor }),
+        // Mindless Rage (L6): immune to charmed / frightened while
+        // raging. The host stamps the immunity from this flag.
+        mindlessRageImmunities: (actor) => ({ immune: ['charmed', 'frightened'], actor })
       }
     }
   },
@@ -80,7 +92,17 @@ export default {
     7: ['Feral Instinct', 'Instinctive Pounce'],
     8: ['Ability Score Improvement'],
     9: ['Brutal Strike'],
-    10: ['Subclass Feature']
+    10: ['Subclass Feature'],
+    11: ['Relentless Rage'],
+    12: ['Ability Score Improvement'],
+    13: ['Improved Brutal Strike'],
+    14: ['Subclass Feature'],
+    15: ['Persistent Rage'],
+    16: ['Ability Score Improvement'],
+    17: ['Subclass Feature'],
+    18: ['Indomitable Might'],
+    19: ['Epic Boon'],
+    20: ['Primal Champion']
   },
   // Resource-bearing features (since 1.3.1). Rage refreshes on Long
   // Rest with one use recovered on Short Rest per SRD 5.2 § Barbarian
@@ -153,6 +175,24 @@ export default {
      * Read-only: is the actor currently raging? Boolean result for
      * chip-state and UI affordances.
      */
-    isRaging: (actor) => ({ raging: Boolean(actor.rage?.active) })
+    isRaging: (actor) => ({ raging: Boolean(actor.rage?.active) }),
+    /**
+     * SRD 5.2 § Barbarian § Relentless Rage (L11): when reduced to 0
+     * HP and not killed outright, the Barbarian can drop to 1 HP
+     * instead on a DC 10 CON save. The DC increases by 5 each time
+     * it triggers between rests; the host tracks the count and resets
+     * on a long rest.
+     */
+    relentlessRage: (actor, args, ctx) => {
+      const useCount = actor.relentlessRageUses ?? 0;
+      const dc = 10 + useCount * 5;
+      const result = ctx.saver({ abilityScore: actor.abilityScores?.con ?? 10, dc });
+      if (!result.success) return { ok: false, save: result, actor };
+      return {
+        ok: true,
+        save: result,
+        actor: { ...actor, hp: 1, relentlessRageUses: useCount + 1 }
+      };
+    }
   }
 };

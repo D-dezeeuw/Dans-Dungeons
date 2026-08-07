@@ -4,6 +4,26 @@ export default {
   hitDie: 8,
   primaryAbility: 'dex',
   savingThrowProficiencies: ['dex', 'int'],
+  subclasses: {
+    thief: {
+      id: 'thief',
+      name: 'Thief',
+      features: {
+        3: ['Fast Hands', 'Second-Story Work'],
+        9: ['Supreme Sneak'],
+        13: ['Use Magic Device'],
+        17: ['Thief\'s Reflexes']
+      },
+      mechanics: {
+        // Fast Hands: bonus action to use thieves' tools, sleight of
+        // hand, or use an object. Returns the dispatched action.
+        fastHands: (actor, args) => {
+          const action = args?.action ?? 'use-object';
+          return { ok: true, bonusActionUsed: action, actor };
+        }
+      }
+    }
+  },
   // Sneak Attack scales: 1d6 at L1, +1d6 every 2 levels (rounded).
   sneakAttackDice: { 1: 1, 3: 2, 5: 3, 7: 4, 9: 5 },
   features: {
@@ -16,7 +36,17 @@ export default {
     7: ['Evasion', 'Reliable Talent'],
     8: ['Ability Score Improvement'],
     9: ['Subclass Feature'],
-    10: ['Ability Score Improvement']
+    10: ['Ability Score Improvement'],
+    11: ['Reliable Talent'],
+    12: ['Ability Score Improvement'],
+    13: ['Subclass Feature'],
+    14: ['Devious Strikes'],
+    15: ['Slippery Mind'],
+    16: ['Ability Score Improvement'],
+    17: ['Subclass Feature'],
+    18: ['Elusive'],
+    19: ['Epic Boon'],
+    20: ['Stroke of Luck']
   },
   mechanics: {
     /**
@@ -75,6 +105,18 @@ export default {
       if (!actor.sneakAttackUsedThisTurn) return { actor };
       const { sneakAttackUsedThisTurn: _, ...rest } = actor;
       return { actor: rest };
+    },
+    /**
+     * SRD 5.2 § Rogue § Reliable Talent (L11): on any proficient
+     * ability check, treat a d20 roll of 9 or lower as a 10.
+     * `args.d20` is the raw die face the host rolled; the helper
+     * returns `{ d20, adjusted }` so the host can re-add the mod
+     * and compare to the DC.
+     */
+    reliableTalent: (_actor, args) => {
+      const raw = args?.d20 ?? 1;
+      const adjusted = raw < 10 ? 10 : raw;
+      return { d20: raw, adjusted };
     }
   }
 };

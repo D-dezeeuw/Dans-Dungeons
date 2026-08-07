@@ -20,7 +20,7 @@ export function legal({ pc, scene }) {
   // replaces the chip set with "stand up".
   const blockers = incapacitatingConditions(pc);
   if (blockers.length > 0) return incapacitatedActions(blockers);
-  if (Array.isArray(pc?.conditions) && pc.conditions.includes('prone')) {
+  if (Array.isArray(pc?.conditions) && pc.conditions.some(e => (typeof e === 'string' ? e : e.name) === 'prone')) {
     return [
       { id: 'talk',     label: 'Free-form dialogue',         cost: 'free' },
       { id: 'look',     label: 'Look around',                cost: 'free' },
@@ -45,7 +45,9 @@ const INCAPACITATING = new Set(['incapacitated', 'paralyzed', 'petrified', 'stun
 
 function incapacitatingConditions(pc) {
   const list = pc?.conditions ?? [];
-  return list.filter((c) => INCAPACITATING.has(c));
+  return list
+    .map(e => (typeof e === 'string' ? e : e.name))
+    .filter(c => INCAPACITATING.has(c));
 }
 
 function incapacitatedActions(blockers) {

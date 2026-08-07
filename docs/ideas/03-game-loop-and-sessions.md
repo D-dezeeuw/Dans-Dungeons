@@ -1,5 +1,9 @@
 # 03 — Game loop & sessions
 
+> **IMPLEMENTATION STATUS (DOC-ONLY)** — audited 2026-08-07.
+> The turn loop shipped; the SESSION layer in this doc did not. There are no chapters, no recaps and no transcript summarization — session.chapterId is a hardcoded dead field. This is Epic E4 of the implementation plan and one of the four things gating the 80-hour goal.
+> Full evidence: [`docs/audit/2026-08-comprehensive-audit.md`](../audit/2026-08-comprehensive-audit.md).
+
 > **Status:** rough sketch.
 
 ## Chapter = D&D session

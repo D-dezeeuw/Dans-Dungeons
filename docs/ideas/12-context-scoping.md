@@ -1,5 +1,9 @@
 # 12 — Context scoping (what the AI sees, per turn)
 
+> **IMPLEMENTATION STATUS (DOC-ONLY)** — audited 2026-08-07.
+> None of this is implemented. The narrator currently sees the last 3 transcript entries plus a digest chain — the single hardest blocker to an 80-hour campaign. This doc remains the right design; it is Epic E5 of the implementation plan, and Epic E2 (the world ledger) is the memory layer it needs underneath it.
+> Full evidence: [`docs/audit/2026-08-comprehensive-audit.md`](../audit/2026-08-comprehensive-audit.md).
+
 > **Status:** rough sketch. The biggest unknown is the size-class budget
 > tuning, which only real measurement will pin down.
 

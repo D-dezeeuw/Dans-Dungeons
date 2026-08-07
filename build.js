@@ -21,9 +21,16 @@ await esbuild.build({
     'bag-of-holding':        './vendor/bag-of-holding/index.js',
     'bag-of-holding-client': './vendor/bag-of-holding-client/index.js',
   },
-  // Inline the version as a global constant
+  // Inline the version as a global constant.
+  //
+  // DEMO_KEY / DEMO_BASE_URL power the optional "try it without a key" tier
+  // (src/ai/demo-key.js). They come from the environment and default to null,
+  // so a normal build — and everything CI publishes — ships NO credential.
+  // Never hardcode a key here: a browser bundle cannot keep a secret.
   define: {
     __APP_VERSION__: JSON.stringify(version),
+    DEMO_KEY:        JSON.stringify(process.env.DD_DEMO_KEY      ?? null),
+    DEMO_BASE_URL:   JSON.stringify(process.env.DD_DEMO_BASE_URL ?? null),
   },
   logLevel: 'info',
 });

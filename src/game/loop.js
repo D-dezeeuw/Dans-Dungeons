@@ -17,6 +17,13 @@ import { resolveRules, goblinRetaliates, commitAll, appendTranscript,
 import { beginRoller, commitRoller }          from './rng.js';
 import { buildStoryContext, setStoryFlag, activeBeat, completeBeatNow } from './story.js';
 import { beginTurn, finalizeTurn }          from './undo.js';
+import { recordMechanical, currentPlaceId, currentRoomId, entitiesUnder,
+         detailsAt, recentEvents }           from './ledger.js';
+import { extractCanon }                      from '../ai/canon.js';
+import { memoryContext, maybeRefreshDigest } from './chapters.js';
+import { commitCanon }                       from './canon-commit.js';
+import { awardXp, xpForKill, announcementFor } from './progression.js';
+import { statBlockFor }                      from './bestiary.js';
 import { t }                                 from '../i18n/i18n.js';
 
 // ─── Scene context (pure snapshot for AI) ────────────────────────────────────
@@ -78,6 +85,20 @@ export function buildScene() {
   const story = buildStoryContext();
   if (story) scene.story = story;
 
+  // The generated world's tone travels with the scene so the narrator stops
+  // hardcoding one voice regardless of what the blueprint rolled.
+  const tone = appState.world?.tone;
+  if (tone) scene.tone = tone;
+
+  // Ledger memory (Epic E2): what this place has accumulated, and what the world
+  // has been doing lately. This is what stops the GM contradicting itself — the
+  // mould it described thirty turns ago comes back with the room.
+  const details = detailsAt(currentRoomId());
+  if (details.length) scene.knownDetails = details.map(d => `${d.name}: ${d.note}`);
+
+  const events = recentEvents({ limit: 5, minScope: 'local' });
+  if (events.length) scene.recentEvents = events.map(e => e.because);
+
   return scene;
 }
 
@@ -118,9 +139,14 @@ export async function processTurn(playerInput, onNarrationChunk) {
 
   // 3. Compute goblin retaliation BEFORE committing PC's attack.
   //    A killed goblin must not retaliate.
-  const goblinTurnTriggered = ['attack', 'skill', 'wait', 'look', 'talk', 'move', 'take', 'unlock'].includes(resolved.intent);
+  const goblinTurnTriggered = ['attack', 'skill', 'wait', 'look', 'talk', 'move', 'take',
+                               'unlock', 'rest', 'use', 'flee'].includes(resolved.intent);
   const goblinSurvived      = resolved.intent !== 'attack' || !resolved.targetDead;
-  const goblinResult        = (goblinTurnTriggered && goblinSurvived)
+  // Getting away means getting away: a successful flight is not punished by the
+  // enemy it just escaped. This is the same class of contradiction as a stealth
+  // success narrated alongside the hit it was supposed to prevent.
+  const escaped             = resolved.intent === 'flee' && resolved.success === true;
+  const goblinResult        = (goblinTurnTriggered && goblinSurvived && !escaped)
     ? goblinRetaliates(roller)
     : null;
 
@@ -136,6 +162,7 @@ export async function processTurn(playerInput, onNarrationChunk) {
     scene,
     appState.transcript ?? [],
     onNarrationChunk,
+    memoryContext(),          // chapter digests + rolling summary (Epic E4)
   );
 
   // 5. Commit the turn's mechanics, then tick so they're live in appState —
@@ -157,6 +184,25 @@ export async function processTurn(playerInput, onNarrationChunk) {
     setStoryFlag('enemy-slain');
     if (killedNpc.isBoss) setStoryFlag(`boss-${killedNpc.creatureId ?? 'boss'}-slain`);
   }
+
+  // 6b. Record this turn's mechanical changes in the world ledger, then extract
+  //     the durable claims the narration just made. Together these are what
+  //     makes the world remember: the dice write ground truth, the GM writes
+  //     colour, and colour may never overwrite truth.
+  recordTurnMechanics(resolved, goblinResult, killedNpc);
+
+  // Experience for the kill. The engine has shipped the XP tables all along;
+  // nothing ever called them, so every campaign ran at level 1 forever.
+  let progression = null;
+  if (killedNpc) {
+    let block = null;
+    try { block = statBlockFor(killedNpc.creatureId); } catch { block = { cr: 0 }; }
+    progression = awardXp(xpForKill(killedNpc.creatureId, block),
+      t('progress.killReason', { name: killedNpc.name }));
+  }
+  await absorbNarration(narratorResp.narration);
+  await maybeRefreshDigest();   // rolling chapter memory (Epic E4)
+
   await maybeAdvanceBeat(narratorResp.narration);
 
   // 7. Turn fully committed (mechanics + flags) — register the undo boundary (a
@@ -164,8 +210,69 @@ export async function processTurn(playerInput, onNarrationChunk) {
   finalizeTurn(turnMark);
   commit();
 
-  return { ...narratorResp, _debug: { classified, resolved, goblinResult } };
+  return {
+    ...narratorResp,
+    progression: progression ? announcementFor(progression) : null,
+    _debug: { classified, resolved, goblinResult, progression },
+  };
 }
+
+// ─── World ledger (Epic E2) ──────────────────────────────────────────────────
+
+// Write the turn's mechanical outcomes as ledger patches. These are ground
+// truth: a later canon claim cannot contradict them.
+function recordTurnMechanics(resolved, goblinResult, killedNpc) {
+  const place = currentPlaceId();
+  const room  = currentRoomId();
+
+  if (killedNpc) {
+    recordMechanical(`${place}.npc.${slugId(killedNpc.id)}`, 'alive', false, {
+      scope:   killedNpc.isBoss ? 'regional' : 'local',
+      because: `${killedNpc.name} was slain by the party`,
+    });
+  }
+  if (resolved?.intent === 'take' && resolved.item?.name) {
+    recordMechanical(`${room}.item.${slugId(resolved.item.id ?? resolved.item.name)}`, 'taken', true, {
+      because: `the party took the ${resolved.item.name}`,
+    });
+  }
+  if (resolved?.intent === 'unlock' && resolved.unlocked) {
+    recordMechanical(room, 'gateUnlocked', true, { because: 'a locked way was opened' });
+  }
+  if (goblinResult?.hit) {
+    const pc = appState.party?.pc?.record;
+    if (pc) recordMechanical(`${place}.pc`, 'hpCurrent', goblinResult.pcNewHp, { because: 'wounded in combat' });
+  }
+}
+
+// Ask the tiny tier what the narration asserted, then commit what survives
+// validation. Best-effort by design: a failed extraction costs the world one
+// turn of memory, never the turn itself.
+async function absorbNarration(narration) {
+  try {
+    const place = currentPlaceId();
+    const known = knownSceneIds(place);
+    if (!known.length) return;
+    const proposed = await extractCanon(narration, { knownIds: known, placeId: place });
+    if (!proposed.facts.length && !proposed.mint.length) return;
+    const res = commitCanon(proposed, { knownIds: known });
+    if (res.minted.length) tick();
+  } catch { /* memory is best-effort; never fail a committed turn */ }
+}
+
+// The entity ids the extractor is allowed to attach facts to: this room, this
+// place, the NPCs present, and anything the ledger already knows here.
+function knownSceneIds(place) {
+  const room = currentRoomId();
+  const ids  = new Set([place, room, `${place}.pc`]);
+  for (const npc of Object.values(appState.world?.npcs ?? {})) {
+    if (npc?.id) ids.add(`${place}.npc.${slugId(npc.id)}`);
+  }
+  for (const id of Object.keys(entitiesUnder(room))) ids.add(id);
+  return [...ids];
+}
+
+const slugId = (x) => String(x).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'x';
 
 // Phase 4.4: ask the tiny tier whether the latest narration fulfilled the
 // current beat's dramatic purpose; advance the thread if so. Only campaigns

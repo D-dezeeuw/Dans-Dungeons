@@ -7,10 +7,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ```bash
 npm run serve   # serves the repo root; open: http://localhost:3000
 node build.js   # esbuild bundle → vendor/app.bundle.js + version stamp
-npm test        # node --test tests/ — zero-dep test runner (Node 20+)
+npm test        # node --test — zero-dep test runner (Node 20+)
 ```
 
-Run a single test file: `node --test tests/dnd/dice.test.js`
+Run a single test file: `node --test tests/seeded-rolls.test.js`
+
+(The runner is invoked with no path argument: `--test` with a glob needs Node 22+,
+while bare `--test` discovers tests recursively on Node 20 too — and CI pins 20.)
 
 ## Development workflow
 
@@ -32,9 +35,10 @@ Every feature request follows this loop (no PRs — direct merge to `main`):
 
 ### Key constraints
 
-- **Zero deps installed.** `node_modules` holds only esbuild (dev). Runtime libraries (Spektrum, bag-of-holding) are vendored or load from `unpkg` at pinned URLs.
+- **Zero deps installed.** `node_modules` holds only esbuild (dev). Runtime libraries (Spektrum, bag-of-holding, bag-of-holding-client) are **vendored** under `vendor/` — nothing loads from a CDN. Sync them with `node scripts/vendor-sync.js`, which stamps a `VENDOR.json` manifest; `--check` fails CI when vendored files drift from it. Never hand-patch `vendor/` — patch the sibling repo and re-sync.
 - **esbuild bundles for prod.** `node build.js` produces `vendor/app.bundle.js`, stamps the git hash into `vendor/app.version` and `sw.js`. GitHub Pages serves the bundle.
-- **BYOK.** The player provides their own OpenRouter API key, stored in `localStorage`, sent only to the configured AI base URL.
+- **BYOK, and no secrets in the bundle.** The player provides their own OpenRouter key, stored in `localStorage`, sent only to the configured base URL. A shared demo key can be injected at build time via `DD_DEMO_KEY` (see `src/ai/demo-key.js`) but defaults to `null`; a browser bundle cannot keep a secret, so any such key must be treated as public.
+- **Model ids rot.** Defaults live in the client library and are healed against the provider catalog at boot; `node scripts/check-models.js` (weekly in CI) fails when a configured id is delisted.
 
 ### Module map
 
@@ -45,23 +49,36 @@ src/
 │   ├── state.js          Spektrum wrapper (setValue, tick, computed, etc.)
 │   └── utils.js          escHtml and other small helpers
 ├── game/
-│   ├── flow.js           Game lifecycle FSM: setup, play loop, victory/defeat, autoplay
+│   ├── flow.js           Game lifecycle FSM: setup, play loop, towns, travel, end states
 │   ├── loop.js           Turn engine: classify → resolve → narrate → commit
 │   ├── resolver.js       Pure D&D rules: attack, skill, move, take, unlock
 │   ├── character.js      Character creation wizard
-│   ├── world.js          Procedural dungeon generator
+│   ├── world.js          Dungeon assembly (content injection over the client lib)
+│   ├── worldgen.js       Layered AI world generation pipeline (L00→L03)
+│   ├── worldseed.js      Seeded blueprint wrapper + domain treasures/keys
+│   ├── worldbible.js     World-bible EPUB generation
+│   ├── story.js          Red-thread beats, story flags, faction reputation
+│   ├── undo.js           Time travel: epochs, undo/redo, branches, persistence
+│   ├── rng.js            Epoch-seeded combat dice + verifiable roll log
+│   ├── bestiary.js       Stat-block provider over the engine's SRD monsters
+│   ├── creatures.js      Creature id pools (overworld, dungeon)
+│   ├── dungeon-overlays.js  Re-export of the client lib's 24 theme overlays
+│   ├── encounter-state.js   Pure world swap for road encounters
 │   └── rules.js          Thin re-export shim for bag-of-holding
 ├── ai/
-│   ├── client.js         OpenRouter HTTP transport, retry, streaming
-│   ├── classify.js       Intent classifier (tiny tier)
-│   ├── narrate.js        GM narrator + scene image generation (medium tier)
+│   ├── client.js         appState→config adapter over the client lib's LLM client
+│   ├── classify.js       Intent classifier + beat-fulfilment check (tiny tier)
+│   ├── narrate.js        GM narrator, travel beats, scene images (medium tier)
+│   ├── dialogue.js       Settlement classifier + NPC conversation (tiny/medium)
 │   ├── autoplay.js       LLM-driven autopilot (tiny tier)
 │   ├── journal.js        LLM story weaver for journal export (medium tier)
 │   ├── schemas.js        JSON schemas: CLASSIFIER, NARRATOR, AUTOPLAY, JOURNAL
-│   ├── tiers.js          Default model IDs per tier
-│   ├── stream.js         SSE stream parser / NarrationExtractor
-│   ├── tts.js            Text-to-speech via OpenRouter
-│   └── stt.js            Speech-to-text via OpenRouter
+│   ├── tiers.js          Pricing tier → model set (tables live in the client lib)
+│   ├── demo-key.js       Optional build-injected demo credential (null by default)
+│   ├── auth.js           OpenRouter OAuth redirect + code exchange
+│   ├── spend.js          Real cumulative spend (outside replayable history)
+│   ├── tts.js            Text-to-speech
+│   └── stt.js            Speech-to-text
 ├── i18n/
 │   ├── i18n.js           t(key, params), tRaw(key), locale(), setLocale()
 │   ├── en.json           English string table (~200 keys)
@@ -76,7 +93,7 @@ src/
     ├── reactive.js        Spektrum computed bindings for UI state
     ├── sketch.js          Scene background image management
     ├── exports.js         Journal (EPUB), screenshot, sketches, save import
-    ├── epub.js            Zero-dep EPUB builder (ZIP + XHTML + canvas cover)
+    ├── timeline.js        Time-travel timeline panel (turns + branches)
     └── icons.js           Lucide SVG icon catalog
 ```
 
@@ -146,28 +163,34 @@ LLM-driven autopilot (`src/ai/autoplay.js`):
 
 ### AI model tiers
 
-| Tier | Purpose | Default model |
-|------|---------|---------------|
-| `tiny` | Classifier, autoplay (every turn) | gemini-2.5-flash-lite |
-| `medium` | Narrator, journal story | deepseek-v4-pro |
-| `image` | Scene sketches | gemini-2.5-flash-image |
-| `tts` | Text-to-speech | gemini-3.1-flash-tts |
-| `stt` | Speech-to-text | nvidia/parakeet-tdt |
+Model tables live in **bag-of-holding-client** (`src/llm/tiers.js`) — one owner,
+one place to fix when a provider delists a model. `src/ai/tiers.js` only maps the
+app's pricing tiers onto them.
 
-The `maxTokens` override in `chatCompletion()` opts allows per-call limits (journal uses 4000).
+| Tier | Purpose | Free default | Deluxe default |
+|------|---------|--------------|----------------|
+| `tiny` | Classifier, autoplay, beat checks (every turn) | gemma-4-26b:free | gemini-2.5-flash-lite |
+| `medium` | Narrator, journal, worldgen, dialogue | nemotron-3-super-120b:free | deepseek-v4-pro |
+| `large` | (configured, no call sites) | nemotron-3-super-120b:free | deepseek-v4-pro |
+| `image` | Scene sketches | — | gemini-2.5-flash-image |
+| `tts` / `stt` | Speech | — | — (OpenRouter hosts no speech models) |
+
+Ids are verified live by `scripts/check-models.js`; a delisted id is healed to the
+tier default at boot, and a rate-limited or dead model walks the tier's fallback
+chain. The `maxTokens` override in `chatCompletion()` allows per-call limits.
 
 ### Service worker
 
 Cache-first for speed, self-invalidating via version check:
 
-- Page fetches `vendor/app.version` (`cache: no-store`) on every load
+- Page fetches `vendor/app.version` (`cache: no-store`) on every load — the SW must never cache that file, or the check compares a frozen value to itself
 - Posts hash to SW via `postMessage`
 - On mismatch: SW purges all caches, unregisters, reloads all tabs
 - Next load gets fresh files, new SW installs
 
 ### Icons
 
-Lucide SVG icons (MIT) vendored in `vendor/icons/`. `src/ui/icons.js` exports inline SVG strings via `icon.name(size)`. No emoji in the UI — all icons are Lucide SVGs.
+Lucide SVG icons (ISC) vendored in `vendor/icons/`. `src/ui/icons.js` exports inline SVG strings via `icon.name(size)`. No emoji in the UI — all icons are Lucide SVGs.
 
 ### Sibling repo: `bag-of-holding`
 
@@ -183,4 +206,11 @@ Saves in `localStorage` (key: `dans-dungeons`). Full state exported as `.dnd.jso
 
 ### Tests
 
-Tests in `tests/` using `node --test` (zero deps). Test deterministic logic only: dice, checks, combat, XP, schema validation.
+Tests in `tests/` using `node --test` (zero deps), 301 passing. Test deterministic
+logic: dice, checks, combat, XP, schema validation, encounter state, save-growth
+shape. `tests/dom-contract.test.js` asserts every `getElementById` target in
+`src/` exists in `index.html` — a null-guarded renderer must never silently
+no-op again (the chip layer did, for the repo's entire history).
+
+CI (`.github/workflows/ci.yml`) runs the suite, the vendor-manifest check, the
+build, and a stale-bundle guard on every push and PR.

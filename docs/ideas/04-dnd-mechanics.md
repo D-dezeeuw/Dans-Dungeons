@@ -1,5 +1,9 @@
 # 04 — D&D mechanics
 
+> **IMPLEMENTATION STATUS (PARTIAL)** — audited 2026-08-07.
+> Dice, checks, combat, conditions and death saves are real and enforced by the engine. XP and levelling are NOT wired (every character is permanently level 1), casters have no spells, and the trademark blocklist / safe-terminology machinery described here was never built.
+> Full evidence: [`docs/audit/2026-08-comprehensive-audit.md`](../audit/2026-08-comprehensive-audit.md).
+
 > **Status:** rough sketch.
 
 The rules engine lives in a sibling repo:

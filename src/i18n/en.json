@@ -106,7 +106,9 @@
     "connectTry": "Try without an account (shared, may be slow)",
     "connectingOAuth": "Redirecting to OpenRouter…",
     "oauthSuccess": "Connected! Your personal API key has been saved.",
-    "oauthFail": "Connection failed. You can paste a key manually with /settings."
+    "oauthFail": "Connection failed. You can paste a key manually with /settings.",
+    "demoNotice": "Demo mode: this key is shared by everyone playing, so it is rate-limited and your text passes through the host's account. Connect your own key for a full campaign.",
+    "modelHealed": "The '{{tier}}' model ({{from}}) is no longer available — switched to {{to}}."
   },
   "tier": {
     "upgradeQuestion": "Do you want to upgrade to the Deluxe tier?",
@@ -126,8 +128,31 @@
     "upgraded": "Upgraded to Deluxe. All features unlocked.",
     "downgraded": "Key invalid — falling back to Free tier."
   },
+  "chapter": {
+    "untitled": "Chapter {{n}}",
+    "banner": "── Chapter {{n}} — {{title}} ──",
+    "previously": "Previously, in {{title}}: {{digest}}",
+    "recapHeader": "Previously on your adventure…"
+  },
+  "progress": {
+    "xpGained": "+{{xp}} XP — {{reason}}",
+    "levelUp": "You reach level {{level}}.",
+    "levelUpStats": "Maximum hit points are now {{hp}}; proficiency bonus +{{prof}}. You feel the difference.",
+    "xpLine": "XP {{xp}}{{next}} — level {{level}}",
+    "killReason": "defeated {{name}}",
+    "dungeonReason": "cleared {{name}}",
+    "questReason": "completed a quest",
+    "beatReason": "advanced the story"
+  },
+  "storage": {
+    "autosaveFailed": "Autosave has stopped working — browser storage is full. Everything from here on exists only in this tab. Export your game (Settings → Save) now.",
+    "autosaveRecovered": "Autosave is working again — your progress is being written to disk.",
+    "nearlyFull": "Browser storage is {{pct}}% full. Consider exporting your game as a backup.",
+    "corruptSave": "A previous save could not be read and was set aside. Import a save file to continue that run."
+  },
   "meta": {
     "saved": "Game saved to localStorage.",
+    "saveFailed": "Save FAILED — browser storage is full. Export your game (Settings → Save) before closing this tab.",
     "status": "{{name}} — HP {{hp}}/{{max}}, AC {{ac}}",
     "helpList": "/save · /status · /settings · /restart · /help",
     "unknownCmd": "Unknown command: {{cmd}}  (try /help)"
@@ -149,6 +174,7 @@
     "youAreIn": "You stand in {{name}}.",
     "npcList": "People here:",
     "exitList": "Paths from here:",
+    "knownList": "Places you already know:",
     "talkTo": "Talk to {{name}}",
     "talkCmd": "I talk to {{name}}",
     "travelTo": "Travel to {{name}}",
@@ -159,6 +185,7 @@
     "travelDungeon": "You set out toward {{name}}…",
     "returnSettlement": "You return to {{name}}.",
     "goldLine": "You carry {{gold}} gold.",
+    "goldWord": "gold",
     "shop": "Browse wares",
     "shopCmd": "I want to buy something",
     "questsChip": "Quest log",
@@ -194,7 +221,11 @@
     "inventoryEmpty": "Your pack is empty.",
     "invLine": "  • {{name}}{{qty}}",
     "roadNotReady": "The road stretches away into the wild — but that journey is not ready for you yet.",
-    "status": {"active": "active", "completed": "completed", "failed": "failed"},
+    "status": {
+      "active": "active",
+      "completed": "completed",
+      "failed": "failed"
+    },
     "mapChip": "World map",
     "fastTravelTo": "Fast travel to {{name}}",
     "questCompleted": "Quest complete: {{desc}}",
@@ -261,94 +292,334 @@
     "default": "← default"
   },
   "world": {
-    "houseStyles": ["crumbling manor", "abandoned estate", "forsaken keep", "derelict townhouse", "ruined priory", "sunken cellar complex"],
+    "houseStyles": [
+      "crumbling manor",
+      "abandoned estate",
+      "forsaken keep",
+      "derelict townhouse",
+      "ruined priory",
+      "sunken cellar complex"
+    ],
     "rooms": {
       "entrance": [
-        { "name": "Entrance Hall", "desc": "You stand in the entrance hall of a {{style}}. Tattered tapestries cling to damp stone walls, and the reek of mildew fills your lungs." },
-        { "name": "Foyer", "desc": "The foyer of this {{style}} greets you with warped floorboards and the ghost of old grandeur. A cracked mirror reflects your wary face." },
-        { "name": "Mudroom", "desc": "A narrow mudroom at the threshold of the {{style}}. Boots long rotted away line one wall; rusted coat-hooks the other." },
-        { "name": "Gatehouse", "desc": "A low-ceilinged gatehouse opens before you, its iron portcullis rusted halfway up. Beyond it the {{style}} waits in silence." },
-        { "name": "Threshold", "desc": "Cracked flagstones mark the threshold of the {{style}}. A cold draught carries the scent of damp earth and something older." }
+        {
+          "name": "Entrance Hall",
+          "desc": "You stand in the entrance hall of a {{style}}. Tattered tapestries cling to damp stone walls, and the reek of mildew fills your lungs."
+        },
+        {
+          "name": "Foyer",
+          "desc": "The foyer of this {{style}} greets you with warped floorboards and the ghost of old grandeur. A cracked mirror reflects your wary face."
+        },
+        {
+          "name": "Mudroom",
+          "desc": "A narrow mudroom at the threshold of the {{style}}. Boots long rotted away line one wall; rusted coat-hooks the other."
+        },
+        {
+          "name": "Gatehouse",
+          "desc": "A low-ceilinged gatehouse opens before you, its iron portcullis rusted halfway up. Beyond it the {{style}} waits in silence."
+        },
+        {
+          "name": "Threshold",
+          "desc": "Cracked flagstones mark the threshold of the {{style}}. A cold draught carries the scent of damp earth and something older."
+        }
       ],
       "hall": [
-        { "name": "Great Hall", "desc": "A vaulted great hall stretches before you, its long feasting table overturned. Moonlight bleeds through a cracked skylight above." },
-        { "name": "Drawing Room", "desc": "The drawing room reeks of old smoke and something worse. Furniture has been shoved to the walls as if barricaded, then abandoned." },
-        { "name": "Banquet Chamber", "desc": "A vast banquet chamber with a chandelier hanging crooked from a single chain. Plates still sit on the table — a feast interrupted decades ago." },
-        { "name": "Gallery", "desc": "A long gallery lined with empty portrait frames. The paintings are gone, but faint outlines on the walls hint at what once hung here." },
-        { "name": "Audience Room", "desc": "A raised dais at one end suggests this was once an audience room. The chair atop it has been smashed to kindling." }
+        {
+          "name": "Great Hall",
+          "desc": "A vaulted great hall stretches before you, its long feasting table overturned. Moonlight bleeds through a cracked skylight above."
+        },
+        {
+          "name": "Drawing Room",
+          "desc": "The drawing room reeks of old smoke and something worse. Furniture has been shoved to the walls as if barricaded, then abandoned."
+        },
+        {
+          "name": "Banquet Chamber",
+          "desc": "A vast banquet chamber with a chandelier hanging crooked from a single chain. Plates still sit on the table — a feast interrupted decades ago."
+        },
+        {
+          "name": "Gallery",
+          "desc": "A long gallery lined with empty portrait frames. The paintings are gone, but faint outlines on the walls hint at what once hung here."
+        },
+        {
+          "name": "Audience Room",
+          "desc": "A raised dais at one end suggests this was once an audience room. The chair atop it has been smashed to kindling."
+        }
       ],
       "corridor": [
-        { "name": "Stone Corridor", "desc": "A long corridor bisects the heart of the building. Sconces hold nothing but wax stumps. Your footsteps echo off the bare stone." },
-        { "name": "Narrow Passage", "desc": "A narrow passage barely wide enough for one. The walls press close and the air is stale. Something scratches faintly in the dark ahead." },
-        { "name": "Arched Hallway", "desc": "An arched hallway with crumbling plaster revealing rough brick beneath. Cobwebs hang in curtains from the vaulting." },
-        { "name": "Servants' Passage", "desc": "A hidden servants' passage, low and cramped. Hooks on the walls once held lanterns; now they hold only dust." },
-        { "name": "Cellar Stairs", "desc": "Worn stone steps spiral downward, slick with moisture. The temperature drops with each step, and the walls glisten." }
+        {
+          "name": "Stone Corridor",
+          "desc": "A long corridor bisects the heart of the building. Sconces hold nothing but wax stumps. Your footsteps echo off the bare stone."
+        },
+        {
+          "name": "Narrow Passage",
+          "desc": "A narrow passage barely wide enough for one. The walls press close and the air is stale. Something scratches faintly in the dark ahead."
+        },
+        {
+          "name": "Arched Hallway",
+          "desc": "An arched hallway with crumbling plaster revealing rough brick beneath. Cobwebs hang in curtains from the vaulting."
+        },
+        {
+          "name": "Servants' Passage",
+          "desc": "A hidden servants' passage, low and cramped. Hooks on the walls once held lanterns; now they hold only dust."
+        },
+        {
+          "name": "Cellar Stairs",
+          "desc": "Worn stone steps spiral downward, slick with moisture. The temperature drops with each step, and the walls glisten."
+        }
       ],
       "chamber": [
-        { "name": "Dusty Chamber", "desc": "A square chamber thick with dust. Footprints other than your own cross the floor — someone was here recently." },
-        { "name": "Round Room", "desc": "A curious round room with a domed ceiling. Acoustic tricks make every sound reverberate — even your breathing feels amplified." },
-        { "name": "Antechamber", "desc": "A small antechamber with a mosaic floor, most tiles cracked or missing. What remains shows a serpent eating its own tail." },
-        { "name": "Guard Room", "desc": "A guard room with weapon racks mounted on every wall — all empty. A table holds dice and the remnants of an interrupted card game." },
-        { "name": "Cold Room", "desc": "An unnaturally cold room. Your breath clouds in front of you. Frost rimes the corners and the stone feels like ice through your boots." }
+        {
+          "name": "Dusty Chamber",
+          "desc": "A square chamber thick with dust. Footprints other than your own cross the floor — someone was here recently."
+        },
+        {
+          "name": "Round Room",
+          "desc": "A curious round room with a domed ceiling. Acoustic tricks make every sound reverberate — even your breathing feels amplified."
+        },
+        {
+          "name": "Antechamber",
+          "desc": "A small antechamber with a mosaic floor, most tiles cracked or missing. What remains shows a serpent eating its own tail."
+        },
+        {
+          "name": "Guard Room",
+          "desc": "A guard room with weapon racks mounted on every wall — all empty. A table holds dice and the remnants of an interrupted card game."
+        },
+        {
+          "name": "Cold Room",
+          "desc": "An unnaturally cold room. Your breath clouds in front of you. Frost rimes the corners and the stone feels like ice through your boots."
+        }
       ],
       "storage": [
-        { "name": "Kitchen", "desc": "The kitchen still holds the ghost of old meals. Pots hang from rusted hooks, and a butcher's block is scarred deep by years of use." },
-        { "name": "Pantry", "desc": "Rows of empty shelves line the pantry, their contents long since spoiled or stolen. The air is thick with the memory of spice." },
-        { "name": "Wine Cellar", "desc": "Broken casks line the walls of this wine cellar. A dark stain covers the floor — wine or blood, hard to tell. One barrel remains sealed." },
-        { "name": "Armoury", "desc": "An armoury picked nearly clean. Armour stands hold nothing but rust-shaped outlines. A single dented shield leans forgotten in a corner." },
-        { "name": "Storeroom", "desc": "A cluttered storeroom with crates stacked to the ceiling. Most are empty; a few hold mouldy cloth or tarnished buckles." }
+        {
+          "name": "Kitchen",
+          "desc": "The kitchen still holds the ghost of old meals. Pots hang from rusted hooks, and a butcher's block is scarred deep by years of use."
+        },
+        {
+          "name": "Pantry",
+          "desc": "Rows of empty shelves line the pantry, their contents long since spoiled or stolen. The air is thick with the memory of spice."
+        },
+        {
+          "name": "Wine Cellar",
+          "desc": "Broken casks line the walls of this wine cellar. A dark stain covers the floor — wine or blood, hard to tell. One barrel remains sealed."
+        },
+        {
+          "name": "Armoury",
+          "desc": "An armoury picked nearly clean. Armour stands hold nothing but rust-shaped outlines. A single dented shield leans forgotten in a corner."
+        },
+        {
+          "name": "Storeroom",
+          "desc": "A cluttered storeroom with crates stacked to the ceiling. Most are empty; a few hold mouldy cloth or tarnished buckles."
+        }
       ],
       "quarters": [
-        { "name": "Servants' Quarters", "desc": "A cramped room once shared by servants, now empty of all comfort. Bare pallets are pushed against the walls." },
-        { "name": "Bedchamber", "desc": "A bedchamber with a four-poster frame — the mattress and curtains long gone. Scratches on the bedpost count the days someone was trapped here." },
-        { "name": "Study", "desc": "A small study with a writing desk and a chair. Ink has dried in the well. A half-written letter sits on the desk, the words too faded to read." },
-        { "name": "Nursery", "desc": "A nursery with a rocking crib in the corner. Toys are scattered on the floor — wooden soldiers and a cloth doll with no face." },
-        { "name": "Monk's Cell", "desc": "A bare monk's cell: stone bed, stone floor, stone walls. Someone scratched a prayer into the wall with their fingernails." }
+        {
+          "name": "Servants' Quarters",
+          "desc": "A cramped room once shared by servants, now empty of all comfort. Bare pallets are pushed against the walls."
+        },
+        {
+          "name": "Bedchamber",
+          "desc": "A bedchamber with a four-poster frame — the mattress and curtains long gone. Scratches on the bedpost count the days someone was trapped here."
+        },
+        {
+          "name": "Study",
+          "desc": "A small study with a writing desk and a chair. Ink has dried in the well. A half-written letter sits on the desk, the words too faded to read."
+        },
+        {
+          "name": "Nursery",
+          "desc": "A nursery with a rocking crib in the corner. Toys are scattered on the floor — wooden soldiers and a cloth doll with no face."
+        },
+        {
+          "name": "Monk's Cell",
+          "desc": "A bare monk's cell: stone bed, stone floor, stone walls. Someone scratched a prayer into the wall with their fingernails."
+        }
       ],
       "shrine": [
-        { "name": "Ruined Chapel", "desc": "A small chapel with pews overturned and an altar defaced. Candle stubs still ring the broken altar — someone prayed here not long ago." },
-        { "name": "Crypt", "desc": "A crypt lined with niches holding stone coffins. Most are sealed. One is open — and empty. Grave dust coats everything." },
-        { "name": "Ritual Chamber", "desc": "Arcane symbols cover every surface of this chamber. A circle of melted candles surrounds a dark stain in the centre." },
-        { "name": "Ossuary", "desc": "Bones stacked floor to ceiling in neat rows — skulls arranged in geometric patterns. The air is dry and carries a mineral tang." },
-        { "name": "Shrine", "desc": "A small shrine to a forgotten deity. The idol's face has been chiselled away. Offerings of tarnished coin sit in a stone bowl." }
+        {
+          "name": "Ruined Chapel",
+          "desc": "A small chapel with pews overturned and an altar defaced. Candle stubs still ring the broken altar — someone prayed here not long ago."
+        },
+        {
+          "name": "Crypt",
+          "desc": "A crypt lined with niches holding stone coffins. Most are sealed. One is open — and empty. Grave dust coats everything."
+        },
+        {
+          "name": "Ritual Chamber",
+          "desc": "Arcane symbols cover every surface of this chamber. A circle of melted candles surrounds a dark stain in the centre."
+        },
+        {
+          "name": "Ossuary",
+          "desc": "Bones stacked floor to ceiling in neat rows — skulls arranged in geometric patterns. The air is dry and carries a mineral tang."
+        },
+        {
+          "name": "Shrine",
+          "desc": "A small shrine to a forgotten deity. The idol's face has been chiselled away. Offerings of tarnished coin sit in a stone bowl."
+        }
       ],
       "vault": [
-        { "name": "Master Study", "desc": "The master's study is in disarray — shelves ransacked, papers scattered. Yet in the centre of the room, {{treasure}} sits untouched, as though protected by some old ward. A way out beckons." },
-        { "name": "Trophy Room", "desc": "Glass cases line the trophy room, most shattered and empty. But one pedestal still bears its prize: {{treasure}}. A back exit stands ajar." },
-        { "name": "Vault", "desc": "Stone walls and an iron-banded floor mark this as the vault proper. The most valuable thing was left behind: {{treasure}}. A passage leads out." },
-        { "name": "Hidden Chamber", "desc": "A concealed chamber behind a false wall. Cobwebs part to reveal {{treasure}}, resting on a velvet cushion. Light filters in from a crack in the ceiling — freedom." },
-        { "name": "Treasury", "desc": "A small treasury with iron-bound chests — all empty save one. Inside: {{treasure}}. A drainage grate in the floor leads to open air." }
+        {
+          "name": "Master Study",
+          "desc": "The master's study is in disarray — shelves ransacked, papers scattered. Yet in the centre of the room, {{treasure}} sits untouched, as though protected by some old ward. A way out beckons."
+        },
+        {
+          "name": "Trophy Room",
+          "desc": "Glass cases line the trophy room, most shattered and empty. But one pedestal still bears its prize: {{treasure}}. A back exit stands ajar."
+        },
+        {
+          "name": "Vault",
+          "desc": "Stone walls and an iron-banded floor mark this as the vault proper. The most valuable thing was left behind: {{treasure}}. A passage leads out."
+        },
+        {
+          "name": "Hidden Chamber",
+          "desc": "A concealed chamber behind a false wall. Cobwebs part to reveal {{treasure}}, resting on a velvet cushion. Light filters in from a crack in the ceiling — freedom."
+        },
+        {
+          "name": "Treasury",
+          "desc": "A small treasury with iron-bound chests — all empty save one. Inside: {{treasure}}. A drainage grate in the floor leads to open air."
+        }
       ]
     },
     "enemies": [
-      { "name": "Grizzik the Goblin", "monsterId": "goblin", "intro": "A goblin crouches in the shadows, yellow eyes snapping open as you enter. It snatches up a battered scimitar and bares its teeth: \"This place belongs to Grizzik! Turn back or bleed, big-folk!\"" },
-      { "name": "Guard Skeleton", "monsterId": "skeleton", "intro": "Bones rattle as a skeleton lurches upright from the corner. Its hollow eye sockets fix on you; a rusted longsword rises into a fighting stance with terrible purpose." },
-      { "name": "Feral Cultist", "monsterId": "cultist", "intro": "A robed figure spins to face you, madness bright in its eyes. It has been waiting here for a reason you don't yet understand — and it levels a long dagger at your throat." },
-      { "name": "Giant Rat", "monsterId": "giant-rat", "intro": "A rat the size of a terrier erupts from beneath the debris, hackles raised and yellow teeth bared. It lunges before you can take a breath." },
-      { "name": "Shambling Corpse", "monsterId": "zombie", "intro": "Something rises from the floor — a corpse in rusted armour, joints cracking as it stands. Its jaw hangs loose and a guttural moan escapes what remains of its throat." },
-      { "name": "Cave Spider", "monsterId": "cave-spider", "intro": "Silk threads catch the light a moment before you see the spider — bloated, black-legged, and fast. It drops from the ceiling with a wet hiss." }
+      {
+        "name": "Grizzik the Goblin",
+        "monsterId": "goblin",
+        "intro": "A goblin crouches in the shadows, yellow eyes snapping open as you enter. It snatches up a battered scimitar and bares its teeth: \"This place belongs to Grizzik! Turn back or bleed, big-folk!\""
+      },
+      {
+        "name": "Guard Skeleton",
+        "monsterId": "skeleton",
+        "intro": "Bones rattle as a skeleton lurches upright from the corner. Its hollow eye sockets fix on you; a rusted longsword rises into a fighting stance with terrible purpose."
+      },
+      {
+        "name": "Feral Cultist",
+        "monsterId": "cultist",
+        "intro": "A robed figure spins to face you, madness bright in its eyes. It has been waiting here for a reason you don't yet understand — and it levels a long dagger at your throat."
+      },
+      {
+        "name": "Giant Rat",
+        "monsterId": "giant-rat",
+        "intro": "A rat the size of a terrier erupts from beneath the debris, hackles raised and yellow teeth bared. It lunges before you can take a breath."
+      },
+      {
+        "name": "Shambling Corpse",
+        "monsterId": "zombie",
+        "intro": "Something rises from the floor — a corpse in rusted armour, joints cracking as it stands. Its jaw hangs loose and a guttural moan escapes what remains of its throat."
+      },
+      {
+        "name": "Cave Spider",
+        "monsterId": "cave-spider",
+        "intro": "Silk threads catch the light a moment before you see the spider — bloated, black-legged, and fast. It drops from the ceiling with a wet hiss."
+      }
     ],
     "keys": [
-      { "name": "brass key", "desc": "A tarnished brass key, its bow cast in the shape of a crescent moon." },
-      { "name": "iron key", "desc": "A heavy iron key, cold to the touch and etched with a single Roman numeral." },
-      { "name": "silver key", "desc": "A slender silver key that catches the light with an almost warm glow." },
-      { "name": "bone key", "desc": "A key carved from a single piece of bone — its origin better left unasked." }
+      {
+        "name": "brass key",
+        "desc": "A tarnished brass key, its bow cast in the shape of a crescent moon."
+      },
+      {
+        "name": "iron key",
+        "desc": "A heavy iron key, cold to the touch and etched with a single Roman numeral."
+      },
+      {
+        "name": "silver key",
+        "desc": "A slender silver key that catches the light with an almost warm glow."
+      },
+      {
+        "name": "bone key",
+        "desc": "A key carved from a single piece of bone — its origin better left unasked."
+      }
     ],
     "treasures": [
-      { "name": "chest of gold coins", "desc": "A brass-banded chest overflowing with gold coins, worth a small fortune." },
-      { "name": "sapphire amulet", "desc": "A deep-blue sapphire set in filigreed silver, pulsing with faint inner light." },
-      { "name": "sealed arcane tome", "desc": "A thick book sealed with wax and cord, its cover warm despite the cold room." },
-      { "name": "jewelled ceremonial sword", "desc": "A sword more art than weapon — its hilt crusted with rubies and engraved silver." }
+      {
+        "name": "chest of gold coins",
+        "desc": "A brass-banded chest overflowing with gold coins, worth a small fortune."
+      },
+      {
+        "name": "sapphire amulet",
+        "desc": "A deep-blue sapphire set in filigreed silver, pulsing with faint inner light."
+      },
+      {
+        "name": "sealed arcane tome",
+        "desc": "A thick book sealed with wax and cord, its cover warm despite the cold room."
+      },
+      {
+        "name": "jewelled ceremonial sword",
+        "desc": "A sword more art than weapon — its hilt crusted with rubies and engraved silver."
+      }
     ],
     "loot": [
-      { "name": "healing potion", "desc": "A small glass vial of red liquid that sloshes with a faint warmth." },
-      { "name": "silver ring", "desc": "A plain silver ring engraved with tiny runes on the inside band." },
-      { "name": "old journal", "desc": "A leather-bound journal filled with frantic handwriting. The last entry is unfinished." },
-      { "name": "handful of coins", "desc": "A scatter of copper and silver coins, perhaps ten in all." }
+      {
+        "name": "healing potion",
+        "desc": "A small glass vial of red liquid that sloshes with a faint warmth."
+      },
+      {
+        "name": "silver ring",
+        "desc": "A plain silver ring engraved with tiny runes on the inside band."
+      },
+      {
+        "name": "old journal",
+        "desc": "A leather-bound journal filled with frantic handwriting. The last entry is unfinished."
+      },
+      {
+        "name": "handful of coins",
+        "desc": "A scatter of copper and silver coins, perhaps ten in all."
+      }
     ],
-    "enemyNames": {"skeleton": "Guard Skeleton", "zombie": "Shambling Corpse", "spider": "Crawling Spider"},
+    "enemyNames": {
+      "skeleton": "Guard Skeleton",
+      "zombie": "Shambling Corpse",
+      "spider": "Crawling Spider"
+    },
     "enemyIntroGeneric": "{{name}} rounds on you, hostile and ready to fight.",
-    "enemyIntros": {"giant-rat": "A rat the size of a terrier erupts from the debris, hackles raised and yellow teeth bared.", "cave-spider": "Silk threads catch the light a moment before you see the spider — bloated, black-legged, and fast.", "spider": "A spider scuttles into view, mandibles clicking, eyes glinting like wet beads.", "swarm-of-rats": "The floor itself seems to move — a writhing carpet of rats pours toward you, squealing.", "kobold": "A kobold yelps and snatches up a crude spear, its scaled hide twitching with fear and spite.", "bandit": "A bandit steps from cover, blade already drawn. \"Wrong place, friend.\"", "acolyte": "A robed acolyte looks up from a half-finished rite, eyes hardening as it reaches for a cudgel.", "cultist": "A robed figure spins to face you, madness bright in its eyes, a long dagger levelled at your throat.", "skeleton": "Bones rattle as a skeleton lurches upright, hollow sockets fixing on you as a rusted blade rises.", "zombie": "A corpse in rusted armour drags itself upright, jaw hanging loose, a wet moan escaping it.", "goblin": "A goblin snatches up a battered scimitar and bares its teeth. \"This place is mine, big-folk!\"", "flying-sword": "A sword lifts from the rack on its own, point swivelling toward you, humming with cold purpose.", "violet-fungus": "A cluster of violet fungus shudders and unfurls rubbery tendrils dripping with corrosive rot.", "constrictor-snake": "Coils slide over coils as a great snake unwinds from the dark, tongue tasting the air.", "wolf": "A wolf pads from the shadows, lips peeling back from its fangs, a low growl building in its chest.", "worg": "A worg the size of a pony stalks forward, intelligent malice glinting in its red eyes.", "black-bear": "A black bear rears with a bellowing roar, claws raking the air.", "hobgoblin": "A hobgoblin levels a longsword in a disciplined stance, eyes cold and assessing.", "crocodile": "Water sheets off scaled hide as a crocodile lunges from the shallows, jaws gaping.", "scout": "A scout melts out of cover, shortbow half-drawn. \"You shouldn't have come this far.\"", "magma-mephit": "A small creature of cinder and molten rock cackles, flinging sparks as it darts at you.", "ice-mephit": "A jagged little thing of frost and rime hisses, its breath fogging the freezing air.", "shadow": "A patch of darkness peels away from the wall and slides toward you, cold and hungry.", "fungal-zombie": "A corpse riddled with pale mushrooms staggers up, spores puffing from its ruined chest.", "imp": "An imp blinks into view with a malicious giggle, barbed tail flicking, eyes like embers.", "spy": "A nondescript figure straightens, and a dagger is suddenly in hand. No words — just intent.", "dire-wolf": "A dire wolf the size of a horse lowers its head, hackles bristling, a growl like grinding stone.", "ghoul": "A ghoul scrabbles upright on too-long limbs, blackened claws twitching, reeking of the grave.", "specter": "The air goes cold as a specter coalesces, its hollow wail tugging at the warmth in your blood.", "giant-spider": "A giant spider drops on a thick strand of silk, fangs glistening, far too fast for its size.", "bugbear": "A bugbear unfolds from the dark, far larger than you guessed, a spiked morningstar in its fist.", "animated-armor": "A suit of empty armour clanks to life, gauntlet rising into a guard with nobody inside it.", "ogre": "An ogre ducks under the lintel, club dragging, dull eyes lighting with appetite at the sight of you.", "bandit-captain": "A scarred captain rises from a looted throne, a blade in each hand. \"Kill them.\"", "cult-fanatic": "A fanatic throws back its hood, eyes alight with terrible devotion, spells already on its lips.", "ankheg": "The floor bursts apart as an ankheg surges up, mandibles wide, acid hissing along its chitin.", "veteran": "A veteran in dented plate sets her feet and raises a longsword. \"Last warning.\"", "hell-hound": "A hound wreathed in smoke pads forward, embers spilling from its jaws with every breath.", "owlbear": "An owlbear rears with a screeching roar, beak snapping, claws like meat-hooks.", "wight": "A wight in ancient mail regards you with cold, deliberate hatred, then draws a notched sword.", "banshee": "A banshee unfolds from the gloom, mouth opening on a wail that promises to stop your heart.", "will-o-wisp": "A bobbing light drifts close, almost friendly — then crackles white-hot and lunges.", "gibbering-mouther": "A heaving mass of mouths and eyes flows across the floor, babbling in a dozen stolen voices.", "myconid-sovereign": "A towering mushroom-thing turns its cap toward you, releasing a cloud of hallucinogenic spores.", "stone-sentinel": "A statue grinds its head around to track you, then steps off its plinth with a sound like an avalanche.", "vampire-spawn": "A pale figure smiles, fangs bright, eyes red. \"Stay. You'll make a fine meal.\"", "young-drake": "A young drake uncoils atop the hoard, smoke curling from its nostrils, gold cascading from its scales.", "lesser-demon": "Something claws its way through the rift — all teeth and hooked limbs, stinking of brimstone."}
+    "enemyIntros": {
+      "giant-rat": "A rat the size of a terrier erupts from the debris, hackles raised and yellow teeth bared.",
+      "cave-spider": "Silk threads catch the light a moment before you see the spider — bloated, black-legged, and fast.",
+      "spider": "A spider scuttles into view, mandibles clicking, eyes glinting like wet beads.",
+      "swarm-of-rats": "The floor itself seems to move — a writhing carpet of rats pours toward you, squealing.",
+      "kobold": "A kobold yelps and snatches up a crude spear, its scaled hide twitching with fear and spite.",
+      "bandit": "A bandit steps from cover, blade already drawn. \"Wrong place, friend.\"",
+      "acolyte": "A robed acolyte looks up from a half-finished rite, eyes hardening as it reaches for a cudgel.",
+      "cultist": "A robed figure spins to face you, madness bright in its eyes, a long dagger levelled at your throat.",
+      "skeleton": "Bones rattle as a skeleton lurches upright, hollow sockets fixing on you as a rusted blade rises.",
+      "zombie": "A corpse in rusted armour drags itself upright, jaw hanging loose, a wet moan escaping it.",
+      "goblin": "A goblin snatches up a battered scimitar and bares its teeth. \"This place is mine, big-folk!\"",
+      "flying-sword": "A sword lifts from the rack on its own, point swivelling toward you, humming with cold purpose.",
+      "violet-fungus": "A cluster of violet fungus shudders and unfurls rubbery tendrils dripping with corrosive rot.",
+      "constrictor-snake": "Coils slide over coils as a great snake unwinds from the dark, tongue tasting the air.",
+      "wolf": "A wolf pads from the shadows, lips peeling back from its fangs, a low growl building in its chest.",
+      "worg": "A worg the size of a pony stalks forward, intelligent malice glinting in its red eyes.",
+      "black-bear": "A black bear rears with a bellowing roar, claws raking the air.",
+      "hobgoblin": "A hobgoblin levels a longsword in a disciplined stance, eyes cold and assessing.",
+      "crocodile": "Water sheets off scaled hide as a crocodile lunges from the shallows, jaws gaping.",
+      "scout": "A scout melts out of cover, shortbow half-drawn. \"You shouldn't have come this far.\"",
+      "magma-mephit": "A small creature of cinder and molten rock cackles, flinging sparks as it darts at you.",
+      "ice-mephit": "A jagged little thing of frost and rime hisses, its breath fogging the freezing air.",
+      "shadow": "A patch of darkness peels away from the wall and slides toward you, cold and hungry.",
+      "fungal-zombie": "A corpse riddled with pale mushrooms staggers up, spores puffing from its ruined chest.",
+      "imp": "An imp blinks into view with a malicious giggle, barbed tail flicking, eyes like embers.",
+      "spy": "A nondescript figure straightens, and a dagger is suddenly in hand. No words — just intent.",
+      "dire-wolf": "A dire wolf the size of a horse lowers its head, hackles bristling, a growl like grinding stone.",
+      "ghoul": "A ghoul scrabbles upright on too-long limbs, blackened claws twitching, reeking of the grave.",
+      "specter": "The air goes cold as a specter coalesces, its hollow wail tugging at the warmth in your blood.",
+      "giant-spider": "A giant spider drops on a thick strand of silk, fangs glistening, far too fast for its size.",
+      "bugbear": "A bugbear unfolds from the dark, far larger than you guessed, a spiked morningstar in its fist.",
+      "animated-armor": "A suit of empty armour clanks to life, gauntlet rising into a guard with nobody inside it.",
+      "ogre": "An ogre ducks under the lintel, club dragging, dull eyes lighting with appetite at the sight of you.",
+      "bandit-captain": "A scarred captain rises from a looted throne, a blade in each hand. \"Kill them.\"",
+      "cult-fanatic": "A fanatic throws back its hood, eyes alight with terrible devotion, spells already on its lips.",
+      "ankheg": "The floor bursts apart as an ankheg surges up, mandibles wide, acid hissing along its chitin.",
+      "veteran": "A veteran in dented plate sets her feet and raises a longsword. \"Last warning.\"",
+      "hell-hound": "A hound wreathed in smoke pads forward, embers spilling from its jaws with every breath.",
+      "owlbear": "An owlbear rears with a screeching roar, beak snapping, claws like meat-hooks.",
+      "wight": "A wight in ancient mail regards you with cold, deliberate hatred, then draws a notched sword.",
+      "banshee": "A banshee unfolds from the gloom, mouth opening on a wail that promises to stop your heart.",
+      "will-o-wisp": "A bobbing light drifts close, almost friendly — then crackles white-hot and lunges.",
+      "gibbering-mouther": "A heaving mass of mouths and eyes flows across the floor, babbling in a dozen stolen voices.",
+      "myconid-sovereign": "A towering mushroom-thing turns its cap toward you, releasing a cloud of hallucinogenic spores.",
+      "stone-sentinel": "A statue grinds its head around to track you, then steps off its plinth with a sound like an avalanche.",
+      "vampire-spawn": "A pale figure smiles, fangs bright, eyes red. \"Stay. You'll make a fine meal.\"",
+      "young-drake": "A young drake uncoils atop the hoard, smoke curling from its nostrils, gold cascading from its scales.",
+      "lesser-demon": "Something claws its way through the rift — all teeth and hooked limbs, stinking of brimstone."
+    }
   },
   "chips": {
     "goDir": "I go {{dir}}",
@@ -369,41 +640,127 @@
     "spellInfo": "Spell save DC {{dc}} · spell atk +{{bonus}}"
   },
   "skills": {
-    "athletics":       { "label": "Athletics",       "desc": "Climb, jump, swim, or grapple. Raw physical effort against resistance." },
-    "acrobatics":      { "label": "Acrobatics",      "desc": "Balance, tumble, or escape a grapple. Finesse and body control." },
-    "sleight-of-hand": { "label": "Sleight of Hand", "desc": "Pick pockets, plant objects, or perform manual trickery unseen." },
-    "stealth":         { "label": "Stealth",         "desc": "Move silently and stay hidden. Opposed by passive Perception." },
-    "arcana":          { "label": "Arcana",          "desc": "Recall lore about spells, magic items, and the planes." },
-    "history":         { "label": "History",         "desc": "Recall past events, legendary figures, and ancient civilisations." },
-    "investigation":   { "label": "Investigation",   "desc": "Search for clues, find hidden doors, or deduce what happened." },
-    "nature":          { "label": "Nature",          "desc": "Identify plants, animals, weather patterns, and natural hazards." },
-    "religion":        { "label": "Religion",        "desc": "Recall lore about deities, rites, cults, and holy symbols." },
-    "animal-handling": { "label": "Animal Handling", "desc": "Calm, guide, or read the intent of beasts and mounts." },
-    "insight":         { "label": "Insight",         "desc": "Read someone's true feelings or detect when they're lying." },
-    "medicine":        { "label": "Medicine",        "desc": "Stabilise a dying creature, diagnose ailments, or tend wounds." },
-    "perception":      { "label": "Perception",      "desc": "Notice threats, spot hidden creatures, or hear distant sounds." },
-    "survival":        { "label": "Survival",        "desc": "Track prey, forage food, navigate terrain, or endure the wild." },
-    "deception":       { "label": "Deception",       "desc": "Lie convincingly, disguise your intent, or create a false impression." },
-    "intimidation":    { "label": "Intimidation",    "desc": "Coerce through threats, menace, or sheer force of presence." },
-    "performance":     { "label": "Performance",     "desc": "Entertain, impersonate, or captivate an audience." },
-    "persuasion":      { "label": "Persuasion",      "desc": "Win someone over through charm, reasoned argument, or diplomacy." }
+    "athletics": {
+      "label": "Athletics",
+      "desc": "Climb, jump, swim, or grapple. Raw physical effort against resistance."
+    },
+    "acrobatics": {
+      "label": "Acrobatics",
+      "desc": "Balance, tumble, or escape a grapple. Finesse and body control."
+    },
+    "sleight-of-hand": {
+      "label": "Sleight of Hand",
+      "desc": "Pick pockets, plant objects, or perform manual trickery unseen."
+    },
+    "stealth": {
+      "label": "Stealth",
+      "desc": "Move silently and stay hidden. Opposed by passive Perception."
+    },
+    "arcana": {
+      "label": "Arcana",
+      "desc": "Recall lore about spells, magic items, and the planes."
+    },
+    "history": {
+      "label": "History",
+      "desc": "Recall past events, legendary figures, and ancient civilisations."
+    },
+    "investigation": {
+      "label": "Investigation",
+      "desc": "Search for clues, find hidden doors, or deduce what happened."
+    },
+    "nature": {
+      "label": "Nature",
+      "desc": "Identify plants, animals, weather patterns, and natural hazards."
+    },
+    "religion": {
+      "label": "Religion",
+      "desc": "Recall lore about deities, rites, cults, and holy symbols."
+    },
+    "animal-handling": {
+      "label": "Animal Handling",
+      "desc": "Calm, guide, or read the intent of beasts and mounts."
+    },
+    "insight": {
+      "label": "Insight",
+      "desc": "Read someone's true feelings or detect when they're lying."
+    },
+    "medicine": {
+      "label": "Medicine",
+      "desc": "Stabilise a dying creature, diagnose ailments, or tend wounds."
+    },
+    "perception": {
+      "label": "Perception",
+      "desc": "Notice threats, spot hidden creatures, or hear distant sounds."
+    },
+    "survival": {
+      "label": "Survival",
+      "desc": "Track prey, forage food, navigate terrain, or endure the wild."
+    },
+    "deception": {
+      "label": "Deception",
+      "desc": "Lie convincingly, disguise your intent, or create a false impression."
+    },
+    "intimidation": {
+      "label": "Intimidation",
+      "desc": "Coerce through threats, menace, or sheer force of presence."
+    },
+    "performance": {
+      "label": "Performance",
+      "desc": "Entertain, impersonate, or captivate an audience."
+    },
+    "persuasion": {
+      "label": "Persuasion",
+      "desc": "Win someone over through charm, reasoned argument, or diplomacy."
+    }
   },
   "classAbilities": {
     "fighter": {
-      "secondWind":  { "label": "Second Wind",  "note": "Bonus action: regain 1d10+{{lvl}} HP.\nOnce per short rest.",  "text": "I use Second Wind to heal myself" },
-      "actionSurge": { "label": "Action Surge", "note": "Take one additional action this turn.\nOnce per short rest.", "text": "I use Action Surge for an extra action" }
+      "secondWind": {
+        "label": "Second Wind",
+        "note": "Bonus action: regain 1d10+{{lvl}} HP.\nOnce per short rest.",
+        "text": "I use Second Wind to heal myself"
+      },
+      "actionSurge": {
+        "label": "Action Surge",
+        "note": "Take one additional action this turn.\nOnce per short rest.",
+        "text": "I use Action Surge for an extra action"
+      }
     },
     "rogue": {
-      "sneakAttack":   { "label": "Sneak Attack",   "note": "Deal {{dice}}d6 extra damage when you have advantage\nor an ally flanks your target.", "text": "I make a Sneak Attack" },
-      "cunningAction": { "label": "Cunning Action", "note": "Bonus action: Dash, Disengage, or Hide.\nKeeps you mobile without spending your main action.", "text": "I use Cunning Action to " }
+      "sneakAttack": {
+        "label": "Sneak Attack",
+        "note": "Deal {{dice}}d6 extra damage when you have advantage\nor an ally flanks your target.",
+        "text": "I make a Sneak Attack"
+      },
+      "cunningAction": {
+        "label": "Cunning Action",
+        "note": "Bonus action: Dash, Disengage, or Hide.\nKeeps you mobile without spending your main action.",
+        "text": "I use Cunning Action to "
+      }
     },
     "cleric": {
-      "turnUndead": { "label": "Turn Undead", "note": "Channel Divinity: undead within 30 ft must flee.\nWIS save DC {{dc}} or be turned for 1 minute.",            "text": "I use Channel Divinity: Turn Undead" },
-      "castSpell":  { "label": "Cast Spell",  "note": "Cast a prepared spell. Targets resist with DC {{dc}}.\nConcentration spells last until broken or you cast another.", "text": "I cast a spell at " }
+      "turnUndead": {
+        "label": "Turn Undead",
+        "note": "Channel Divinity: undead within 30 ft must flee.\nWIS save DC {{dc}} or be turned for 1 minute.",
+        "text": "I use Channel Divinity: Turn Undead"
+      },
+      "castSpell": {
+        "label": "Cast Spell",
+        "note": "Cast a prepared spell. Targets resist with DC {{dc}}.\nConcentration spells last until broken or you cast another.",
+        "text": "I cast a spell at "
+      }
     },
     "wizard": {
-      "arcaneRecovery": { "label": "Arcane Recovery", "note": "Short rest: regain spell slots up to level {{slotLvl}}.\nOnce per long rest.",      "text": "I use Arcane Recovery" },
-      "castSpell":      { "label": "Cast Spell",      "note": "Cast a prepared spell. +{{atk}} to spell attack rolls.\nHigher spell slots deal more damage or last longer.", "text": "I cast a spell at " }
+      "arcaneRecovery": {
+        "label": "Arcane Recovery",
+        "note": "Short rest: regain spell slots up to level {{slotLvl}}.\nOnce per long rest.",
+        "text": "I use Arcane Recovery"
+      },
+      "castSpell": {
+        "label": "Cast Spell",
+        "note": "Cast a prepared spell. +{{atk}} to spell attack rolls.\nHigher spell slots deal more damage or last longer.",
+        "text": "I cast a spell at "
+      }
     }
   },
   "exports": {
@@ -444,6 +801,7 @@
     "segment": "The road winds on through the {{climate}}. Hours pass without incident.",
     "arrive": "At last {{destination}} comes into view on the horizon.",
     "encounterRoom": "On the road",
+    "encounterResume": "You come back to yourself mid-fight — the danger has not moved on.",
     "encounterWin": "The threat dealt with, you press on.",
     "encounterFlee": "You break away and put distance between yourself and the danger, rejoining the road.",
     "fleeChip": "Flee",
@@ -474,20 +832,29 @@
     "factionLine": "  {{name}}  [{{bar}}]  {{standing}} ({{rep}})",
     "questsHeader": "Active quests:",
     "flagsHeader": "Notable deeds:",
-    "standing": {"neutral": "neutral", "ally": "ally", "enemy": "enemy", "champion": "champion", "nemesis": "nemesis"}
+    "standing": {
+      "neutral": "neutral",
+      "ally": "ally",
+      "enemy": "enemy",
+      "champion": "champion",
+      "nemesis": "nemesis"
+    }
   },
   "common": {
     "yes": "Yes",
     "no": "No"
   },
   "ai": {
-    "beatCheckPrompt": "You judge whether a story beat was just fulfilled. The beat's dramatic purpose is:\n\"{{purpose}}\"\n\nGiven the GM narration the user provides, set fulfilled=true ONLY if the narration CLEARLY accomplishes that dramatic purpose (the key event happened on screen). If it merely hints at, sets up, or is unrelated to the purpose, set fulfilled=false. Be strict — when in doubt, false.",
+    "canonPrompt": "You extract durable world facts from a Dungeon Master's narration so the game can remember them.\n\nThe scene contains exactly these entity ids:\n{{ids}}\nCurrent place: {{place}}\n\nReturn two lists.\n\nfacts — claims the narration makes about an entity ABOVE. Never invent an id; use one from the list verbatim. Only durable things worth remembering later (a lasting condition, a changed mood or attitude, a description of a place). Skip anything transient (a swing that missed, a sentence of dialogue). Set scope to 'regional' only if the wider area would hear about it; otherwise 'local'.\n\nmint — things the narration introduced that do not exist yet and deserve to: a named person (npc), a monster or beast (creature), a noticeable feature of the room (detail), or a location (site). Give the plain name, a short note, whether it is a threat, and for creatures the closest common monster type (e.g. ghoul, wolf, bandit) or an empty string. Do NOT mint anything already in the id list. Most turns mint nothing.\n\nBe conservative: a wrong fact poisons the world forever. Write values and reasons in {{language}}. Return only JSON.",
+    "summarizePrompt": "You keep a running memory of a tabletop campaign chapter so the Game Master never forgets what happened.\n\nPrevious summary:\n{{previous}}\n\nRecorded events: {{events}}\n\nRewrite the summary so it covers everything so far, including the new turns below. Keep it under 200 words. Prose, no headings or lists. Name people, places and unresolved threads explicitly — this text is all the Game Master will remember later, so a name you drop is a name it forgets. Prefer concrete facts (who, where, what changed, what is owed) over atmosphere. Write in {{language}}. Return only the summary text.",
+    "chapterTitlePrompt": "Give this chapter of a fantasy campaign a short evocative title: 2 to 5 words, no quotes, no numbering, in {{language}}. Return only the title.",
+    "beatCheckPrompt": "You judge whether a story beat was just fulfilled. The beat's dramatic purpose is:\n\"{{purpose}}\"\n\nGiven the GM narration the user provides, set fulfilled=true ONLY if the narration CLEARLY accomplishes that dramatic purpose (the key event happened on screen). If it merely hints at, sets up, or is unrelated to the purpose, set fulfilled=false. Be strict — when in doubt, false. Reply with fulfilled (true only if the scene clearly resolves that purpose) and a one-sentence reason.",
     "travelPrompt": "You are a travel narrator for a fantasy RPG. Write ONE vivid prose paragraph (2-4 sentences) for a single travel beat. No dialogue, no game mechanics, no lists, no headings. Beat and details:\n{{context}}\nWrite in {{language}}.",
     "travelUserMsg": "Narrate this travel beat.",
     "settlementClassifierPrompt": "You are a classifier for a text-RPG town scene. Map the player's free-text input (English or Dutch) to one structured action.\n\nIntents:\n- talk: speak to or approach an NPC. Set target to the NPC's name or role.\n- buy: browse or purchase goods from a merchant.\n- travel: leave toward an exit (a dungeon, road, or wilderness). Set target to the destination name or direction.\n- rest: sleep / recover at an inn.\n- quest: review accepted quests / the quest log.\n- inventory: check carried items and gold.\n- look: look around, or anything that doesn't fit the above.\n\nCurrent location context (the valid NPC and exit names):\n{{context}}\n\nOutput one JSON object. Set target to the relevant NPC / exit / item name, otherwise null.",
     "npcDialoguePrompt": "You roleplay a single NPC in a fantasy town. Stay fully in character. Reply with ONE short spoken line (1-3 sentences) — no narration, no surrounding quotation marks.\n\nNPC: {{name}}, a {{role}} ({{attitude}}).\nPersonality: {{personality}}\nFaction: {{faction}} (player standing: {{reputation}})\nKnown quest hook: {{questHook}}\nGuarded secret: {{secret}}\nMay reveal the secret this turn: {{mayReveal}}\n\nRules:\n- If 'May reveal the secret' is NO, never reveal or strongly hint at the secret; deflect if pushed.\n- If YES and the player is probing or has earned trust, you MAY let the secret slip — set revealsSecret true only when your reply actually discloses it.\n- Reflect your attitude and the player's faction standing in your tone.\n- Reply in {{language}}.\n\nRecent conversation:\n{{transcript}}",
     "classifierPrompt": "You are a D&D action classifier. Classify the player's intent from their free-text input.\n\nThe player writes in English.\n\nCurrent scene (use this to identify valid targets):\n{{scene}}\n\nOutput a single JSON object. Be generous in interpretation (\"hit the goblin\" → attack, \"sneak past\" → skill stealth).\n- \"go north\" / \"head through the doorway\" → move (set direction to north/south/east/west)\n- \"take the key\" / \"grab the brass key\"  → take (set target_id to the item's id from scene loot)\n- \"unlock the door\" / \"use the key\"       → unlock\n- direction: the cardinal direction for move, null otherwise\n- target_id: NPC id for attack, item id for take, null otherwise\nFor skill checks suggest a dc between 10 and 20.",
-    "narratorPrompt": "You are the Game Master narrating a D&D 5e dungeon encounter.\n\nSetting: gritty low fantasy, second person (\"you strike\", \"you dodge\").\nNarrate in English.\n\nRules:\n- Do NOT invent dice results — use only the resolved facts in the data\n- 2–4 sentences; vivid but concise\n- If a hit: describe the impact and the enemy's reaction\n- If a miss: describe the near-miss\n- If the enemy retaliated: weave it into the same narration\n- End on tension or consequence\n- If intent is 'move': describe entering the new room (use newRoom.description); introduce any enemies using their intro text; mention visible items\n- If intent is 'take': describe picking up the item\n- If intent is 'unlock': describe unlocking the door with a satisfying click\n- CRITICAL — if intent is 'impossible': the action simply cannot happen. Do NOT describe it succeeding or partially succeeding. Describe only the failure and its reason. No enemy dies, no item is taken, nothing changes.\n\nRecent transcript (last 3 turns, for continuity):\n{{transcript}}\n\nIf the scene contains a story.directive, treat it as YOUR private objective \u2014 steer the scene toward it subtly. NEVER state it outright or break character.\n\nCurrent scene:\n{{scene}}\n\nResolved mechanics:\n{{resolved}}\n\nOutput ONLY a JSON object — no markdown, no extra text:\n{\"narration\":\"...\",\"combat_ended\":true/false,\"outcome\":\"continue\"|\"victory\"|\"defeat\"|\"flee\"}",
+    "narratorPrompt": "You are the Game Master of an ongoing tabletop campaign, narrating one turn.\n\nSetting tone: {{tone}}. Second person (\"you strike\", \"you dodge\"). Narrate in English.\n\nWHAT YOU REMEMBER (earlier chapters, oldest first):\n{{memory}}\n\nRecent exchange:\n{{transcript}}\n\nCurrent scene:\n{{scene}}\n\nResolved mechanics (already decided — these are facts):\n{{resolved}}\n\nHARD RULES — breaking these breaks the game:\n- Never invent dice results, damage, hits or misses. Use the resolved facts exactly.\n- Never invent an exit, door, room, item, or NPC that is not in the scene. If the player reaches for something that is not there, say so.\n- Never change the world's state in narration: no healing, no death, no gained or lost items, no unlocked doors, unless the resolved facts say it happened.\n- If resolved.noEffect is true, this action changed nothing mechanically. Narrate only atmosphere, thought or dialogue. Do not imply any lasting change.\n- If intent is 'impossible', describe only the failure and why. Nothing changes.\n- The scene's knownDetails are things you established earlier. They are still true — honour them; contradicting them is a continuity error.\n\nWHAT YOU MAY INVENT FREELY: sensory texture. Smells, sounds, light, weather, wear and damage, what a room's dust or damp looks like, an idle gesture. This is where the world's character comes from — a cracked bell, mould on a curtain, a doll with no face. Invent at that scale often.\nIf you name a person, a creature or a place, do it deliberately: it becomes real and permanent.\n\nIf the scene contains story.directive, that is YOUR private objective — steer toward it subtly. NEVER state it outright or break character.\n\n2–4 sentences. End on tension or consequence.\n\nOutput ONLY a JSON object — no markdown, no extra text:\n{\"narration\":\"...\",\"combat_ended\":true/false,\"outcome\":\"continue\"|\"victory\"|\"defeat\"|\"flee\"}",
     "narrateTurnPrompt": "Narrate the outcome of this turn.",
     "autoplayPrompt": "You are a bold, curious adventurer playing a D&D dungeon crawl.\n\nDecision priority:\n1. If there's a hostile enemy — fight with your best weapon or class ability\n2. If there are items on the ground (scene.room.loot) — pick them up\n3. If there's a locked exit (scene.room.exits with locked:true) AND you have a key — unlock it\n4. Move to an UNVISITED room (see navigation info below)\n5. Use a skill if it fits (Perception, Stealth, Investigation)\n6. Look around ONLY if nothing else applies\n\n{{navigation}}\n\nCRITICAL RULES:\n- ONLY pick from the available actions list. Do NOT invent actions.\n- ALWAYS pick an exit marked UNVISITED or \"GO HERE\" first.\n- If no unvisited exits exist, backtrack through exits marked \"LEADS TO UNVISITED ROOMS\".\n- NEVER move to a \"dead end\" exit unless there is no other option.\n- NEVER repeat the same action twice in a row.\n\nCurrent scene:\n{{scene}}\n\nAvailable actions (ONLY pick from this list):\n{{actions}}\n\nRecent transcript:\n{{transcript}}\n\nRespond in English. Output ONLY a JSON object:\n{\"action\": \"pick one action from the available actions list above\"}",
     "autoplayUserMsg": "Choose your next action.",
@@ -510,6 +877,22 @@
     "worldgenStep4": "Shaping the region…",
     "worldgenStep5": "Building the settlement…",
     "worldgenStep6": "Generating the dungeon…",
-    "worldgenDone": "The world is ready."
+    "worldgenDone": "The world is ready.",
+    "defaultTone": "gritty low fantasy"
+  },
+  "thinking": {
+    "reading": "The Dungeon Master considers your words",
+    "rolling": "Dice clatter across the table",
+    "narrating": "The Dungeon Master speaks",
+    "remembering": "The Dungeon Master recalls what came before",
+    "building": "The world takes shape"
+  },
+  "rumour": {
+    "threatLabel": "{{name}} is still out there",
+    "stirring": "People mention {{subject}}, half-joking.",
+    "building": "Talk keeps circling back to {{subject}}. Nobody is joking now.",
+    "imminent": "{{subject}} — and the room goes quiet when it comes up.",
+    "breaking": "{{subject}}. It has gone past talk.",
+    "resolved": "They still tell the story of {{subject}}."
   }
 }

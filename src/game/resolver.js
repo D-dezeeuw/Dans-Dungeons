@@ -123,9 +123,99 @@ export function resolveRules(classified, roller = plainRoller()) {
     return { intent: 'unlock', exitDir: locked.dir, newRoomId: locked.roomId };
   }
 
-  // ── OTHERS ────────────────────────────────────────────────────────────────
-  return { intent };
+  // ── REST ──────────────────────────────────────────────────────────────────
+  // A short rest actually restores hit points. This used to fall through to the
+  // narrator, which happily described the party recovering while their hit
+  // points sat unchanged — the exact fiction-versus-state drift the engine
+  // exists to prevent.
+  if (intent === 'rest') {
+    if (hostilesPresent()) {
+      return { intent: 'impossible', reason: 'You cannot rest with enemies nearby.' };
+    }
+    const max     = sheet?.hp?.max ?? record.hpCurrent;
+    if (record.hpCurrent >= max) {
+      return { intent: 'rest', healed: 0, hpBefore: record.hpCurrent, hpAfter: record.hpCurrent, alreadyFull: true };
+    }
+    // One hit die of recovery, CON-modified, floored at 1 — the short-rest
+    // shape without the full hit-dice bookkeeping the campaign layer owns.
+    const conMod  = sheet.abilityScores?.mod?.con ?? 0;
+    const roll    = roller.rollDie(8);
+    const healed  = Math.max(1, roll + conMod);
+    const hpAfter = Math.min(max, record.hpCurrent + healed);
+    return {
+      intent: 'rest', d8: roll, conMod,
+      healed: hpAfter - record.hpCurrent, hpBefore: record.hpCurrent, hpAfter,
+    };
+  }
+
+  // ── FLEE ──────────────────────────────────────────────────────────────────
+  // An opposed check against the nearest hostile. Success moves you back the
+  // way you came; failure costs the turn and the enemy still acts.
+  if (intent === 'flee') {
+    const hostiles = hostilesHere();
+    if (!hostiles.length) return { intent: 'flee', unopposed: true };
+    const exits = (appState.world?.rooms?.[appState.world?.currentRoom]?.exits ?? []).filter(e => !e.locked);
+    if (!exits.length) return { intent: 'impossible', reason: 'There is nowhere to run.' };
+    const check = roller.check({
+      abilityScore:     sheet.abilityScores.final.dex,
+      proficient:       false,
+      proficiencyBonus: 0,
+      dc:               10 + Math.max(...hostiles.map(h => h.toHit ?? 2)),
+    });
+    return {
+      intent: 'flee', d20: check.d20, total: check.total, dc: check.dc,
+      success: check.success, newRoomId: check.success ? exits[0].roomId : null,
+      direction: check.success ? exits[0].dir : null,
+    };
+  }
+
+  // ── USE ───────────────────────────────────────────────────────────────────
+  // Consumables in the pack do what they say. Anything else is inspected, not
+  // consumed, so the narrator never invents an effect.
+  if (intent === 'use') {
+    const inv  = appState.party?.inventory ?? [];
+    const item = inv.find(i => i.id === targetId)
+              ?? inv.find(i => targetId && i.name?.toLowerCase().includes(String(targetId).toLowerCase()));
+    if (!item) return { intent: 'impossible', reason: 'You are not carrying that.' };
+    if (item.heals) {
+      const max     = sheet?.hp?.max ?? record.hpCurrent;
+      const hpAfter = Math.min(max, record.hpCurrent + item.heals);
+      return { intent: 'use', itemId: item.id, itemName: item.name, consumed: true,
+               healed: hpAfter - record.hpCurrent, hpBefore: record.hpCurrent, hpAfter };
+    }
+    return { intent: 'use', itemId: item.id, itemName: item.name, consumed: false, noEffect: true };
+  }
+
+  // ── LOOK ──────────────────────────────────────────────────────────────────
+  // Looking reveals what is here. No dice, but it is not nothing: the narrator
+  // is handed the room's contents so it describes what exists rather than
+  // improvising a room.
+  if (intent === 'look') {
+    const room = appState.world?.rooms?.[appState.world?.currentRoom];
+    return {
+      intent: 'look',
+      exits:  (room?.exits ?? []).map(e => ({ direction: e.dir, locked: !!e.locked })),
+      items:  (room?.loot ?? []).filter(i => !i.taken).map(i => i.name),
+      npcs:   hostilesHere().map(n => n.name),
+      noEffect: true,
+    };
+  }
+
+  // ── NO MECHANICAL EFFECT ──────────────────────────────────────────────────
+  // talk / inventory / wait / travel / buy / meta inside a dungeon change
+  // nothing by themselves. Say so explicitly: the narrator's contract forbids
+  // implying a change when noEffect is set, which is what stopped these turns
+  // from quietly rewriting the world in prose.
+  return { intent, noEffect: true };
 }
+
+function hostilesHere() {
+  const roomId = appState.world?.currentRoom;
+  return Object.values(appState.world?.npcs ?? {})
+    .filter(n => n.roomId === roomId && n.alive && n.attitude === 'hostile');
+}
+
+function hostilesPresent() { return hostilesHere().length > 0; }
 
 // ─── Goblin retaliation ───────────────────────────────────────────────────────
 
@@ -248,9 +338,18 @@ export function commitAll(resolved, goblinResult) {
   // history entry stays tiny — keeping saved time-travel history small and fast.
   // (Dungeon ids are dot-free: room-N, boss, enemy-N — safe as path segments.)
 
-  // Movement
-  if (resolved.intent === 'move' && resolved.newRoomId) {
+  // Movement (including a successful flight from a fight)
+  if ((resolved.intent === 'move' || resolved.intent === 'flee') && resolved.newRoomId) {
     setValue('world.currentRoom', resolved.newRoomId);
+  }
+
+  // Recovery — a rest or a healing draught actually restores hit points, rather
+  // than leaving the narrator to describe a recovery that never happened.
+  if ((resolved.intent === 'rest' || resolved.intent === 'use') && resolved.hpAfter != null) {
+    setValue('party.pc.record.hpCurrent', resolved.hpAfter);
+  }
+  if (resolved.intent === 'use' && resolved.consumed) {
+    setValue('party.inventory', (appState.party?.inventory ?? []).filter(i => i.id !== resolved.itemId));
   }
 
   // Item pickup
@@ -296,11 +395,16 @@ export function commitAll(resolved, goblinResult) {
   }
 }
 
+// Append the turn's two transcript entries as NARROW per-index writes.
+//
+// Rewriting the whole array (the previous `setValue('transcript', [...])`) made
+// every turn record a full copy of the entire transcript in Spektrum's history,
+// and the persisted time-travel spine stores those entries verbatim — so save
+// bytes grew with turns × epoch-turns. Writing one index per entry keeps the
+// recorded delta the size of the entry, and the merged result is identical.
 export function appendTranscript(playerText, gmText) {
   const turn = appState.session?.turnCount ?? 0;
-  setValue('transcript', [
-    ...(appState.transcript ?? []),
-    { role: 'player', text: playerText, turn },
-    { role: 'gm',     text: gmText,     turn },
-  ]);
+  const i    = (appState.transcript ?? []).length;
+  setValue(`transcript.${i}`,     { role: 'player', text: playerText, turn });
+  setValue(`transcript.${i + 1}`, { role: 'gm',     text: gmText,     turn });
 }

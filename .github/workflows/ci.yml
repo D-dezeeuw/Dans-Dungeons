@@ -1,0 +1,44 @@
+# Test gate. Nothing merges — and nothing deploys — on a red suite.
+#
+# Before this workflow the deployed product had no CI at all: production was a
+# push to main carrying a locally built, committed bundle that nothing verified
+# against src/. The vendored-engine chimera and the never-rendered chip layer
+# both reached players that way.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dev dependencies (esbuild only)
+        run: npm ci || npm install
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Vendored libraries match their manifests
+        run: node scripts/vendor-sync.js --check
+
+      - name: Bundle builds
+        run: node build.js
+
+      # The committed bundle is what GitHub Pages serves, so a stale one ships
+      # source that no longer matches the game. Rebuilding must be a no-op.
+      - name: Committed bundle is up to date
+        run: |
+          if ! git diff --quiet -- vendor/app.bundle.js; then
+            echo "::error::vendor/app.bundle.js is stale — run 'node build.js' and commit the result."
+            git diff --stat -- vendor/app.bundle.js
+            exit 1
+          fi

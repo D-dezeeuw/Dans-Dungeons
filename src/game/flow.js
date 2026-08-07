@@ -10,6 +10,9 @@ import { OVERWORLD_ENEMY_IDS } from './creatures.js';
 import { createCharacter } from './character.js';
 import { processTurn, checkApiKey, generateTurnImage, buildScene } from './loop.js';
 import { clearTurnMarks, setScrubHandler } from './undo.js';
+import { enterEncounterState, exitEncounterState } from './encounter-state.js';
+import { cutChapter, shouldCutChapter, recap, chapterIndex } from './chapters.js';
+import { awardMilestone, announcementFor, xpProgress } from './progression.js';
 import { seedCombat }     from './rng.js';
 import {
   goldOf, resolvePurchase, addToInventory, resolveRest, DEFAULT_REST_COST,
@@ -18,11 +21,14 @@ import {
   adjustPrice, isHostile, standing,
   beginTravel, stepTravel, isTravelDone, pickEncounter,
 } from 'bag-of-holding-client';
+import { healModels, fetchModelIds } from 'bag-of-holding-client';
+import { aiConfig } from '../ai/client.js';
 import { setStoryFlag, awardReputation, reputationStanding, progress as storyProgressNow } from './story.js';
 import * as UI from '../ui/console.js';
 import { t, tRaw } from '../i18n/i18n.js';
 import { getSkills } from '../ui/chips.js';
-import { modelsForTier, _cfg } from '../ai/tiers.js';
+import { modelsForTier } from '../ai/tiers.js';
+import { demoKey, demoBaseUrl, hasDemoTier } from '../ai/demo-key.js';
 import { redirectToOpenRouter } from '../ai/auth.js';
 
 // TTS helpers — imported lazily so the audio module is a no-op when TTS is off.
@@ -114,6 +120,18 @@ function requestSceneImage(narration, journalEntry = null) {
 // ─── Key / tier setup ────────────────────────────────────────────────────────
 const DEFAULT_BASE_URL = 'https://openrouter.ai/api/v1';
 
+// Adopt the shared demo credential, if this build has one. Returns false when
+// the build is BYOK-only (the default) so callers can prompt instead of silently
+// leaving the player with no working key.
+function useDemoKey() {
+  const key = demoKey();
+  if (!key) return false;
+  setValue('ai.key', key);
+  const base = demoBaseUrl();
+  if (base) setValue('ai.baseUrl', base);
+  return true;
+}
+
 function applyTier(tier) {
   setValue('ai.tier', tier);
   setValue('ai.models', modelsForTier(tier));
@@ -134,10 +152,13 @@ async function setupKey() {
   UI.appendEntry('gm',     t('setup.gameName'));
   UI.appendEntry('system', '');
 
-  // Three-option connect flow.
+  // Connect flow. The no-key "try it" option only appears when this build was
+  // given a demo credential (DD_DEMO_KEY at build time) — a stock build is
+  // BYOK-only, so we never offer a path that cannot work.
+  const options = hasDemoTier() ? ['oauth', 'paste', 'try'] : ['oauth', 'paste'];
   const choice = await UI.pickFrom(
     t('setup.connectQuestion'),
-    ['oauth', 'paste', 'try'],
+    options,
     x => x === 'oauth' ? t('setup.connectOAuth')
        : x === 'paste' ? t('setup.connectPaste')
        : t('setup.connectTry'),
@@ -170,8 +191,10 @@ async function setupKey() {
   }
 
   if (choice === 'try') {
-    // Shared embedded key — rate-limited.
-    setValue('ai.key', _cfg());
+    // Shared demo credential — heavily rate-limited (the provider's free-model
+    // caps are per ACCOUNT, so every demo player shares one budget).
+    useDemoKey();
+    UI.appendEntry('system', t('setup.demoNotice'));
     UI.appendEntry('system', '');
   }
 
@@ -192,16 +215,21 @@ async function setupKey() {
 export async function upgradeToDeluxe() {
   const key = await UI.prompt(t('setup.pasteKey'));
   if (!key.trim()) return;
+
+  // Validate against the candidate key, but keep the working one until it
+  // proves out — a rejected paste must never leave the player keyless.
+  const previous = appState.ai?.key ?? '';
   setValue('ai.key', key.trim());
-  const valid = await checkApiKey();
-  if (valid) {
+  tick();
+  if (await checkApiKey()) {
     applyTier('deluxe');
     UI.appendEntry('system', t('tier.upgraded'));
-  } else {
-    UI.appendEntry('error', t('tier.downgraded'));
-    setValue('ai.key', _cfg());
-    applyTier('free');
+    return;
   }
+  UI.appendEntry('error', t('tier.downgraded'));
+  setValue('ai.key', previous);
+  if (!previous) useDemoKey();
+  applyTier('free');
 }
 
 async function reAuthKey() {
@@ -215,9 +243,13 @@ async function reAuthKey() {
     setValue('ai.key', key.trim());
     commit();
     UI.appendEntry('system', t('setup.keyUpdated'));
-  } else {
-    setValue('ai.key', _cfg());
+  } else if (useDemoKey()) {
     applyTier('free');
+  } else {
+    // BYOK-only build and no key given: run setup rather than leaving the
+    // player in a state where every turn fails with an auth error.
+    await setupKey();
+    tick();
   }
 }
 
@@ -230,11 +262,33 @@ export async function ensureKey() {
     const valid = await checkApiKey();
     if (!valid) {
       UI.appendEntry('error', t('tier.downgraded'));
-      setValue('ai.key', _cfg());
-      applyTier('free');
+      if (useDemoKey()) applyTier('free');
+      else { setValue('ai.key', ''); await setupKey(); tick(); return; }
     }
   }
-  // Free tier with embedded key — always valid, no check needed.
+
+  // Model ids rot: a provider can delist the model a save was written with, and
+  // ai.models is persisted, so a stale map outlives any fix to the defaults.
+  // Heal it against the live catalog before the first turn (never destructive —
+  // an unreachable catalog heals nothing).
+  await healStaleModels();
+}
+
+// Swap any delisted model id back to this tier's default, and tell the player
+// it happened rather than letting them discover it as a failed turn.
+async function healStaleModels() {
+  try {
+    const live = await fetchModelIds(aiConfig());
+    if (!live) return;
+    const { models, healed } = healModels(
+      appState.ai?.models ?? {}, live, modelsForTier(appState.ai?.tier ?? 'free'));
+    if (!healed.length) return;
+    setValue('ai.models', models);
+    commit();
+    for (const h of healed) {
+      UI.appendEntry('system', t('setup.modelHealed', { tier: h.tier, from: h.from, to: h.to ?? '—' }));
+    }
+  } catch { /* healing is best-effort — never block boot on it */ }
 }
 
 // Helper: check if current tier allows a feature, show gate message if not.
@@ -248,7 +302,13 @@ export function requireDeluxe(featureKey) {
 async function handleMeta(raw) {
   const cmd = raw.slice(1).toLowerCase().trim();
   if (cmd === 'restart') { clearSave(); location.reload(); return; }
-  if (cmd === 'save') { saveToStorage(); UI.appendEntry('system', t('meta.saved')); return; }
+  if (cmd === 'save') {
+    // Report what actually happened — this used to claim success unconditionally,
+    // including when the write had failed on a full quota.
+    if (saveToStorage()) UI.appendEntry('system', t('meta.saved'));
+    else                 UI.appendEntry('error',  t('meta.saveFailed'));
+    return;
+  }
   if (cmd === 'status') {
     const pc = appState.party?.pc;
     if (pc) UI.appendEntry('system', t('meta.status', { name: pc.record.name, hp: pc.record.hpCurrent, max: pc.sheet.hp.max, ac: pc.sheet.ac.value }));
@@ -443,6 +503,15 @@ function renderSettlement(settlement, settlementId) {
     UI.appendEntry('system', '');
   }
 
+  // Places already visited — naming one travels straight back there.
+  const known = Object.entries(appState.world?.settlements ?? {})
+    .filter(([sid, s]) => sid !== settlement.id && s?.name);
+  if (known.length) {
+    UI.appendEntry('system', t('settlement.knownList'));
+    for (const [, s] of known) UI.appendEntry('system', `  ${s.name}`);
+    UI.appendEntry('system', '');
+  }
+
   UI.appendEntry('system', t('settlement.goldLine', { gold: goldOf(appState.party?.pc?.record) }));
   UI.appendEntry('system', '');
 
@@ -627,10 +696,35 @@ function findExit(settlement, target) {
       ?? exits[0] ?? null;
 }
 
+// A discovered settlement the player names directly ("go back to Saltmarch").
+// Fast travel previously existed ONLY as a chip value, so with chips missing it
+// was unreachable by any means; matching here gives it a real free-text path.
+function findKnownSettlement(currentId, target) {
+  if (!target) return null;
+  const tl = String(target).toLowerCase();
+  for (const [sid, s] of Object.entries(appState.world?.settlements ?? {})) {
+    if (sid === currentId || !s?.name) continue;
+    const name = s.name.toLowerCase();
+    if (sid === target || name === tl || name.includes(tl) || tl.includes(name)) return sid;
+  }
+  return null;
+}
+
 function normalizeSettlementAction(r, settlement) {
   const intent = r?.intent ?? 'look';
   if (intent === 'talk')   return { type: 'talk',   npc:  findNpc(settlement, r?.target) };
-  if (intent === 'travel') return { type: 'travel', exit: findExit(settlement, r?.target) };
+  if (intent === 'travel') {
+    // Prefer a real exit; otherwise fast-travel to a settlement already visited.
+    const exits = settlement.exits ?? [];
+    const tl    = String(r?.target ?? '').toLowerCase();
+    const named = tl && exits.some(e =>
+      e.targetId === r?.target || e.targetName.toLowerCase().includes(tl) || tl.includes(e.targetName.toLowerCase()));
+    if (!named) {
+      const sid = findKnownSettlement(settlement.id, r?.target);
+      if (sid) return { type: 'fasttravel', settlementId: sid };
+    }
+    return { type: 'travel', exit: findExit(settlement, r?.target) };
+  }
   if (intent === 'buy')    return { type: 'buy' };
   if (intent === 'rest')   return { type: 'rest' };
   if (intent === 'quest')  return { type: 'quest' };
@@ -653,6 +747,8 @@ function fallbackSettlementAction(raw, settlement) {
   for (const exit of (settlement.exits ?? [])) {
     if (lower.includes(exit.targetName.toLowerCase()) || lower.includes(exit.direction.toLowerCase())) return { type: 'travel', exit };
   }
+  const knownId = findKnownSettlement(settlement.id, lower);
+  if (knownId) return { type: 'fasttravel', settlementId: knownId };
   if (/(travel|go|leave|reis|ga|vertrek)/.test(lower)) return { type: 'travel', exit: settlement.exits?.[0] ?? null };
   return { type: 'look' };
 }
@@ -672,6 +768,8 @@ async function handleSettlementAction(action, settlementId) {
     case 'travel':
       if (!action.exit) { UI.appendEntry('system', t('settlement.noPath')); return; }
       return await doTravel(action.exit, settlementId);
+    case 'fasttravel':
+      return await fastTravelTo(action.settlementId);
     default:
       UI.appendEntry('gm', t('settlement.lookResult', { name: settlement.name }));
   }
@@ -771,6 +869,13 @@ async function openShop(settlementId) {
     }
     if (!wares.length) { UI.appendEntry('system', t('settlement.shopRefused')); return; }
     UI.appendEntry('system', t('settlement.shopBanner', { gold: goldOf(appState.party?.pc?.record) }));
+    // Print the wares as transcript text as well as chips. The banner ends in a
+    // colon and used to be followed by nothing at all whenever chips were not
+    // rendered — a shop the player could neither see nor use.
+    wares.forEach((w, i) => {
+      UI.appendEntry('system', `  ${i + 1}. ${w.item.name} — ${w.item.price} ${t('settlement.goldWord')} (${w.npc})`);
+    });
+    UI.appendEntry('system', '');
     const chips = wares.map((w, i) => ({
       label: t('settlement.buyChip', { name: w.item.name, price: w.item.price }),
       value: `buy:${i}`,
@@ -785,7 +890,13 @@ async function openShop(settlementId) {
     let chosen = null;
     if (m) chosen = wares[Number(m[1])];
     else if (/(leave|done|exit|weg|klaar)/i.test(pick) || pick === t('settlement.leaveShopCmd')) break;
-    else chosen = wares.find(w => pick.toLowerCase().includes(w.item.name.toLowerCase()));
+    else {
+      // Accept the printed list number ("3", "buy 3") as well as the item name.
+      const byIndex = pick.trim().match(/^(?:buy\s+|koop\s+)?(\d+)$/i);
+      chosen = byIndex
+        ? wares[Number(byIndex[1]) - 1]
+        : wares.find(w => pick.toLowerCase().includes(w.item.name.toLowerCase()));
+    }
 
     if (!chosen) { UI.appendEntry('system', t('settlement.noSuchItem')); continue; }
 
@@ -850,6 +961,9 @@ function resolveDungeonQuests() {
     setStoryFlag(`quest-${q.id}-done`);
     if (q.factionId) awardReputation(q.factionId, 15);
     UI.appendEntry('system', t('settlement.questCompleted', { desc: q.description }));
+    for (const line of announcementFor(awardMilestone('quest-completed', t('progress.questReason')))) {
+      UI.appendEntry('system', line);
+    }
   }
   saveToStorage();
 }
@@ -964,31 +1078,46 @@ async function narrateTravelBeat(kind, ctx) {
 async function runEncounter(enemyId) {
   if (!enemyId) return 'flee';
   // Snapshot the active dungeon-combat fields so travel doesn't corrupt them.
-  const snap = {
-    currentRoom: appState.world.currentRoom,
-    exitRoomId:  appState.world.exitRoomId,
-    rooms:       appState.world.rooms,
-    npcs:        appState.world.npcs,
-    location:    appState.world.location,
-  };
-
+  // The snapshot is PERSISTED (world.encounterReturn), not just held in a local:
+  // every encounter turn autosaves, so a reload mid-fight used to resume into a
+  // world whose real rooms/npcs existed only in a dead closure.
   const enemy = buildEnemy(enemyId, { npcId: 'enc-1', roomId: 'encounter' });
-  setValue('world', {
-    ...appState.world,
-    currentRoom: 'encounter',
-    // currentRoom === exitRoomId so that a reload mid-encounter resolves through
-    // playLoop's vault-guarded victory gate (fight the enemy, then win) instead
-    // of soft-locking in an exit-less room.
-    exitRoomId:  'encounter',
-    rooms:       { encounter: { id: 'encounter', name: t('travel.encounterRoom'), description: enemy.intro, exits: [], loot: [] } },
-    npcs:        { 'enc-1': enemy },
-    location:    { ...appState.world.location, type: 'encounter' },
-  });
+  // currentRoom === exitRoomId so that a reload mid-encounter resolves through
+  // playLoop's vault-guarded victory gate (fight the enemy, then win) instead
+  // of soft-locking in an exit-less room.
+  setValue('world', enterEncounterState(appState.world, {
+    room: { id: 'encounter', name: t('travel.encounterRoom'), description: enemy.intro, exits: [], loot: [] },
+    npcs: { 'enc-1': enemy },
+  }));
   tick();
 
   UI.appendEntry('gm', enemy.intro);
   _speak(enemy.intro);
 
+  return await runEncounterLoop();
+}
+
+// Re-enter an encounter that was interrupted by a reload. The enemy, the PC and
+// the return snapshot all live in the save, so the fight simply continues.
+export async function resumeEncounter() {
+  const enemy = appState.world?.npcs?.['enc-1'];
+  if (!enemy) {                       // nothing to fight — just put the world back
+    restoreFromEncounter();
+    return 'flee';
+  }
+  UI.appendEntry('system', t('travel.encounterResume'));
+  UI.appendEntry('gm', enemy.intro ?? '');
+  return await runEncounterLoop();
+}
+
+// Restore the pre-encounter world fields from the persisted snapshot.
+function restoreFromEncounter() {
+  if (!appState.world?.encounterReturn) return;
+  setValue('world', exitEncounterState(appState.world));
+  commit();
+}
+
+async function runEncounterLoop() {
   let outcome = 'win';
   while (true) {
     if (!appState.world.npcs['enc-1']?.alive) { outcome = 'win'; break; }
@@ -1010,31 +1139,38 @@ async function runEncounter(enemyId) {
 
     UI.appendEntry('player', `> ${raw}`);
     UI.clearChips();
-    UI.setThinking(true);
+    UI.setThinking(true, 'reading');
+    // The turn moves through stages; the indicator follows it so a long wait
+    // reads as progress rather than as a hung app.
+    const stageTimer = setTimeout(() => UI.setThinkingStage('rolling'), 900);
 
     let streamEl = null;
-    const onChunk = (text) => { if (!streamEl) { UI.setThinking(false); streamEl = UI.beginStreamEntry('gm'); } UI.appendStreamChunk(streamEl, text); };
+    const onChunk = (text) => {
+      if (!streamEl) { clearTimeout(stageTimer); UI.setThinking(false); streamEl = UI.beginStreamEntry('gm'); }
+      UI.appendStreamChunk(streamEl, text);
+    };
 
     let result = null;
     try {
       result = await processTurn(raw, onChunk);
     } catch (e) {
+      clearTimeout(stageTimer);
       UI.setThinking(false); streamEl?.remove();
       UI.appendEntry('error', t('loop.error', { msg: e.message }));
       continue;
     }
+    clearTimeout(stageTimer);
     tick();
     UI.setThinking(false);
     if (!streamEl && result?.narration) UI.appendEntry('gm', result.narration);
+    for (const line of (result?.progression ?? [])) UI.appendEntry('system', line);
     UI.appendEntry('system', '');
     _speak(result?.narration);
     UI.updateDebugPanel(result?._debug);
   }
 
   UI.clearChips();
-  // Restore the pre-encounter world fields.
-  setValue('world', { ...appState.world, ...snap });
-  commit();
+  restoreFromEncounter();
 
   if (outcome === 'win')      UI.appendEntry('system', t('travel.encounterWin'));
   else if (outcome === 'flee') UI.appendEntry('gm', t('travel.encounterFlee'));
@@ -1440,9 +1576,11 @@ async function playLoop() {
       continue;
     }
 
+    clearTimeout(stageTimer);
     tick();
     UI.setThinking(false);
     if (!streamEl && result?.narration) UI.appendEntry('gm', result.narration);
+    for (const line of (result?.progression ?? [])) UI.appendEntry('system', line);
     UI.appendEntry('system', '');
 
     const journalEntry = { turn: appState.session?.turnCount ?? 0, narration: result?.narration ?? '', imageSrc: null };
@@ -1462,6 +1600,18 @@ async function playLoop() {
 
 // ─── End states ───────────────────────────────────────────────────────────────
 
+// Close the chapter at a real story boundary, with a ceremony line. Cheap AAA
+// texture, and the anchor the recap and the journal both hang off.
+async function markChapterBoundary(reason) {
+  if (!shouldCutChapter(reason)) return;
+  const n = chapterIndex();
+  const closed = await cutChapter(reason);
+  if (!closed) return;
+  UI.appendEntry('system', '');
+  UI.appendEntry('system', t('chapter.banner', { n, title: closed.title }));
+  UI.appendEntry('system', '');
+}
+
 async function doVictory() {
   const room     = appState.world?.rooms?.[appState.world?.exitRoomId];
   const treasure = (room?.loot ?? []).find(i => i.type === 'treasure');
@@ -1471,6 +1621,11 @@ async function doVictory() {
   UI.appendEntry('gm', victoryText);
   UI.appendEntry('system', '');
   _speak(victoryText);
+  for (const line of announcementFor(awardMilestone('dungeon-cleared',
+        t('progress.dungeonReason', { name: room?.name ?? t('victory.banner') })))) {
+    UI.appendEntry('system', line);
+  }
+  await markChapterBoundary('dungeon-cleared');
 
   // Campaign mode: return to settlement (don't set game-over)
   if (appState.world?.location?.settlementId) {
@@ -1515,6 +1670,14 @@ export async function resumeGame() {
   UI.appendEntry('system', t('adventure.resumeBanner'));
   UI.appendEntry('system', '');
 
+  // "Previously on…" — built from stored chapter digests, no AI call.
+  const previously = recap();
+  if (previously) {
+    UI.appendEntry('system', t('chapter.recapHeader'));
+    UI.appendEntry('gm', previously);
+    UI.appendEntry('system', '');
+  }
+
   const entries = (appState.transcript ?? []).slice(-6);
   for (const e of entries) {
     if (e.role === 'player') UI.appendEntry('player', `> ${e.text}`);
@@ -1529,8 +1692,22 @@ export async function resumeGame() {
   }));
   UI.appendEntry('system', '');
 
-  // Resume into the right context
+  // Resume into the right context.
   const locType = appState.world?.location?.type;
+
+  // A save written mid-journey-encounter used to fall through to playLoop, whose
+  // victory path returns to no caller — leaving no active prompt on this and
+  // every later reload. Finish the fight, then hand back to the town loop (the
+  // journey itself is not resumable, so the traveller returns where they set out).
+  if (locType === 'encounter') {
+    const outcome = await resumeEncounter();
+    if (outcome === 'defeat') { await doDefeat(); return; }
+    const back = appState.world?.location?.settlementId;
+    if (back && appState.world?.settlements?.[back]) { await enterSettlement(back, true); return; }
+    await playLoop();
+    return;
+  }
+
   if (locType === 'settlement' && appState.world?.location?.settlementId) {
     await enterSettlement(appState.world.location.settlementId, true);
   } else {

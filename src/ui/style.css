@@ -207,12 +207,19 @@
 .muted { color: var(--system); font-size: 12px; }
 
 /* ─── Action chips ───────────────────────────────────────── */
+/* Contextual actions live in the footer, directly above the input: a wrapping
+   row so a player can click their way through a turn without typing. Collapses
+   to nothing between turns so the footer doesn't jump. */
 #action-chips {
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
   gap: 0.3rem;
-  padding-top: 0.5rem;
+  padding: 0.4rem 0.6rem 0;
+  max-height: 5.5rem;
+  overflow-y: auto;
 }
+
+#action-chips:empty { display: none; }
 
 /* ─── Character chips (weapons + class abilities) ────────── */
 #character-chips {
@@ -926,6 +933,12 @@ body.roleplay-mode #brand-bar   { display: none !important; }
 }
 
 /* ─── Export zone ────────────────────────────────────────── */
+#character-zone {
+  padding: 0.3rem 0.5rem 0.4rem;
+  border-bottom: 1px solid var(--border);
+}
+#character-zone:has(#character-chips:empty):has(#skill-chips:empty) { display: none; }
+
 #export-zone {
   padding: 0.3rem 0.5rem 0.4rem;
   border-bottom: 1px solid var(--border);
@@ -990,3 +1003,51 @@ body.roleplay-mode #brand-bar   { display: none !important; }
 .brand-company { color: var(--gm); font-weight: bold; letter-spacing: 0.03em; }
 .brand-company:hover { color: var(--text); }
 .brand-powered em { font-style: italic; letter-spacing: 0.05em; }
+
+/* ─── Legal / attribution (SRD 5.2 is CC-BY: the credit must reach players) ── */
+#legal-zone {
+  padding: 0.4rem 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+.legal-line {
+  font-size: 10px;
+  line-height: 1.5;
+  color: var(--system);
+  display: block;
+}
+.legal-line a { color: var(--system); text-decoration: underline; }
+.legal-line a:hover { color: var(--text); }
+
+/* ─── Accessibility and mobile (Epic E10) ────────────────────────────────── */
+
+/* iOS zooms the whole page when a focused input's text is under 16px. The game
+   is a text field the player lives in, so that zoom fired constantly. */
+@media (max-width: 767px) {
+  #cmd { font-size: 16px; }
+}
+
+/* There were no focus styles at all, so keyboard players could not see where
+   they were. Only shown for keyboard focus, so mouse users see no change. */
+:focus-visible {
+  outline: 2px solid var(--gm);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* The smallest type was 9px at a 2.1:1 contrast ratio — below the 4.5:1 floor
+   and below any readable size. Raise both without disturbing the layout. */
+.skill-ab,
+.char-spell-info {
+  font-size: 11px;
+  color: var(--text);
+  opacity: 0.75;
+}
+
+.legal-line { font-size: 11px; }
+
+/* Respect a player who has asked for less motion: the streaming transcript and
+   the thinking indicator are the two things that animate. */
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  html { scroll-behavior: auto; }
+}

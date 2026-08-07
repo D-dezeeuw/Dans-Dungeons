@@ -17,9 +17,31 @@ export default {
   primaryAbility: 'str',
   savingThrowProficiencies: ['str', 'con'],
   weaponMasterySlots: 3,
-  // Extra Attack at L5: one additional attack per Attack action.
-  // Encounter system reads this via `attacksPerAction(classDef, level)`.
-  extraAttacks: { 5: 1 },
+  // Extra Attack at L5 / L11: one then two additional attacks per
+  // Attack action. Encounter system reads via attacksPerAction.
+  extraAttacks: { 5: 1, 11: 2, 20: 3 },
+  subclasses: {
+    champion: {
+      id: 'champion',
+      name: 'Champion',
+      features: {
+        3: ['Improved Critical'],
+        7: ['Remarkable Athlete'],
+        10: ['Additional Fighting Style'],
+        15: ['Superior Critical'],
+        18: ['Survivor']
+      },
+      mechanics: {
+        // Improved Critical: 19-20 crits. The host reads
+        // engine.rules.critOn or this expanded range when computing
+        // the crit threshold.
+        improvedCritOn: (_actor, args) => {
+          const level = args?.level ?? 3;
+          return { critOn: level >= 15 ? [18, 19, 20] : [19, 20] };
+        }
+      }
+    }
+  },
   features: {
     1: ['Fighting Style', 'Second Wind', 'Weapon Mastery'],
     2: ['Action Surge', 'Tactical Mind'],
@@ -30,13 +52,26 @@ export default {
     7: ['Subclass Feature'],
     8: ['Ability Score Improvement'],
     9: ['Indomitable', 'Tactical Master'],
-    10: ['Subclass Feature']
+    10: ['Subclass Feature'],
+    11: ['Two Extra Attacks'],
+    12: ['Ability Score Improvement'],
+    13: ['Indomitable (two uses)', 'Studied Attacks'],
+    14: ['Subclass Feature'],
+    15: ['Improved Critical (19-20)'],
+    16: ['Ability Score Improvement'],
+    17: ['Action Surge (two uses)', 'Indomitable (three uses)'],
+    18: ['Subclass Feature'],
+    19: ['Epic Boon'],
+    20: ['Three Extra Attacks']
   },
-  // Resource-bearing features (since 1.3.0). Both refresh on a
-  // Short Rest per SRD 5.2 § Fighter.
+  // Resource-bearing features (since 1.3.0). Indomitable arrives at
+  // L9 with one use, and bumps to two uses at L13 per the SRD table;
+  // the mechanic helper reads the current `max` from the actor's
+  // resources, so the level-up flow updates `indomitable.max`.
   resources: {
     secondWind: { max: 1, refreshes: 'short' },
-    actionSurge: { max: 1, refreshes: 'short' }
+    actionSurge: { max: 1, refreshes: 'short' },
+    indomitable: { max: 1, refreshes: 'long' }
   },
   mechanics: {
     /**
@@ -72,6 +107,17 @@ export default {
       const result = spendResource(actor, 'actionSurge');
       if (!result.ok) return result;
       return { ok: true, extraAction: true, actor: result.actor };
+    },
+    /**
+     * SRD 5.2 § Fighter § Indomitable: reroll a failed save. Host
+     * passes the original save result; if a reroll happens, the
+     * second roll replaces the first. Returns the spent resource
+     * status plus a `reroll: true` flag so the host re-runs the save.
+     */
+    indomitable: (actor) => {
+      const result = spendResource(actor, 'indomitable');
+      if (!result.ok) return result;
+      return { ok: true, reroll: true, actor: result.actor };
     }
   }
 };

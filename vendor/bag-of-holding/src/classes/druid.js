@@ -78,7 +78,19 @@ export default {
       name: 'Circle of the Land',
       features: {
         2: ['Cantrip', 'Land Stride'],
-        3: ['Circle Spells']
+        3: ['Circle Spells'],
+        6: ["Land's Aid"],
+        10: ['Nature\'s Ward'],
+        14: ['Nature\'s Sanctuary']
+      },
+      mechanics: {
+        // Land's Aid: each long rest, can spend a spell slot to
+        // restore HP equal to slot level + WIS mod to nearby creatures.
+        landsAid: (actor, args) => {
+          const slotLevel = args?.slotLevel ?? 1;
+          const wisMod = Math.floor(((actor.abilityScores?.wis ?? 10) - 10) / 2);
+          return { ok: true, healing: slotLevel + wisMod, actor };
+        }
       }
     }
   },
@@ -92,7 +104,17 @@ export default {
     7: ['Elemental Fury'],
     8: ['Ability Score Improvement'],
     9: [],
-    10: ['Subclass Feature']
+    10: ['Subclass Feature'],
+    11: ['Improved Elemental Fury'],
+    12: ['Ability Score Improvement'],
+    13: [],
+    14: ['Subclass Feature'],
+    15: [],
+    16: ['Ability Score Improvement'],
+    17: ['Subclass Feature'],
+    18: ['Beast Spells'],
+    19: ['Epic Boon'],
+    20: ['Archdruid']
   },
   // Resource-bearing features (since 1.3.4). Wild Shape refreshes
   // fully on Long Rest with one use back on Short Rest per SRD 5.2.

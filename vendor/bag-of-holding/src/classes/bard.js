@@ -50,7 +50,19 @@ export default {
       id: 'college-of-lore',
       name: 'College of Lore',
       features: {
-        3: ['Bonus Proficiencies', 'Cutting Words']
+        3: ['Bonus Proficiencies', 'Cutting Words'],
+        6: ['Magical Discoveries'],
+        10: ['Peerless Skill'],
+        14: ['Improved Cutting Words']
+      },
+      mechanics: {
+        // Cutting Words: reaction, spend Bardic Inspiration to subtract
+        // the rolled inspiration die from an enemy's roll. Returns the
+        // die size the host rolls; the host applies the penalty.
+        cuttingWords: (actor, args) => {
+          const dieSize = args?.inspirationDie ?? 6;
+          return { ok: true, dieSize, actor };
+        }
       }
     }
   },
@@ -64,7 +76,17 @@ export default {
     7: [],
     8: ['Ability Score Improvement'],
     9: ['Expertise (2 more skills)'],
-    10: ['Magical Secrets']
+    10: ['Magical Secrets'],
+    11: ['Bardic Inspiration (d10)'],
+    12: ['Ability Score Improvement'],
+    13: ['Subclass Feature'],
+    14: ['Font of Inspiration'],
+    15: ['Improved Magical Secrets'],
+    16: ['Ability Score Improvement'],
+    17: ['Subclass Feature'],
+    18: ['Superior Bardic Inspiration'],
+    19: ['Epic Boon'],
+    20: ['Words of Creation']
   },
   // Resource-bearing features (since 1.3.2). Uses = CHA mod (min 1);
   // refresh tag flips from 'long' to 'short' at L5 per Font of

@@ -4,12 +4,13 @@
 // The page fetches vendor/app.version on every load and posts the hash
 // to the SW. On mismatch: purge caches, unregister, reload all tabs.
 
-const VERSION  = 'app-32b9c03';
+const VERSION  = 'app-0af6e03';
 const BASE     = '/Dans-Dungeons';
 const PRECACHE = [
   `${BASE}/`,
   `${BASE}/index.html`,
   `${BASE}/favicon.svg`,
+  `${BASE}/manifest.webmanifest`,
   `${BASE}/vendor/app.bundle.js`,
 ];
 
@@ -39,6 +40,12 @@ self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET') return;
   const url = new URL(e.request.url);
   if (url.origin !== location.origin) return;
+
+  // Never cache the version stamp. The whole self-invalidation design depends on
+  // the page reading a FRESH vendor/app.version and comparing it to the cached
+  // build — serving that file from cache made the check compare a frozen value
+  // to itself, so a deploy was never detected here.
+  if (url.pathname.endsWith('/app.version')) return;
 
   e.respondWith(
     caches.match(e.request).then(cached => {

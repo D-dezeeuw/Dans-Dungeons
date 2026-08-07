@@ -1,5 +1,9 @@
 # 11 — Open questions
 
+> **IMPLEMENTATION STATUS (STALE)** — audited 2026-08-07.
+> Several entries marked "decided: yes" (client-side RAG at MVP, IndexedDB spillover, multi-slot saves) were never built, and others were silently decided the other way. Re-triage against the 2026-08 audit before trusting any line here.
+> Full evidence: [`docs/audit/2026-08-comprehensive-audit.md`](../audit/2026-08-comprehensive-audit.md).
+
 > **Status:** living list. Each entry should either get resolved into another
 > doc, or graduate to a concrete ticket in `/docs/implementation/`.
 
