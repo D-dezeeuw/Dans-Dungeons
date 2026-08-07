@@ -1,5 +1,9 @@
 # 10 — Roadmap
 
+> **IMPLEMENTATION STATUS (STALE)** — audited 2026-08-07.
+> Phases 0-4 largely shipped, but the phasing here no longer reflects what is next. Use docs/audit/2026-08-comprehensive-implementation.md as the live plan; keep this for historical intent.
+> Full evidence: [`docs/audit/2026-08-comprehensive-audit.md`](../audit/2026-08-comprehensive-audit.md).
+
 > **Status:** rough phasing. Each phase ends in something demonstrable.
 
 The idea: prove the **loop** before we prove the **world**. A boring tiny

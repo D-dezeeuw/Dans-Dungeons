@@ -1,5 +1,9 @@
 # 09 — Hosting & build
 
+> **IMPLEMENTATION STATUS (PARTIAL)** — audited 2026-08-07.
+> esbuild bundling, GitHub Pages and the service worker shipped. This doc predates them: there is no unpkg pinning (everything is vendored), and CI now gates tests, vendor drift and bundle freshness.
+> Full evidence: [`docs/audit/2026-08-comprehensive-audit.md`](../audit/2026-08-comprehensive-audit.md).
+
 > **Status:** rough sketch.
 
 ## Constraints

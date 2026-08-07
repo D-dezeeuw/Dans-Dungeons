@@ -1,5 +1,9 @@
 # 15 — bag-of-holding-client: what else can move in (roadmap)
 
+> **IMPLEMENTATION STATUS (PARTIAL)** — audited 2026-08-07.
+> Tracks doc 14. Cross-check any "done" claim against the code before relying on it.
+> Full evidence: [`docs/audit/2026-08-comprehensive-audit.md`](../audit/2026-08-comprehensive-audit.md).
+
 Follow-up to [`14-client.md`](14-client.md). That doc extracted the four founding
 subsystems (LLM client, worldgen pipeline, dungeon generator, travel FSM). This
 one is the result of a thorough audit of *everything still in the app* to answer:

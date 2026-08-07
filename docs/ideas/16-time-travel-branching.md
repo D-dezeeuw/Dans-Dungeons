@@ -1,5 +1,9 @@
 # 16 — Time-travel: Undo, Redo & Branching
 
+> **IMPLEMENTATION STATUS (CURRENT)** — audited 2026-08-07.
+> All five phases shipped and match this design; it is the most accurate doc in the folder. Note the audit's caveat: the persisted spine stored whole-array transcript copies, which made saves grow quadratically until fixed in 2026-08.
+> Full evidence: [`docs/audit/2026-08-comprehensive-audit.md`](../audit/2026-08-comprehensive-audit.md).
+
 > **Status:** design / approved scope. Builds on the single-step undo already
 > shipped in [`src/game/undo.js`](../../src/game/undo.js) (commit `89ec609`,
 > hardened in the `spektrum-adoption` merge). Target: full undo + redo +

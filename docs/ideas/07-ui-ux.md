@@ -1,5 +1,9 @@
 # 07 — UI / UX
 
+> **IMPLEMENTATION STATUS (PARTIAL)** — audited 2026-08-07.
+> The console, action bar, streaming transcript and sidebar shipped. The chip layer described here was silently dead until 2026-08 (its containers were never in the markup). Wait-state feedback, accessibility and mobile polish remain open — Epic E10.
+> Full evidence: [`docs/audit/2026-08-comprehensive-audit.md`](../audit/2026-08-comprehensive-audit.md).
+
 > **Status:** rough sketch.
 
 ## North-star feeling

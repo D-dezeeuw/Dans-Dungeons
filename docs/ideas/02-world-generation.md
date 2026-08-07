@@ -1,5 +1,9 @@
 # 02 — World generation
 
+> **IMPLEMENTATION STATUS (PARTIAL)** — audited 2026-08-07.
+> The layered pipeline, seeded blueprints, digests, lazy region expansion and the dungeon generator all shipped. The status tables inside still mark shipped systems as "Planned", and the test count quoted (50) is long out of date.
+> Full evidence: [`docs/audit/2026-08-comprehensive-audit.md`](../audit/2026-08-comprehensive-audit.md).
+
 > **Status:** Phase A in progress. Schemas, data model, AI generators, seeded
 > RNG, and dungeon refactor are implemented with 50 passing tests.
 > See [implementation/world-gen.md](../implementation/world-gen.md) for the

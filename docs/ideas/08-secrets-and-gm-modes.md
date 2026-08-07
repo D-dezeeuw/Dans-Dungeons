@@ -1,5 +1,9 @@
 # 08 — Secrets and GM modes
 
+> **IMPLEMENTATION STATUS (DOC-ONLY)** — audited 2026-08-07.
+> Only a per-NPC `secret` field with a host-controlled reveal gate exists. The GM secrets slice, the information-asymmetry model and player-as-GM mode B are unbuilt. Note the security caveat found in the audit: secrets currently ride verbatim inside prompts, so this design needs secrets-by-reference before it scales.
+> Full evidence: [`docs/audit/2026-08-comprehensive-audit.md`](../audit/2026-08-comprehensive-audit.md).
+
 > **Status:** rough sketch.
 
 ## Why this gets its own doc

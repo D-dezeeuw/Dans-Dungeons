@@ -1,5 +1,9 @@
 # 01 — Architecture
 
+> **IMPLEMENTATION STATUS (PARTIAL)** — audited 2026-08-07.
+> The module layout is broadly right, but the game has since split machinery into the bag-of-holding-client library (doc 14) and grown modules this doc never mentions (story, undo, rng, worldbible, bestiary). Read CLAUDE.md for the current tree.
+> Full evidence: [`docs/audit/2026-08-comprehensive-audit.md`](../audit/2026-08-comprehensive-audit.md).
+
 > **Status:** rough sketch. Spektrum API surface verified against
 > [Spektrum 1.0.0](https://github.com/D-dezeeuw/spektrum); slice names and
 > module layout still draft.

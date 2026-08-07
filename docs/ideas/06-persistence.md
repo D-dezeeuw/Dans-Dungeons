@@ -1,5 +1,9 @@
 # 06 — Persistence
 
+> **IMPLEMENTATION STATUS (PARTIAL)** — audited 2026-08-07.
+> Versioned save envelopes, migrations and export/import shipped. The IndexedDB split this doc calls "essential, not optional" does NOT exist; saves are localStorage-only. The quota-failure UX specified here was implemented in 2026-08 (loud failure, pressure warning, corrupt-save quarantine). Multi-slot saves, compression and encryption remain unbuilt. Epic E3.
+> Full evidence: [`docs/audit/2026-08-comprehensive-audit.md`](../audit/2026-08-comprehensive-audit.md).
+
 > **Status:** rough sketch.
 
 ## Storage tiers
