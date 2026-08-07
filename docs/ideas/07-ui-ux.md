@@ -1,7 +1,7 @@
 # 07 — UI / UX
 
 > **IMPLEMENTATION STATUS (PARTIAL)** — audited 2026-08-07.
-> The console, action bar, streaming transcript and sidebar shipped. The chip layer described here was silently dead until 2026-08 (its containers were never in the markup). Wait-state feedback, accessibility and mobile polish remain open — Epic E10.
+> The console, action bar, streaming transcript and sidebar shipped. The chip layer described here was silently dead until 2026-08 (its containers were never in the markup). Wait-state feedback landed with E10.S1/S3: a staged thinking indicator with elapsed time, stick-to-bottom scrolling that respects a player reading back, a web app manifest and the iOS input-zoom fix. Still open (E10.S2/S4/S5): `pickFrom` options are typed rather than clickable, the global Spacebar handler still hijacks button activation, several 9px type rules remain, error messages do not name a cause or a remedy, and the Dutch string table is 39 keys short.
 > Full evidence: [`docs/audit/2026-08-comprehensive-audit.md`](../audit/2026-08-comprehensive-audit.md).
 
 > **Status:** rough sketch.

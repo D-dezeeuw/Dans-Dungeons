@@ -1,7 +1,7 @@
 # 14 — Client: Validation, Cleanup & the `bag-of-holding-client` Library
 
 > **IMPLEMENTATION STATUS (PARTIAL)** — audited 2026-08-07.
-> The library extraction shipped and matches this design. The execution-status header inside is stale in both directions: commit() and save versioning DID ship, while the flow.js split did NOT (it is still ~1,600 lines). Both correctness bugs this doc recorded in June 2026 (tone enum mismatch, en/nl parity) were still live at the 2026-08 audit.
+> The library extraction shipped and matches this design. The execution-status header inside is stale in both directions: commit() and save versioning DID ship, while the flow.js split did NOT (it is ~1,800 lines and growing). Both correctness bugs this doc recorded in June 2026 (tone enum mismatch, en/nl parity) were still live at the 2026-08 audit.
 > Full evidence: [`docs/audit/2026-08-comprehensive-audit.md`](../audit/2026-08-comprehensive-audit.md).
 
 > Audit date: 2026-06-05. Whole-tree review (7172 LOC src, 1940 LOC tests, 362 KB

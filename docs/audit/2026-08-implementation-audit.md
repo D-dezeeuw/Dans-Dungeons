@@ -8,6 +8,15 @@
 
 ---
 
+> **Follow-up pass, same day.** Sections 2–5 below are the audit as found. A remediation
+> pass has since landed the fixes in §7 items 1–5: the four orphans are wired and the
+> wiring test no longer counts imports as consumers; E1.S5 shipped as engine **2.2.1**;
+> the per-turn cost items and DC clamping / response validation are in; the docs are
+> re-stamped. **Not** fixed, and still open: the thirteen unstarted stories in §3 beyond
+> E1.S5, and the partials in §4.3. One plan bullet was deliberately rejected — see the note
+> at the end of §4.1. Findings are left as written so the evidence stays checkable — which
+> means file:line references point at the audited commits above, not at `HEAD`.
+
 ## 1. Verdict
 
 **The foundations are real. The execution log overstates how much of the plan they cover.**
@@ -117,6 +126,12 @@ not met. Grouped by what it costs.
 - **E2.S3 — async canon commit.** Spec: *"extraction runs off the critical path (after
   `finalizeTurn`)"*. Actual: `await absorbNarration()` at `loop.js:221`, before
   `finalizeTurn()` at `:228`. A second tiny-tier round trip sits in the player's wait.
+  **Rejected on review, not fixed.** `finalizeTurn` stamps the undo boundary at the
+  *current* history length, so anything written after it lands outside the turn: an undo
+  to that turn would scrub the minted entities and canon patches, and the story-flag
+  writes above it already carry a comment explaining why they must land first. This
+  bullet was written before time travel shipped and is unsafe as specified. Latency is
+  worth less than a save that survives an undo; `loop.js` now records the reasoning.
 - **E10.S4 — image rationing.** Not implemented. `requestSceneImage()` fires on every turn's
   narration (`flow.js:1629`), gated only on the `sketchView` setting. The plan's "47× the
   text cost" stands.
