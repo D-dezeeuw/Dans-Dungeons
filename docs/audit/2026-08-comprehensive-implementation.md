@@ -56,6 +56,26 @@ Every story in this plan serves at least one. When two conflict, the lower numbe
 - **Pivot valve** = what to cut or shrink under audit §8's pivots (1 = hub-and-spoke,
   2 = episodic, 3 = authored spine). Stories without a valve are vision-independent.
 
+### Execution log
+
+> Updated as work lands. Story IDs link back to the epics below.
+
+| Date | Landed | Status |
+|---|---|---|
+| 2026-08-07 | **E0.S1** shared key | Embedded XOR credential deleted; demo key is build-injected (`DD_DEMO_KEY`), default `null` → stock builds are BYOK-only. **Owner action still required: revoke the old key at OpenRouter** — it shipped publicly and must be treated as compromised. Proxy decision still open. |
+| 2026-08-07 | **E0.S3** licensing | `LICENSE` (MPL-2.0) + `NOTICE`; SRD 5.2 / CC-BY attribution in the sidebar and README; trademark claim dropped. |
+| 2026-08-07 | **E0.S4** CI | `ci.yml` (tests + vendor manifest + build + stale-bundle guard) in the game repo; weekly `model-canary.yml`. Sibling-repo workflows still to add. |
+| 2026-08-07 | **E1.S1** models | Live-verified tables; boot healing against the catalog (fixes stale persisted maps); fallback walk on any swappable 4xx with the whole chain tried; `chatStream` gains the chain; `usage.cost` → real spend. 14 new library tests. |
+| 2026-08-07 | **E1.S2** chips | Containers added; shop prints its wares (and accepts list numbers); fast travel gets a real free-text path; `dom-contract.test.js` makes the class of bug unshippable. |
+| 2026-08-07 | **E1.S3** encounters | Swap snapshot persisted as `world.encounterReturn`; `resumeGame` has an `encounter` route; pure `encounter-state.js` + 9 tests. |
+| 2026-08-07 | **E1.S4** persistence | Narrow transcript/roll-log writes: **13.05 MB → 294 KB of history at 200 turns**, linear thereafter. Save health broadcast, honest `/save`, quota pressure warning, corrupt-save quarantine. 6 tests. |
+| 2026-08-07 | **E1.S6** vendoring | `scripts/vendor-sync.js` + `VENDOR.json` manifests + `--check` in CI; engine re-vendored 1.16.0-chimera → 2.1.0. |
+| 2026-08-07 | **E1.S7** partial | Lock-and-key is a real graph cut (**68.7% → 0% bypass**, 0 soft-locks, 400-seed test); credentials stripped from save export and ignored on import; `app.version` excluded from SW cache; `castSpell` no longer burns a higher slot for a lower-level effect. |
+
+Not yet started: **E0.S2** (full doc triage — README done, `docs/ideas` status stamps pending), **E1.S5** (engine replay totality), and everything from **E2** (the world ledger) onward.
+
+Test counts after this pass: game 301 (was 267), client 110 (was 92), engine 1,564 (was 1,561) — **1,975 passing, 0 failing**, plus the MCP repo's 99 untouched.
+
 ### Milestones
 
 | Milestone | Epics | Demonstrable truth |
