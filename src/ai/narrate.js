@@ -6,6 +6,7 @@
 import { _callStream, repairJson, chatCompletion, aiConfig } from './client.js';
 import { generateImage } from 'bag-of-holding-client';
 import { NARRATOR_SCHEMA } from './schemas.js';
+import { validateNarration } from './validate.js';
 import { t, locale } from '../i18n/i18n.js';
 import { transcriptWindow } from '../game/chapters.js';
 
@@ -65,11 +66,20 @@ export async function narrate(resolvedFacts, sceneContext, recentTranscript, onC
 
   const raw = await _callStream({ tier: 'medium', messages }, onChunk);
 
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return repairJson(raw, { tier: 'medium', schema: NARRATOR_SCHEMA }, messages);
-  }
+  let parsed = null;
+  try { parsed = JSON.parse(raw); } catch { /* fall through to repair */ }
+
+  // Narration is the only field the player actually reads, so a response that
+  // parses but carries none is worse than one that fails to parse: the turn
+  // commits and the screen stays blank. Validate, and let the repair pass have
+  // a second go before giving up.
+  let out = validateNarration(parsed);
+  if (out) return out;
+
+  out = validateNarration(await repairJson(raw, { tier: 'medium', schema: NARRATOR_SCHEMA }, messages));
+  // Null tells flow.js to run its "GM unavailable" path rather than committing
+  // silence as though it were a turn.
+  return out;
 }
 
 // ─── Scene image generation ───────────────────────────────────────────────────

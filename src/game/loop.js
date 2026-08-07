@@ -183,6 +183,13 @@ export async function processTurn(playerInput, onNarrationChunk) {
     buildGmContext(),         // secrets + directive, system prompt only (E5.S1)
   );
 
+  // narrate() returns null when neither the stream nor the repair pass produced
+  // anything the player could read. Throwing here — BEFORE any commit — leaves
+  // the world untouched and no dangling undo mark, and hands flow.js its
+  // existing failure path. Committing a turn with an empty narration would
+  // advance the world behind a blank screen, which is the worse failure.
+  if (!narratorResp?.narration) throw new Error(t('loop.emptyNarration'));
+
   // 5. Commit the turn's mechanics, then tick so they're live in appState —
   //    the story-flag writes below spread the whole `world`, so they must build
   //    on the already-merged mechanics (not clobber them).

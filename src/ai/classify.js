@@ -3,6 +3,7 @@
 
 import { chatCompletion } from './client.js';
 import { CLASSIFIER_SCHEMA, BEAT_CHECK_SCHEMA } from './schemas.js';
+import { validateClassified } from './validate.js';
 import { t } from '../i18n/i18n.js';
 
 export async function classify(playerInput, sceneContext) {
@@ -19,7 +20,7 @@ export async function classify(playerInput, sceneContext) {
     scene: JSON.stringify(sceneContext),
   });
 
-  return chatCompletion({
+  const raw = await chatCompletion({
     tier: 'tiny',
     messages: [
       { role: 'system', content: system },
@@ -27,6 +28,11 @@ export async function classify(playerInput, sceneContext) {
     ],
     schema: CLASSIFIER_SCHEMA,
   });
+
+  // A schema is sent, not enforced: structured output is a provider feature,
+  // and the repair path returns whatever the model wrote. Check the response
+  // against the contract before the rules layer acts on it.
+  return validateClassified(raw);
 }
 
 // ─── Local fast path ─────────────────────────────────────────────────────────
