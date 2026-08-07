@@ -95,6 +95,13 @@ const DEFAULTS = {
     ledgerBases:     {},
     ledgerRejected:  0,   // canon claims refused for contradicting the dice
 
+    // Project clocks (Epic E6.S3): factions and threats advance at chapter
+    // boundaries, so the world changes while the player is elsewhere.
+    clocks: [],
+    // Entities this character has actually met — the knowledge filter the scope
+    // assembler uses so the GM never references what was never seen.
+    encountered: {},
+
     // Quest tracker (Phase 2) — { [questId]: { id, npcId, npcName, description, status } }
     quests: {},
 

@@ -20,6 +20,7 @@
 import { appState, setValue, tick } from '../core/state.js';
 import { summarizeChapter } from '../ai/summarize.js';
 import { recentEvents, compactLedger } from './ledger.js';
+import { tickWorldClocks } from './world-clocks.js';
 import { t } from '../i18n/i18n.js';
 
 const REFRESH_EVERY_TURNS = 6;    // how often the rolling digest is rewritten
@@ -119,6 +120,11 @@ export async function cutChapter(reason, { title = null } = {}) {
   // A closed chapter is the natural moment to fold stale local detail out of
   // the ledger — old turns are now represented by the digest.
   compactLedger(start);
+
+  // ...and the moment the world moves on its own. Threats the player walked
+  // away from get worse; a filled clock becomes regional news.
+  tickWorldClocks();
+
   return closed;
 }
 
