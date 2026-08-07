@@ -72,9 +72,20 @@ Every story in this plan serves at least one. When two conflict, the lower numbe
 | 2026-08-07 | **E1.S6** vendoring | `scripts/vendor-sync.js` + `VENDOR.json` manifests + `--check` in CI; engine re-vendored 1.16.0-chimera → 2.1.0. |
 | 2026-08-07 | **E1.S7** partial | Lock-and-key is a real graph cut (**68.7% → 0% bypass**, 0 soft-locks, 400-seed test); credentials stripped from save export and ignored on import; `app.version` excluded from SW cache; `castSpell` no longer burns a higher slot for a lower-level effect. |
 
-Not yet started: **E0.S2** (full doc triage — README done, `docs/ideas` status stamps pending), **E1.S5** (engine replay totality), and everything from **E2** (the world ledger) onward.
+| 2026-08-07 | **E0.S2** docs | Every `docs/ideas` file stamped CURRENT / PARTIAL / DOC-ONLY / STALE with an audited one-liner; CLAUDE.md module map, tier table, vendoring, licence and test sections corrected. |
+| 2026-08-07 | **E2** world ledger | **The keystone.** base ⊕ append-only patches ⊕ views, hierarchical entity ids, mechanical-beats-canon precedence enforced at append and at fold, dirty-digest tracking, deterministic compaction. Wired into the turn loop: the resolver writes ground truth, a tiny-tier pass extracts what the narration asserted, and minted creatures bind to real stat blocks. |
+| 2026-08-07 | **E4** chapters | Rolling digest (tiny tier, every 6 turns) + frozen chapter digests at story boundaries; narrator window 3 → 14 entries plus all prior chapters; "Previously on…" recap; chapter close compacts the ledger. Narrator contract v2: anti-invention rules, no-effect handling, world tone threaded. |
+| 2026-08-07 | **E5** scope | Scope assembler (here/nearby/region/world/memory/known) with per-tier token budgets proven in CI, stable-first ordering for prefix caching, and a `gmOnly` slice so secrets stop riding in the object the UI reads. Intent gap closed: rest, flee, use and look mechanized; everything else declares `noEffect`. |
+| 2026-08-07 | **E6** atlas | Geography as a graph with seeded stub neighbours (world feels endless, costs O(visited)); `routeBetween`, known-vs-rumoured map. Clocks advance at chapter boundaries with extra pressure on threats the player ignored. |
+| 2026-08-07 | **E7** red line | Acts above beats, generated one at a time from what actually happened; flags as the primary completion signal; stall detection so a thread escalates instead of freezing; payoff ledger turning a planted clue into an obligation. |
+| 2026-08-07 | **E8.S1** progression | XP from CR on kills plus milestones; level-up re-derives the sheet through the engine and heals to the new maximum. The engine's XP tables had shipped long ago with **zero call sites**. |
+| 2026-08-07 | **E9** emergence | Entity minting from narration with dedup and stat-block binding; detail persistence served back with the room; threat clocks and rumour surfacing. The FarStay-ghoul acceptance script is covered by tests. |
+| 2026-08-07 | **E10** presentation | Staged thinking indicator with elapsed time; stick-to-bottom scrolling; web app manifest + theme colour + apple-touch-icon; iOS input-zoom fix; focus-visible outlines; contrast/size floors; reduced-motion honoured. |
+| 2026-08-07 | **E11** quality | Prompt-contract regression suite (locale parity, placeholder parity, prompt↔schema agreement, strict-mode exhaustiveness) — which immediately caught `beatCheckPrompt` not asking for the `reason` its schema required. CI added to all three sibling repos; MCP peer dep corrected to ^2.1.0. |
 
-Test counts after this pass: game 301 (was 267), client 110 (was 92), engine 1,564 (was 1,561) — **1,975 passing, 0 failing**, plus the MCP repo's 99 untouched.
+**Deliberately deferred** (documented rather than half-built): E3's IndexedDB cold store — the narrow-write fix in E1.S4 moved the storage wall from ~5 hours to well beyond the current content ceiling, so the split is no longer the binding constraint; E8.S2–S4 (spell wiring, loot economy, CR 16–24 bestiary) which are content production rather than architecture; E11.S1's `flow.js` split and Playwright e2e.
+
+Test counts after this pass: game **391** (was 267), client **170** (was 92), engine **1,564** (was 1,561), MCP 99 — **2,224 passing, 0 failing** across four repos, all now gated by CI.
 
 ### Milestones
 
