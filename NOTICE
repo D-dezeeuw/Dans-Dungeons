@@ -1,0 +1,36 @@
+Dan's Dungeons
+Copyright (c) 2026 Danny de Zeeuw
+
+This product is licensed under the Mozilla Public License 2.0. See LICENSE.
+
+────────────────────────────────────────────────────────────────────────
+Game rules content
+────────────────────────────────────────────────────────────────────────
+
+This game's mechanics are built on the System Reference Document 5.2
+(SRD 5.2) by Wizards of the Coast LLC, licensed under the Creative
+Commons Attribution 4.0 International License (CC-BY-4.0):
+
+    https://creativecommons.org/licenses/by/4.0/
+
+Dan's Dungeons is an independent product and is not affiliated with,
+endorsed, sponsored, or specifically approved by Wizards of the Coast LLC.
+"Dungeons & Dragons" and "D&D" are trademarks of Wizards of the Coast LLC
+and are not used to identify this product.
+
+────────────────────────────────────────────────────────────────────────
+Bundled third-party code
+────────────────────────────────────────────────────────────────────────
+
+@zeeuw/bag-of-holding          MPL-2.0   vendor/bag-of-holding/
+    The SRD rules engine. See vendor/bag-of-holding/LICENSE.
+
+@zeeuw/bag-of-holding-client   MPL-2.0   vendor/bag-of-holding-client/
+    Browser host toolkit. See vendor/bag-of-holding-client/LICENSE.
+
+Spektrum                       see source   vendor/spektrum.js
+    Reactive state + history engine.
+
+Lucide icons                   ISC       vendor/icons/
+    Copyright (c) 2022 Lucide Contributors
+    https://github.com/lucide-icons/lucide/blob/main/LICENSE

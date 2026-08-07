@@ -1003,3 +1003,17 @@ body.roleplay-mode #brand-bar   { display: none !important; }
 .brand-company { color: var(--gm); font-weight: bold; letter-spacing: 0.03em; }
 .brand-company:hover { color: var(--text); }
 .brand-powered em { font-style: italic; letter-spacing: 0.05em; }
+
+/* ─── Legal / attribution (SRD 5.2 is CC-BY: the credit must reach players) ── */
+#legal-zone {
+  padding: 0.4rem 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+.legal-line {
+  font-size: 10px;
+  line-height: 1.5;
+  color: var(--system);
+  display: block;
+}
+.legal-line a { color: var(--system); text-decoration: underline; }
+.legal-line a:hover { color: var(--text); }

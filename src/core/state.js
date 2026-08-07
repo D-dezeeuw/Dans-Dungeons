@@ -159,6 +159,25 @@ export function pickPersisted() {
   return Object.fromEntries(PERSIST_KEYS.map(k => [k, appState[k]]));
 }
 
+// Credentials and endpoints for the SHAREABLE export. A .dnd.json is meant to be
+// passed around, and it carried the player's API key; on the way back in, an
+// imported baseUrl would silently redirect every future call (and that key) to
+// whatever host the file named. Strip both — the importer keeps their own.
+const CREDENTIAL_FIELDS = ['key', 'baseUrl'];
+
+function withoutCredentials(snapshot) {
+  if (!snapshot?.ai) return snapshot;
+  const ai = { ...snapshot.ai };
+  for (const f of CREDENTIAL_FIELDS) delete ai[f];
+  return { ...snapshot, ai };
+}
+
+// Drop credential fields from imported data so a hostile or careless save file
+// can never rewrite where this browser sends prose and keys.
+export function sanitizeImported(data) {
+  return withoutCredentials(data);
+}
+
 function buildSaveSnapshot() {
   const snap = pickPersisted();
   const tt = _timeTravelProvider?.();
@@ -236,14 +255,15 @@ export function hasCorruptSaveBackup() {
 // downloadable save file. Same { v, data } shape as the localStorage save, so a
 // file and a browser save are interchangeable.
 export function serializeSave() {
-  return JSON.stringify(wrapEnvelope(buildSaveSnapshot(), SAVE_VERSION), null, 2);
+  return JSON.stringify(wrapEnvelope(withoutCredentials(buildSaveSnapshot()), SAVE_VERSION), null, 2);
 }
 
 // Parse a save file's text — envelope-aware, so it accepts both new versioned
 // envelopes and legacy bare snapshots (which load as version 0 and migrate
 // forward). Returns the unwrapped, migrated data, or null if unparseable.
 export function parseSave(raw) {
-  return loadEnvelope(raw, { migrations: SAVE_MIGRATIONS, currentVersion: SAVE_VERSION });
+  const data = loadEnvelope(raw, { migrations: SAVE_MIGRATIONS, currentVersion: SAVE_VERSION });
+  return data ? sanitizeImported(data) : data;
 }
 
 export function clearSave() {

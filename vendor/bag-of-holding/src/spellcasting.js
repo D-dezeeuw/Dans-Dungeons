@@ -419,6 +419,8 @@ export function castSpell(actor, spell, args = {}) {
   }
 
   let working = actor;
+  // The level actually paid for, once slot selection has run (see below).
+  let consumedLevel = null;
 
   // 3. Ritual vs normal slot consumption (SRD § Spells — Ritual).
   if (args.ritual === true) {
@@ -444,19 +446,29 @@ export function castSpell(actor, spell, args = {}) {
     const slotResult = consumeSlot(actor.spellSlots, slotLevel);
     if (!slotResult.ok) return { ok: false, reason: slotResult.reason };
     working = { ...working, spellSlots: slotResult.slots };
+    // consumeSlot takes the lowest slot of AT LEAST the requested level, so a
+    // 3rd-level request with only a 5th-level slot left burns the 5th. The cast
+    // must then happen at 5th too: reporting the requested level spent the
+    // bigger slot for none of its effect (Fireball at 3rd, extraDice 0).
+    consumedLevel = slotResult.levelCast;
   }
 
-  // 4. Concentration auto-bind (SRD § Spells — Concentration).
+  // 4. The level this cast actually happens at: the slot that was spent, not
+  // the one that was asked for.
+  const castLevel = args.ritual === true
+    ? spell.level
+    : (consumedLevel ?? args.slotLevel ?? spell.level);
+
+  // 5. Concentration auto-bind (SRD § Spells — Concentration).
   // Pairs with the 1.5.0 auto-drop on incapacitating conditions.
   if (spell.concentration === true) {
-    const result = startConcentration(working, { spellId: spell.id, level: args.slotLevel ?? spell.level });
+    const result = startConcentration(working, { spellId: spell.id, level: castLevel });
     working = result.actor;
   }
 
-  // 5. Upcast delta. Spell records expose a `upcast(level)` function
+  // 6. Upcast delta. Spell records expose a `upcast(level)` function
   // that returns the per-cast-level effect delta (e.g. Fireball
   // returns `{ extraDice: 1 }` per slot above 3rd).
-  const castLevel = args.ritual === true ? spell.level : (args.slotLevel ?? spell.level);
   const upcastEffect = typeof spell.upcast === 'function' ? spell.upcast(castLevel) : null;
 
   return {
