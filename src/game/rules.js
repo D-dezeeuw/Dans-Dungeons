@@ -3,8 +3,9 @@
 // Thin re-export shim for bag-of-holding.
 // All app code imports from here, never directly across repos.
 //
-//   Dev:     import map → /2026n/bag-of-holding/index.js
-//   Release: import map → pinned unpkg URL (swap in index.html)
+// The bare specifier is resolved by build.js's esbuild alias to the vendored
+// copy under vendor/bag-of-holding (kept in sync, and manifest-checked, by
+// scripts/vendor-sync.js). Nothing is loaded from a CDN.
 
 export {
   Dice,
@@ -12,6 +13,7 @@ export {
   Combat,
   Conditions,
   XP,
+  EncounterDesign,
   Character,
   SRD,
   Monsters,

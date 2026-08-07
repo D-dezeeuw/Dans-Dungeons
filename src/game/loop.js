@@ -22,6 +22,8 @@ import { recordMechanical, currentPlaceId, currentRoomId, entitiesUnder,
 import { extractCanon }                      from '../ai/canon.js';
 import { memoryContext, maybeRefreshDigest } from './chapters.js';
 import { commitCanon }                       from './canon-commit.js';
+import { awardXp, xpForKill, announcementFor } from './progression.js';
+import { statBlockFor }                      from './bestiary.js';
 import { t }                                 from '../i18n/i18n.js';
 
 // ─── Scene context (pure snapshot for AI) ────────────────────────────────────
@@ -188,6 +190,16 @@ export async function processTurn(playerInput, onNarrationChunk) {
   //     makes the world remember: the dice write ground truth, the GM writes
   //     colour, and colour may never overwrite truth.
   recordTurnMechanics(resolved, goblinResult, killedNpc);
+
+  // Experience for the kill. The engine has shipped the XP tables all along;
+  // nothing ever called them, so every campaign ran at level 1 forever.
+  let progression = null;
+  if (killedNpc) {
+    let block = null;
+    try { block = statBlockFor(killedNpc.creatureId); } catch { block = { cr: 0 }; }
+    progression = awardXp(xpForKill(killedNpc.creatureId, block),
+      t('progress.killReason', { name: killedNpc.name }));
+  }
   await absorbNarration(narratorResp.narration);
   await maybeRefreshDigest();   // rolling chapter memory (Epic E4)
 
@@ -198,7 +210,11 @@ export async function processTurn(playerInput, onNarrationChunk) {
   finalizeTurn(turnMark);
   commit();
 
-  return { ...narratorResp, _debug: { classified, resolved, goblinResult } };
+  return {
+    ...narratorResp,
+    progression: progression ? announcementFor(progression) : null,
+    _debug: { classified, resolved, goblinResult, progression },
+  };
 }
 
 // ─── World ledger (Epic E2) ──────────────────────────────────────────────────

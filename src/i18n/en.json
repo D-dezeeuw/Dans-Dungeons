@@ -134,6 +134,16 @@
     "previously": "Previously, in {{title}}: {{digest}}",
     "recapHeader": "Previously on your adventure…"
   },
+  "progress": {
+    "xpGained": "+{{xp}} XP — {{reason}}",
+    "levelUp": "You reach level {{level}}.",
+    "levelUpStats": "Maximum hit points are now {{hp}}; proficiency bonus +{{prof}}. You feel the difference.",
+    "xpLine": "XP {{xp}}{{next}} — level {{level}}",
+    "killReason": "defeated {{name}}",
+    "dungeonReason": "cleared {{name}}",
+    "questReason": "completed a quest",
+    "beatReason": "advanced the story"
+  },
   "storage": {
     "autosaveFailed": "Autosave has stopped working — browser storage is full. Everything from here on exists only in this tab. Export your game (Settings → Save) now.",
     "autosaveRecovered": "Autosave is working again — your progress is being written to disk.",

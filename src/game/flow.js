@@ -12,6 +12,7 @@ import { processTurn, checkApiKey, generateTurnImage, buildScene } from './loop.
 import { clearTurnMarks, setScrubHandler } from './undo.js';
 import { enterEncounterState, exitEncounterState } from './encounter-state.js';
 import { cutChapter, shouldCutChapter, recap, chapterIndex } from './chapters.js';
+import { awardMilestone, announcementFor, xpProgress } from './progression.js';
 import { seedCombat }     from './rng.js';
 import {
   goldOf, resolvePurchase, addToInventory, resolveRest, DEFAULT_REST_COST,
@@ -960,6 +961,9 @@ function resolveDungeonQuests() {
     setStoryFlag(`quest-${q.id}-done`);
     if (q.factionId) awardReputation(q.factionId, 15);
     UI.appendEntry('system', t('settlement.questCompleted', { desc: q.description }));
+    for (const line of announcementFor(awardMilestone('quest-completed', t('progress.questReason')))) {
+      UI.appendEntry('system', line);
+    }
   }
   saveToStorage();
 }
@@ -1151,6 +1155,7 @@ async function runEncounterLoop() {
     tick();
     UI.setThinking(false);
     if (!streamEl && result?.narration) UI.appendEntry('gm', result.narration);
+    for (const line of (result?.progression ?? [])) UI.appendEntry('system', line);
     UI.appendEntry('system', '');
     _speak(result?.narration);
     UI.updateDebugPanel(result?._debug);
@@ -1566,6 +1571,7 @@ async function playLoop() {
     tick();
     UI.setThinking(false);
     if (!streamEl && result?.narration) UI.appendEntry('gm', result.narration);
+    for (const line of (result?.progression ?? [])) UI.appendEntry('system', line);
     UI.appendEntry('system', '');
 
     const journalEntry = { turn: appState.session?.turnCount ?? 0, narration: result?.narration ?? '', imageSrc: null };
@@ -1606,6 +1612,10 @@ async function doVictory() {
   UI.appendEntry('gm', victoryText);
   UI.appendEntry('system', '');
   _speak(victoryText);
+  for (const line of announcementFor(awardMilestone('dungeon-cleared',
+        t('progress.dungeonReason', { name: room?.name ?? t('victory.banner') })))) {
+    UI.appendEntry('system', line);
+  }
   await markChapterBoundary('dungeon-cleared');
 
   // Campaign mode: return to settlement (don't set game-over)

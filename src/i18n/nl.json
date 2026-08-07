@@ -134,6 +134,16 @@
     "previously": "Eerder, in {{title}}: {{digest}}",
     "recapHeader": "Wat er eerder gebeurde…"
   },
+  "progress": {
+    "xpGained": "+{{xp}} XP — {{reason}}",
+    "levelUp": "Je bereikt niveau {{level}}.",
+    "levelUpStats": "Je maximale levenspunten zijn nu {{hp}}; vaardigheidsbonus +{{prof}}. Je voelt het verschil.",
+    "xpLine": "XP {{xp}}{{next}} — niveau {{level}}",
+    "killReason": "{{name}} verslagen",
+    "dungeonReason": "{{name}} gezuiverd",
+    "questReason": "een opdracht voltooid",
+    "beatReason": "het verhaal vooruitgeholpen"
+  },
   "storage": {
     "autosaveFailed": "Automatisch opslaan werkt niet meer — de browseropslag is vol. Alles vanaf nu bestaat alleen in dit tabblad. Exporteer je spel (Instellingen → Opslaan) nu.",
     "autosaveRecovered": "Automatisch opslaan werkt weer — je voortgang wordt weer weggeschreven.",
