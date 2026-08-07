@@ -6,7 +6,7 @@
 
 import { seededRng, rollDie, roll, rollAdvantage, rollDisadvantage } from './dice.js';
 import { abilityCheck, savingThrow } from './checks.js';
-import { attackRoll, damageRoll, rollInitiative } from './combat.js';
+import { attackRoll, damageRoll, rollInitiative, deathSave } from './combat.js';
 import { DEFAULT_RULES, buildRules } from './rules.js';
 
 // Mock-actor pair that produces the requested stance when fed into
@@ -149,6 +149,36 @@ export function verifyLog({ seed, log, rules: rulesOpt }) {
           return { ok: false, divergedAt: i, expected: entry, actual };
         }
         break;
+      case 'deathSave':
+        // A death save is one d20 plus the tracker it lands in. The entry
+        // snapshots the pre-roll tracker precisely so it is reconstructable
+        // without external state, so replay rebuilds a synthetic actor from it
+        // and checks the outcome, not just the die.
+        //
+        // Until this case existed, verifyLog threw on any log containing one —
+        // and a downed character is not an edge case. Downstream hosts worked
+        // around it by re-encoding the save as a bare rollDie(20), which cost
+        // them the outcome check this now performs.
+        actual = deathSave({
+          deathSaves: {
+            successes: entry.previousSuccesses ?? 0,
+            failures:  entry.previousFailures ?? 0,
+            stable: false, dead: false,
+          },
+        }, rng, rules);
+        if (actual.d20 !== entry.d20 || actual.outcome !== entry.outcome) {
+          return { ok: false, divergedAt: i, expected: entry, actual };
+        }
+        break;
+
+      // Bookkeeping entries: recorded so a log reads as a narrative of the
+      // session, but they draw no dice. Skipping them is what makes verifyLog
+      // TOTAL over the logs the engine actually produces — a class mechanic or
+      // a fired hook must not make a session unverifiable.
+      case 'mechanicApplied':
+      case 'hookFired':
+        break;
+
       default:
         throw new Error(`Cannot replay unknown roll op: ${entry.op}`);
     }

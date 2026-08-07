@@ -146,6 +146,33 @@ const _RAW_CONDITION_EFFECTS = {
 for (const v of Object.values(_RAW_CONDITION_EFFECTS)) Object.freeze(v);
 export const CONDITION_EFFECTS = Object.freeze(_RAW_CONDITION_EFFECTS);
 
+// ─── Condition records ───────────────────────────────────────────────────────
+//
+// An entry in `actor.conditions` is either a bare name (`'poisoned'`) or a
+// record carrying the metadata needed to clear it again:
+//
+//   { name: 'poisoned', source: 'giant-spider', saveAbility: 'con',
+//     dc: 11, endsOn: 'turnEnd' }
+//
+// Records shipped in 1.6.1 and were lost in the 2.1.0 merge, taking
+// `conditionName` and `conditionsRequiringSave` with them — so a host could
+// apply a condition with a save DC and had no way to ask what needed saving
+// against. Both shapes are accepted everywhere; a bare string is a record with
+// no metadata, which is exactly what most conditions are.
+
+function nameOf(entry) {
+  return typeof entry === 'string' ? entry : entry?.name;
+}
+
+/**
+ * Extract the condition name from a string or a `ConditionRecord`. Hosts
+ * iterating `actor.conditions` to build UI labels use this rather than
+ * re-implementing the shape check.
+ */
+export function conditionName(entry) {
+  return nameOf(entry);
+}
+
 /**
  * Compute the union of effect flags from an actor's active
  * conditions. Multiple conditions OR together — applying
@@ -157,8 +184,8 @@ export const CONDITION_EFFECTS = Object.freeze(_RAW_CONDITION_EFFECTS);
  */
 export function effectsFor(actor) {
   const flags = {};
-  for (const condition of actor.conditions ?? []) {
-    const effect = CONDITION_EFFECTS[condition];
+  for (const entry of actor.conditions ?? []) {
+    const effect = CONDITION_EFFECTS[nameOf(entry)];
     if (!effect) continue;
     for (const [k, v] of Object.entries(effect)) {
       if (typeof v === 'boolean') flags[k] = flags[k] || v;
@@ -225,7 +252,8 @@ export function attackStance({ attacker = {}, target = {}, attackerDistanceFt = 
  * bare actor record.
  */
 export function has(actor, condition) {
-  return Array.isArray(actor.conditions) && actor.conditions.includes(condition);
+  return Array.isArray(actor.conditions) &&
+    actor.conditions.some(e => nameOf(e) === condition);
 }
 
 /**
@@ -244,17 +272,22 @@ export function has(actor, condition) {
  * for homebrew without forking this function.
  */
 export function apply(actor, condition, allowedConditions = CONDITIONS) {
-  if (!allowedConditions.includes(condition)) throw new Error(`Unknown condition: ${condition}`);
+  // `condition` may be a bare name or a record carrying save metadata. The
+  // vocabulary gate applies to the NAME either way.
+  const name = nameOf(condition);
+  if (!allowedConditions.includes(name)) throw new Error(`Unknown condition: ${name}`);
   // SRD § Monsters — Immunities (since 1.5.0): actors with the
   // condition listed in their `conditionImmunities` are unaffected.
   // We return the unchanged actor rather than throwing so the host
   // chip / UI can render "immune" gracefully without branch logic.
-  if ((actor.conditionImmunities ?? []).includes(condition)) {
+  if ((actor.conditionImmunities ?? []).includes(name)) {
     return actor;
   }
-  const current = new Set(actor.conditions ?? []);
-  current.add(condition);
-  return { ...actor, conditions: [...current] };
+  // Dedupe by name, and let a re-application replace the entry: applying
+  // `{name:'poisoned', dc:13}` over a bare `'poisoned'` must upgrade it to the
+  // record, or the save metadata is silently dropped.
+  const kept = (actor.conditions ?? []).filter(e => nameOf(e) !== name);
+  return { ...actor, conditions: [...kept, condition] };
 }
 
 /**
@@ -274,9 +307,24 @@ export function isImmuneTo(actor, condition) {
  * first would just push the boilerplate one level out.
  */
 export function remove(actor, condition) {
-  const current = new Set(actor.conditions ?? []);
-  current.delete(condition);
-  return { ...actor, conditions: [...current] };
+  const name = nameOf(condition);
+  return {
+    ...actor,
+    conditions: (actor.conditions ?? []).filter(e => nameOf(e) !== name),
+  };
+}
+
+/**
+ * The conditions on this actor that end on a save at the given timing
+ * (`'turnEnd'` or `'turnStart'`). Only entries carrying *both*
+ * `saveAbility` and `dc` are returned — anything applied without save
+ * metadata cannot be auto-cleared by the engine, and a host that got it back
+ * here would have nothing to roll against.
+ */
+export function conditionsRequiringSave(actor, timing) {
+  return (actor.conditions ?? [])
+    .filter(e => typeof e === 'object' && e !== null &&
+                 e.endsOn === timing && e.saveAbility !== undefined && e.dc !== undefined);
 }
 
 // SRD 5.2 Exhaustion: cumulative levels 0–6.

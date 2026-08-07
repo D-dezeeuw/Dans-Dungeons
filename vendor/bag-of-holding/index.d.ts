@@ -24,10 +24,11 @@ export type ConditionName =
   | string;
 
 /**
- * Full condition record shape (since v1.6.1). Hosts can apply a plain
- * string for simple boolean conditions, or a record to attach save
- * metadata. The engine normalises string `apply` calls to `{ name }`
- * internally; `actor.conditions` always contains records at runtime.
+ * Full condition record shape (since v1.6.1, restored in 2.2.1). Hosts can
+ * apply a plain string for simple boolean conditions, or a record to attach
+ * save metadata. Entries are stored as given — `actor.conditions` may hold
+ * either shape, and every reader here accepts both. Use `conditionName` rather
+ * than reading `.name` when iterating.
  */
 export interface ConditionRecord {
   name: ConditionName;
@@ -706,17 +707,19 @@ export interface ConditionsNamespace {
   readonly CONDITIONS: readonly ConditionName[];
   readonly EXHAUSTION_MAX: number;
   has(actor: Actor, condition: ConditionName): boolean;
-  /** Apply a condition. Pass a plain string for a simple boolean condition
-   *  (idempotent, set semantics) or a `ConditionRecord` to attach save
-   *  metadata for save-at-turn-end/start enforcement (append semantics,
-   *  allows multiple sources). */
+  /** Apply a condition. Pass a plain string for a simple boolean condition,
+   *  or a `ConditionRecord` to attach save metadata. Deduped by name:
+   *  re-applying with metadata upgrades the existing entry rather than
+   *  duplicating it. */
   apply(actor: Actor, condition: ConditionName | ConditionRecord): Actor;
   /** Remove all entries with the given condition name. */
   remove(actor: Actor, condition: ConditionName | ConditionRecord): Actor;
   /** Extract the condition name from a string or record entry. */
   conditionName(entry: ConditionName | ConditionRecord): ConditionName;
-  /** Return entries that carry save metadata matching `timing`. Used
-   *  internally by `turnEnd` / `turnStart`; also useful for host UI. */
+  /** Entries carrying BOTH `saveAbility` and `dc` whose `endsOn` matches
+   *  `timing` — the conditions a host can roll a save against at that moment.
+   *  The engine does not auto-roll these; `turnEnd` / `turnStart` tick timers
+   *  and fire hooks, and the host decides whether to save. */
   conditionsRequiringSave(actor: Actor, timing: 'turnEnd' | 'turnStart'): ConditionRecord[];
   effectsFor(actor: Actor): Record<string, boolean | string>;
   attackStance(args: { attacker?: Actor; target?: Actor; attackerDistanceFt?: number }): 'normal' | 'advantage' | 'disadvantage';
