@@ -550,19 +550,25 @@
     "loot": [
       {
         "name": "healing potion",
-        "desc": "A small glass vial of red liquid that sloshes with a faint warmth."
+        "desc": "A small glass vial of red liquid that sloshes with a faint warmth.",
+        "heals": 8,
+        "consumable": true
       },
       {
         "name": "silver ring",
-        "desc": "A plain silver ring engraved with tiny runes on the inside band."
+        "desc": "A plain silver ring engraved with tiny runes on the inside band.",
+        "value": 25
       },
       {
         "name": "old journal",
-        "desc": "A leather-bound journal filled with frantic handwriting. The last entry is unfinished."
+        "desc": "A leather-bound journal filled with frantic handwriting. The last entry is unfinished.",
+        "lore": true
       },
       {
         "name": "handful of coins",
-        "desc": "A scatter of copper and silver coins, perhaps ten in all."
+        "desc": "A scatter of copper and silver coins, perhaps ten in all.",
+        "gold": 15,
+        "consumable": true
       }
     ],
     "enemyNames": {

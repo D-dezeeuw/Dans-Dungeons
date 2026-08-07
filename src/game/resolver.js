@@ -183,7 +183,14 @@ export function resolveRules(classified, roller = plainRoller()) {
       return { intent: 'use', itemId: item.id, itemName: item.name, consumed: true,
                healed: hpAfter - record.hpCurrent, hpBefore: record.hpCurrent, hpAfter };
     }
-    return { intent: 'use', itemId: item.id, itemName: item.name, consumed: false, noEffect: true };
+    if (item.gold) {
+      return { intent: 'use', itemId: item.id, itemName: item.name, consumed: true,
+               goldGained: item.gold, goldAfter: (record.gold ?? 0) + item.gold };
+    }
+    // Everything else is examined, not consumed — the narrator describes it but
+    // the world does not change, which is what noEffect tells it.
+    return { intent: 'use', itemId: item.id, itemName: item.name, consumed: false,
+             lore: !!item.lore, value: item.value ?? null, noEffect: true };
   }
 
   // ── LOOK ──────────────────────────────────────────────────────────────────
@@ -350,6 +357,9 @@ export function commitAll(resolved, goblinResult) {
   }
   if (resolved.intent === 'use' && resolved.consumed) {
     setValue('party.inventory', (appState.party?.inventory ?? []).filter(i => i.id !== resolved.itemId));
+  }
+  if (resolved.intent === 'use' && resolved.goldAfter != null) {
+    setValue('party.pc.record.gold', resolved.goldAfter);
   }
 
   // Item pickup

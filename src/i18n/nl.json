@@ -550,19 +550,25 @@
     "loot": [
       {
         "name": "genezingsdrank",
-        "desc": "Een klein glazen flesje met rode vloeistof dat klotst met een zwakke warmte."
+        "desc": "Een klein glazen flesje met rode vloeistof dat klotst met een zwakke warmte.",
+        "heals": 8,
+        "consumable": true
       },
       {
         "name": "zilveren ring",
-        "desc": "Een eenvoudige zilveren ring met kleine runen gegraveerd aan de binnenkant."
+        "desc": "Een eenvoudige zilveren ring met kleine runen gegraveerd aan de binnenkant.",
+        "value": 25
       },
       {
         "name": "oud dagboek",
-        "desc": "Een in leer gebonden dagboek vol gejaagd handschrift. De laatste vermelding is onafgemaakt."
+        "desc": "Een in leer gebonden dagboek vol gejaagd handschrift. De laatste vermelding is onafgemaakt.",
+        "lore": true
       },
       {
         "name": "handvol munten",
-        "desc": "Een verzameling koperen en zilveren munten, misschien tien in totaal."
+        "desc": "Een verzameling koperen en zilveren munten, misschien tien in totaal.",
+        "gold": 15,
+        "consumable": true
       }
     ],
     "enemyNames": {
