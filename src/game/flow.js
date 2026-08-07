@@ -14,7 +14,7 @@ import { enterEncounterState, exitEncounterState } from './encounter-state.js';
 import { cutChapter, shouldCutChapter, recap, chapterIndex } from './chapters.js';
 import { awardMilestone, announcementFor, xpProgress } from './progression.js';
 import { storyStalled, gmDirective, raiseFlag, progress as storyProgress, actNumber } from './acts-runtime.js';
-import { armThreatClocks, rumours } from './world-clocks.js';
+import { armThreatClocks, rumours, seedFactionClocks } from './world-clocks.js';
 import { initAtlas, initialAtlas, stubToward, hydrateRegion, mapView } from './atlas.js';
 import { seedCombat }     from './rng.js';
 import {
@@ -452,6 +452,12 @@ async function startCampaign() {
     geography: initialAtlas(region.id, region.name, appState.world?.seed),
   };
   setValue('world', worldState);
+
+  // Every faction starts working on something. These tick at chapter
+  // boundaries, so by the time the player comes out of their first dungeon the
+  // world has moved on its own — which is the whole point of having factions
+  // rather than a list of names with reputations attached.
+  seedFactionClocks(region.id);
 
   setValue('session.phase', 'play');
   commit();

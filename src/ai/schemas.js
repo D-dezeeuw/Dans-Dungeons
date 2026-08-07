@@ -174,7 +174,24 @@ export const ACT_SCHEMA = {
         additionalProperties: false,
       },
     },
+    // Foreshadowing this act plants and a LATER act must pay off (E7.S4). The
+    // payoff ledger has no other producer: without these, every act generates
+    // against an empty obligation list and clues stay cosmetic.
+    setups: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          id:       { type: 'string' },
+          clue:     { type: 'string' },
+          paysInto: { type: ['string', 'null'] },
+          dueByAct: { type: ['number', 'null'] },
+        },
+        required: ['id', 'clue', 'paysInto', 'dueByAct'],
+        additionalProperties: false,
+      },
+    },
   },
-  required: ['title', 'premise', 'beats'],
+  required: ['title', 'premise', 'beats', 'setups'],
   additionalProperties: false,
 };

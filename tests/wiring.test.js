@@ -29,9 +29,19 @@ const FILES = sourceFiles();
 const SOURCE = Object.fromEntries(FILES.map(f => [path.relative(ROOT, f), fs.readFileSync(f, 'utf8')]));
 
 // Everything except the module that defines it must be considered a consumer.
+//
+// An IMPORT IS NOT A CONSUMER. The first version of this file matched the bare
+// symbol anywhere in another file, so `import { plantClue } from ...` satisfied
+// it — and four capabilities (the payoff ledger, digest invalidation, chapter
+// titling, faction clocks) sat unused behind a green test for exactly that
+// reason. Strip import statements before looking, so only real references count.
+function withoutImports(src) {
+  return src.replace(/^\s*import\s[\s\S]*?from\s*['"][^'"]+['"];?\s*$/gm, '');
+}
+
 function callersOf(symbol, definedIn) {
   return Object.entries(SOURCE)
-    .filter(([file, src]) => file !== definedIn && new RegExp(`\\b${symbol}\\b`).test(src))
+    .filter(([file, src]) => file !== definedIn && new RegExp(`\\b${symbol}\\b`).test(withoutImports(src)))
     .map(([file]) => file);
 }
 
@@ -57,6 +67,13 @@ describe('every capability has a consumer', () => {
     ['adoptAct',          'src/game/acts-runtime.js',       'adding a generated act to the thread'],
     ['storyStalled',      'src/game/acts-runtime.js',       'escalating a frozen story'],
     ['generateAct',       'src/ai/acts.js',                 'act generation'],
+    // The second wave — all four were built, tested, exported and called by
+    // nothing until the audit found them. They are listed here so that can
+    // never be true again silently.
+    ['activeSetups',      'src/game/acts-runtime.js',       'the GM knowing which clues to seed'],
+    ['refreshStaleDigests','src/game/digests.js',           'digests that stop describing a dead world'],
+    ['titleChapter',      'src/ai/summarize.js',            'chapters with names instead of numbers'],
+    ['seedFactionClocks', 'src/game/world-clocks.js',       'factions that are working on something'],
   ];
 
   for (const [symbol, definedIn, powers] of WIRED) {
@@ -79,6 +96,35 @@ describe('the red thread runs on one runtime', () => {
   it('legacy saves are migrated rather than stranded', () => {
     assert.match(SOURCE['src/game/acts-runtime.js'], /redThread/,
       'an in-flight campaign must keep its progress when acts arrive');
+  });
+});
+
+describe('foreshadowing is planted, carried and paid', () => {
+  // The payoff ledger shipped complete — plantSetup, duePayoffs, paySetup, all
+  // tested in the library — and had no producer. duePayoffs() returned [] for
+  // the life of every campaign, so the act generator's "any unpaidSetups MUST
+  // be paid off" instruction was addressed to an empty list, forever.
+  it('an act plants the clues it generates', () => {
+    assert.match(SOURCE['src/game/acts-runtime.js'], /plantClue\(\{/,
+      'adoptAct must plant the generated setups, or the payoff ledger has no input');
+  });
+
+  it('the generator is asked for setups', () => {
+    assert.match(SOURCE['src/ai/schemas.js'], /setups:\s*\{/,
+      'ACT_SCHEMA must carry setups');
+  });
+
+  it('completing a beat pays off the clue that led to it', () => {
+    assert.match(SOURCE['src/game/acts-runtime.js'], /paysInto === beatId/,
+      'a beat that resolves a setup must settle it, or every clue stays due forever');
+  });
+
+  it('unpaid clues reach the GM privately, not the player', () => {
+    assert.match(SOURCE['src/game/scope.js'], /activeSetups\(\)/);
+    const scope = SOURCE['src/game/scope.js'];
+    const gmBlock = scope.slice(scope.indexOf('if (includeGmOnly)'));
+    assert.match(gmBlock, /gm\.setups/,
+      'setups must live in the gmOnly slice — foreshadowing handed to the player is not foreshadowing');
   });
 });
 

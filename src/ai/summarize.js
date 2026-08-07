@@ -39,6 +39,34 @@ export async function summarizeChapter({ previous = null, transcript = [], event
   }
 }
 
+// Re-render a place's digest so it accounts for what has happened there
+// (Epic E4.S3). Takes the PREVIOUS digest plus the ledger's one-line causes and
+// rewrites, rather than regenerating from scratch: a place's established
+// character has to survive its news. Returns null on failure — the caller keeps
+// the stale digest, which is better than losing the place's description.
+export async function redigestPlace({ kind = 'place', name = '', previous = '', changes = [] } = {}) {
+  if (!previous?.trim() || !changes.length) return null;
+  try {
+    const out = await chatCompletion({
+      tier: 'tiny',
+      maxTokens: 260,
+      temperature: 0.3,
+      messages: [
+        { role: 'system', content: t('ai.redigestPrompt', {
+            language: locale() === 'nl' ? 'Dutch' : 'English',
+            kind,
+            name,
+            changes: changes.join('; '),
+          }) },
+        { role: 'user', content: previous },
+      ],
+    });
+    return (typeof out === 'string' && out.trim()) ? out.trim() : null;
+  } catch {
+    return null;
+  }
+}
+
 // Name a chapter from its digest — one short evocative title, used at the
 // boundary ceremony. Falls back to null so a numbered title is used instead.
 export async function titleChapter(digest) {
