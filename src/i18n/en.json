@@ -879,5 +879,12 @@
     "worldgenStep6": "Generating the dungeon…",
     "worldgenDone": "The world is ready.",
     "defaultTone": "gritty low fantasy"
+  },
+  "thinking": {
+    "reading": "The Dungeon Master considers your words",
+    "rolling": "Dice clatter across the table",
+    "narrating": "The Dungeon Master speaks",
+    "remembering": "The Dungeon Master recalls what came before",
+    "building": "The world takes shape"
   }
 }

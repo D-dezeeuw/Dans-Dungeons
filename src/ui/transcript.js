@@ -5,6 +5,18 @@
 import { appState } from '../core/state.js';
 import { t } from '../i18n/i18n.js';
 
+// Stick to the bottom only when the player is already there. Auto-scrolling on
+// every streamed token yanked the viewport away from anyone reading back
+// through the log — during a 5-30s stream that is most of the time. A 60px
+// slack means "close enough to the bottom to count as following along".
+function scrollIfFollowing(el) {
+  const box = document.getElementById('transcript');
+  if (!box) { el.scrollIntoView({ block: 'end' }); return; }
+  const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 60;
+  if (atBottom) el.scrollIntoView({ behavior: 'smooth', block: 'end' });
+}
+
+
 const transcriptEl = () => document.getElementById('transcript');
 
 export function clear() {
@@ -16,7 +28,7 @@ export function appendEntry(role, text) {
   el.className = `entry entry-${role}`;
   el.textContent = text;
   transcriptEl().appendChild(el);
-  el.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  scrollIfFollowing(el);
   return el;
 }
 
@@ -40,24 +52,54 @@ export function beginStreamEntry(role) {
   const el = document.createElement('div');
   el.className = `entry entry-${role}`;
   transcriptEl().appendChild(el);
-  el.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  scrollIfFollowing(el);
   return el;
 }
 
 export function appendStreamChunk(el, chunk) {
   el.textContent += chunk;
-  el.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  scrollIfFollowing(el);
 }
 
-export function setThinking(on) {
-  const ID = 'thinking-indicator';
-  if (on) {
-    if (document.getElementById(ID)) return;
-    const el = appendEntry('thinking', '…');
-    el.id = ID;
-  } else {
-    document.getElementById(ID)?.remove();
+// A turn can take five to thirty seconds. A static "…" gives the player no way
+// to tell "the Game Master is thinking" from "the app has died", which is the
+// single loudest thing separating this from a polished product. Show what stage
+// the turn is at, and how long it has been going.
+const THINKING_ID = 'thinking-indicator';
+let thinkingTimer = null;
+let thinkingStage = null;
+
+export function setThinking(on, stage = null) {
+  if (!on) {
+    clearInterval(thinkingTimer);
+    thinkingTimer = null;
+    thinkingStage = null;
+    document.getElementById(THINKING_ID)?.remove();
+    return;
   }
+
+  thinkingStage = stage;
+  let el = document.getElementById(THINKING_ID);
+  if (!el) {
+    el = appendEntry('thinking', '');
+    el.id = THINKING_ID;
+    const started = Date.now();
+    const render = () => {
+      const secs = Math.floor((Date.now() - started) / 1000);
+      const dots = '.'.repeat(1 + (Math.floor((Date.now() - started) / 400) % 3));
+      const label = thinkingStage ? t(`thinking.${thinkingStage}`) : t('transcript.thinking');
+      // Elapsed time appears once the wait is long enough to worry about.
+      el.textContent = secs >= 3 ? `${label}${dots} (${secs}s)` : `${label}${dots}`;
+    };
+    render();
+    thinkingTimer = setInterval(render, 400);
+  }
+}
+
+// Update the stage without restarting the elapsed clock — the turn is one wait,
+// not three.
+export function setThinkingStage(stage) {
+  if (document.getElementById(THINKING_ID)) thinkingStage = stage;
 }
 
 // ─── Floating hover-speak button ──────────────────────────────────────────────

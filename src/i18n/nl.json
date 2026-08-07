@@ -857,5 +857,12 @@
     "worldgenStep6": "De kerker wordt gegenereerd…",
     "worldgenDone": "De wereld is gereed.",
     "defaultTone": "rauwe, aardse fantasy"
+  },
+  "thinking": {
+    "reading": "De Dungeon Master overweegt je woorden",
+    "rolling": "Dobbelstenen rollen over tafel",
+    "narrating": "De Dungeon Master spreekt",
+    "remembering": "De Dungeon Master haalt op wat eerder gebeurde",
+    "building": "De wereld krijgt vorm"
   }
 }

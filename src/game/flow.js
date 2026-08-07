@@ -1139,19 +1139,27 @@ async function runEncounterLoop() {
 
     UI.appendEntry('player', `> ${raw}`);
     UI.clearChips();
-    UI.setThinking(true);
+    UI.setThinking(true, 'reading');
+    // The turn moves through stages; the indicator follows it so a long wait
+    // reads as progress rather than as a hung app.
+    const stageTimer = setTimeout(() => UI.setThinkingStage('rolling'), 900);
 
     let streamEl = null;
-    const onChunk = (text) => { if (!streamEl) { UI.setThinking(false); streamEl = UI.beginStreamEntry('gm'); } UI.appendStreamChunk(streamEl, text); };
+    const onChunk = (text) => {
+      if (!streamEl) { clearTimeout(stageTimer); UI.setThinking(false); streamEl = UI.beginStreamEntry('gm'); }
+      UI.appendStreamChunk(streamEl, text);
+    };
 
     let result = null;
     try {
       result = await processTurn(raw, onChunk);
     } catch (e) {
+      clearTimeout(stageTimer);
       UI.setThinking(false); streamEl?.remove();
       UI.appendEntry('error', t('loop.error', { msg: e.message }));
       continue;
     }
+    clearTimeout(stageTimer);
     tick();
     UI.setThinking(false);
     if (!streamEl && result?.narration) UI.appendEntry('gm', result.narration);
@@ -1568,6 +1576,7 @@ async function playLoop() {
       continue;
     }
 
+    clearTimeout(stageTimer);
     tick();
     UI.setThinking(false);
     if (!streamEl && result?.narration) UI.appendEntry('gm', result.narration);

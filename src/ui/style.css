@@ -1017,3 +1017,37 @@ body.roleplay-mode #brand-bar   { display: none !important; }
 }
 .legal-line a { color: var(--system); text-decoration: underline; }
 .legal-line a:hover { color: var(--text); }
+
+/* ─── Accessibility and mobile (Epic E10) ────────────────────────────────── */
+
+/* iOS zooms the whole page when a focused input's text is under 16px. The game
+   is a text field the player lives in, so that zoom fired constantly. */
+@media (max-width: 767px) {
+  #cmd { font-size: 16px; }
+}
+
+/* There were no focus styles at all, so keyboard players could not see where
+   they were. Only shown for keyboard focus, so mouse users see no change. */
+:focus-visible {
+  outline: 2px solid var(--gm);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* The smallest type was 9px at a 2.1:1 contrast ratio — below the 4.5:1 floor
+   and below any readable size. Raise both without disturbing the layout. */
+.skill-ab,
+.char-spell-info {
+  font-size: 11px;
+  color: var(--text);
+  opacity: 0.75;
+}
+
+.legal-line { font-size: 11px; }
+
+/* Respect a player who has asked for less motion: the streaming transcript and
+   the thinking indicator are the two things that animate. */
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  html { scroll-behavior: auto; }
+}
