@@ -51,3 +51,9 @@ export function statBlockFor(monsterId) {
     cr:          m.cr ?? 0,
   };
 }
+
+// Every creature id the engine can actually run a fight with. Canon minting
+// (src/game/canon-commit.js) resolves a Game-Master-invented creature name
+// against this list, so "a ghoul haunts the privy" becomes a bindable stat
+// block rather than prose nothing can act on.
+export const KNOWN_CREATURE_IDS = Object.freeze(Object.keys(BESTIARY));

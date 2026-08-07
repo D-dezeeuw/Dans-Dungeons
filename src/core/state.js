@@ -80,6 +80,14 @@ const DEFAULTS = {
     // L03 — Settlements
     settlements: {},
 
+    // World ledger (Epic E2) — the world's memory. `ledger` is an append-only
+    // list of patches (mechanical from the engine, canon from narration);
+    // `ledgerBases` holds per-entity snapshots that compaction folds old local
+    // detail into. Current state of anything = fold(base, patches).
+    ledger:          [],
+    ledgerBases:     {},
+    ledgerRejected:  0,   // canon claims refused for contradicting the dice
+
     // Quest tracker (Phase 2) — { [questId]: { id, npcId, npcName, description, status } }
     quests: {},
 
