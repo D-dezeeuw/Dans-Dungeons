@@ -2,6 +2,7 @@
 // Also exports SKILLS (shared with actionbar.js) and classAbilities().
 
 import { prefillChip, fireChip } from './input.js';
+import { appState } from '../core/state.js';
 import { t, tRaw } from '../i18n/i18n.js';
 
 const actionChipsEl    = () => document.getElementById('action-chips');
@@ -172,6 +173,9 @@ export function showRoomChips(exits, loot) {
     { label: t('chips.look'),    value: t('chips.lookCmd') },
     { label: t('chips.talk'),    value: t('chips.talkCmd') },
     { label: t('chips.wait'),    value: t('chips.waitCmd') },
+    // Sketches are drawn on arrival rather than every turn; this is how a
+    // player asks for one of the moment they are actually in.
+    ...(appState.settings?.sceneImage ? [{ label: t('chips.sketch'), value: '/sketch' }] : []),
   ];
   showActionChips(actions);
 }

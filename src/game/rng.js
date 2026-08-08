@@ -75,9 +75,9 @@ export function plainRoller() {
 // One roller over an engine. Each method rolls through the engine (so the seeded
 // rng + SRD mechanics apply) and records one verifyLog-replayable entry in draw
 // order — but only when a seeded stream is active (`rng` set). The engine's own
-// rollLog isn't reused because it tags death saves with a `deathSave` op that
-// verifyLog can't replay; encoding the save as its single `rollDie(20)` keeps the
-// whole log verifiable.
+// rollLog isn't reused because it also records bookkeeping ops this game has no
+// use for; the entries written here use the engine's own op shapes, so
+// verifyLog replays them without translation.
 function roller(engine, rng) {
   const log = [];
   const seeded = rng != null;
@@ -107,9 +107,22 @@ function roller(engine, rng) {
       if (seeded) log.push({ op: 'rollDie', sides, value });
       return value;
     },
+    // Logged as the engine's own `deathSave` op (engine 2.2.1+), which records
+    // the pre-roll tracker so replay checks the OUTCOME, not just the die. This
+    // used to be re-encoded as a bare rollDie(20) because verifyLog threw on
+    // `deathSave` — the workaround cost the outcome check and is gone.
     deathSave(actor) {
       const r = engine.Combat.deathSave(actor);
-      if (seeded && r.outcome !== 'noop') log.push({ op: 'rollDie', sides: 20, value: r.d20 });
+      if (seeded && r.outcome !== 'noop') {
+        const prev = actor?.deathSaves ?? {};
+        log.push({
+          op: 'deathSave',
+          d20: r.d20,
+          outcome: r.outcome,
+          previousSuccesses: prev.successes ?? 0,
+          previousFailures:  prev.failures ?? 0,
+        });
+      }
       return r;
     },
     draws: () => (rng ? rng.draws() : 0),

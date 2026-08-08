@@ -39,10 +39,23 @@ export function tickWorldClocks() {
   for (const c of fired) {
     // A fired clock is world news: it lands in the ledger at regional scope, so
     // digests go stale and the next region summary has to account for it.
-    recordMechanical(c.owner ?? `${currentPlaceId()}.event.${c.id}`, 'escalated', true, {
-      scope: 'regional',
+    //
+    // A clock may carry its own consequences (`onFill`) — a faction project
+    // finishing changes something specific and says where. Without them we fall
+    // back to recording that the clock's own subject escalated.
+    const patches = c.onFill?.length ? c.onFill : [{
+      target: c.owner ?? `${currentPlaceId()}.event.${c.id}`,
+      path:   'escalated',
+      to:     true,
+      scope:  'regional',
       because: c.label,
-    });
+    }];
+    for (const p of patches) {
+      recordMechanical(p.target, p.path, p.to, {
+        scope:   p.scope   ?? 'regional',
+        because: p.because ?? c.label,
+      });
+    }
   }
   tick();
   return fired;
@@ -54,6 +67,51 @@ export function rumours({ limit = 2 } = {}) {
   return pressingClocks(clocks(), { limit })
     .map(c => t(`rumour.${c.mood}`, { subject: c.label }));
 }
+
+// ─── Faction projects ────────────────────────────────────────────────────────
+
+// Every faction is working on something. Without this, `addClock` had exactly
+// one caller — invented local threats — so "the world moved while you were in a
+// dungeon" only ever meant a ghoul got worse. Factions had reputations and
+// tensions and no agency at all.
+//
+// Deterministic: derived from the generated faction data, no LLM call, same
+// world → same projects. Segments are chapter-scale (6–8) so a project is a
+// slow pressure the player can see coming and interfere with, not an ambush.
+const PROJECTS = [
+  { kind: 'expand',      segments: 8 },
+  { kind: 'consolidate', segments: 6 },
+  { kind: 'strike',      segments: 6 },   // only when the faction has an enemy
+];
+
+export function seedFactionClocks(regionId) {
+  const factions = Object.values(appState.world?.factions ?? {});
+  if (!factions.length) return 0;
+
+  const region = `region.${slug(regionId ?? appState.world?.location?.regionId ?? 'wilds')}`;
+  let added = 0;
+
+  for (const f of factions) {
+    const enemy = (f.enemies ?? []).find(Boolean) ?? null;
+    for (const { kind, segments } of PROJECTS) {
+      if (kind === 'strike' && !enemy) continue;
+      const label = t(`clock.faction.${kind}`, { faction: f.name ?? f.id, enemy: enemy ?? '' });
+      const ok = addClock({
+        id:    `clock.faction.${slug(f.id ?? f.name)}.${kind}`,
+        label,
+        // The consequence lands on the REGION, so a finished project makes the
+        // region digest stale and the next summary has to account for it.
+        onFill: [{ target: region, path: `factionProject.${slug(f.id ?? f.name)}.${kind}`, to: 'done',
+                   scope: 'regional', because: label }],
+        segments,
+      });
+      if (ok) added++;
+    }
+  }
+  return added;
+}
+
+const slug = (x) => String(x).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'x';
 
 // Give every active threat in this place a clock, so a minted danger starts
 // counting down the moment it exists.

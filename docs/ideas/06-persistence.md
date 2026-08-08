@@ -1,7 +1,7 @@
 # 06 — Persistence
 
-> **IMPLEMENTATION STATUS (PARTIAL)** — audited 2026-08-07.
-> Versioned save envelopes, migrations and export/import shipped. The IndexedDB split this doc calls "essential, not optional" does NOT exist; saves are localStorage-only. The quota-failure UX specified here was implemented in 2026-08 (loud failure, pressure warning, corrupt-save quarantine). Multi-slot saves, compression and encryption remain unbuilt. Epic E3.
+> **IMPLEMENTATION STATUS (PARTIAL)** — audited 2026-08-07, re-stamped after E3.S1 landed.
+> The IndexedDB split this doc calls "essential, not optional" now exists (`bag-of-holding-client/src/persistence/idb.js`): every turn writes a bounded hot slice to localStorage and hands the rest to a segmented cold archive, degrading to hot-only where IndexedDB is refused. Versioned envelopes, migrations, export/import and the quota-failure UX all shipped. Still unbuilt: multi-tab safety (E3.S2 — two tabs are last-writer-wins), multi-slot saves (E3.S3), compression and encryption. The save envelope is still v2 with an identity-only migration.
 > Full evidence: [`docs/audit/2026-08-comprehensive-audit.md`](../audit/2026-08-comprehensive-audit.md).
 
 > **Status:** rough sketch.

@@ -6,7 +6,7 @@
 
 import { seededRng, rollDie, roll, rollAdvantage, rollDisadvantage } from './dice.js';
 import { abilityCheck, savingThrow } from './checks.js';
-import { attackRoll, damageRoll, rollInitiative } from './combat.js';
+import { attackRoll, damageRoll, rollInitiative, deathSave } from './combat.js';
 import { DEFAULT_RULES, buildRules } from './rules.js';
 
 // Mock-actor pair that produces the requested stance when fed into
@@ -156,13 +156,24 @@ export function verifyLog({ seed, log, rules: rulesOpt }) {
           return { ok: false, divergedAt: i, expected: entry, actual };
         }
         break;
-      // A death save draws exactly one d20 (the engine only records the entry
-      // when the save actually rolled), so it must consume a draw here or every
-      // subsequent roll in the log shifts and the whole verification diverges.
       case 'deathSave':
-        actual = rollDie(20, rng);
-        if (actual !== entry.d20) {
-          return { ok: false, divergedAt: i, expected: entry.d20, actual };
+        // A death save is one d20 plus the tracker it lands in. The entry
+        // snapshots the pre-roll tracker precisely so it is reconstructable
+        // without external state, so replay rebuilds a synthetic actor from it
+        // and checks the OUTCOME, not just the die — a log whose result was
+        // rewritten must not verify clean.
+        //
+        // Draw count is identical to rolling the d20 directly (deathSave calls
+        // rollDie(20) exactly once), so the stream stays aligned either way.
+        actual = deathSave({
+          deathSaves: {
+            successes: entry.previousSuccesses ?? 0,
+            failures:  entry.previousFailures ?? 0,
+            stable: false, dead: false,
+          },
+        }, rng, rules);
+        if (actual.d20 !== entry.d20 || actual.outcome !== entry.outcome) {
+          return { ok: false, divergedAt: i, expected: entry, actual };
         }
         break;
 

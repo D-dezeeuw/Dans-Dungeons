@@ -1,7 +1,7 @@
 # 08 — Secrets and GM modes
 
 > **IMPLEMENTATION STATUS (DOC-ONLY)** — audited 2026-08-07.
-> Only a per-NPC `secret` field with a host-controlled reveal gate exists. The GM secrets slice, the information-asymmetry model and player-as-GM mode B are unbuilt. Note the security caveat found in the audit: secrets currently ride verbatim inside prompts, so this design needs secrets-by-reference before it scales.
+> The GM secrets slice shipped with E5.S1: `assembleScope({includeGmOnly:true})` collects unrevealed NPC secrets, the beat directive and unpaid foreshadowing into a `gmOnly` block that reaches the narrator's system prompt and never the scene object the UI renders or the save serialises (`tests/wiring.test.js` asserts the separation). The information-asymmetry model and player-as-GM mode B are still unbuilt. The audit's caveat stands: secrets travel verbatim inside the prompt, so this design still wants secrets-by-reference before it scales.
 > Full evidence: [`docs/audit/2026-08-comprehensive-audit.md`](../audit/2026-08-comprehensive-audit.md).
 
 > **Status:** rough sketch.

@@ -200,6 +200,13 @@ export async function processTurn(playerInput, onNarrationChunk) {
     buildGmContext(),         // secrets + directive, system prompt only (E5.S1)
   );
 
+  // narrate() returns null when neither the stream nor the repair pass produced
+  // anything the player could read. Throwing here — BEFORE any commit — leaves
+  // the world untouched and no dangling undo mark, and hands flow.js its
+  // existing failure path. Committing a turn with an empty narration would
+  // advance the world behind a blank screen, which is the worse failure.
+  if (!narratorResp?.narration) throw new Error(t('loop.emptyNarration'));
+
   // 5. Commit the turn's mechanics, then tick so they're live in appState —
   //    the story-flag writes below spread the whole `world`, so they must build
   //    on the already-merged mechanics (not clobber them).
@@ -252,6 +259,12 @@ export async function processTurn(playerInput, onNarrationChunk) {
   // series only ever cost the player latency — two tiny-tier round trips back
   // to back at the end of every turn. Started together, awaited before the
   // undo boundary so their writes still land INSIDE this turn.
+  //
+  // Note that E2.S3 asked for extraction to run AFTER finalizeTurn. That is not
+  // safe: finalizeTurn stamps the undo boundary at the current history length,
+  // so anything written past it falls outside the turn and an undo would scrub
+  // the minted entities. Concurrency is the latency win that does not cost the
+  // save its integrity.
   const canonPass = absorbNarration(narratorResp.narration);
   const beatPass  = maybeAdvanceBeat(narratorResp.narration);
 

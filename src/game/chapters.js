@@ -18,9 +18,10 @@
 // a region left, a long rest taken in safety, or simply enough turns.
 
 import { appState, setValue, tick } from '../core/state.js';
-import { summarizeChapter } from '../ai/summarize.js';
+import { summarizeChapter, titleChapter } from '../ai/summarize.js';
 import { recentEvents, compactLedger } from './ledger.js';
 import { tickWorldClocks } from './world-clocks.js';
+import { refreshStaleDigests } from './digests.js';
 import { t } from '../i18n/i18n.js';
 
 const REFRESH_EVERY_TURNS = 6;    // how often the rolling digest is rewritten
@@ -100,9 +101,15 @@ export async function cutChapter(reason, { title = null } = {}) {
     events:     recentEvents({ limit: 10 }).map(e => e.because),
   });
 
+  // Name it. A chapter called "Chapter 4" is a counter; "The Road to Saltmarch"
+  // is the boundary ceremony the plan asked for, and the anchor the recap and
+  // the journal both cite. Cheap (tiny tier) and never fatal: an unnamed
+  // chapter falls back to its number.
+  const named = title ?? (digest ? await titleChapter(digest) : null);
+
   const closed = {
     id:        `ch-${chapterIndex()}`,
-    title:     title ?? t('chapter.untitled', { n: chapterIndex() }),
+    title:     named ?? t('chapter.untitled', { n: chapterIndex() }),
     digest:    digest ?? '',
     startTurn: start,
     endTurn:   turn,
@@ -124,6 +131,12 @@ export async function cutChapter(reason, { title = null } = {}) {
   // ...and the moment the world moves on its own. Threats the player walked
   // away from get worse; a filled clock becomes regional news.
   tickWorldClocks();
+
+  // A clock that fired wrote a regional patch, which means some digest now
+  // describes a world that no longer exists. Re-render those before the next
+  // chapter's first prompt is assembled, or the GM opens the chapter reading
+  // last chapter's world. Best-effort: a failed render keeps the old text.
+  try { await refreshStaleDigests(); } catch { /* stale beats broken */ }
 
   return closed;
 }

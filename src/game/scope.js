@@ -25,6 +25,7 @@ import { appState } from '../core/state.js';
 import { entitiesUnder, detailsAt, recentEvents, currentPlaceId, currentRoomId, hasEncountered } from './ledger.js';
 import { memoryContext } from './chapters.js';
 import { buildStoryContext } from './story.js';
+import { activeSetups } from './acts-runtime.js';
 import { BUDGET, estimateTokens, scopeCost } from './scope-budget.js';
 
 export { BUDGET, estimateTokens, scopeCost };
@@ -95,6 +96,10 @@ export function assembleScope({ includeGmOnly = false } = {}) {
       .filter(n => n?.secret && !n.secretRevealed)
       .map(n => ({ npc: n.name, secret: n.secret }));
     if (secrets.length) gm.secrets = secrets;
+    // Clues waiting to be dropped. GM-private by nature: foreshadowing the
+    // player is handed outright is not foreshadowing.
+    const setups = activeSetups();
+    if (setups.length) gm.setups = setups.slice(0, 4);
     if (Object.keys(gm).length) packet.gmOnly = gm;
   }
 

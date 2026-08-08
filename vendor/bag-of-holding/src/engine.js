@@ -247,6 +247,9 @@ function buildConditions(extraConditions = []) {
     remove: ConditionsBase.remove,
     effectsFor: ConditionsBase.effectsFor,
     attackStance: ConditionsBase.attackStance,
+    // Condition-record readers: restored after the 2.1.0 merge dropped them.
+    conditionName: ConditionsBase.conditionName,
+    conditionsRequiringSave: ConditionsBase.conditionsRequiringSave,
     exhaustion: ConditionsBase.exhaustion
   };
 }
@@ -687,7 +690,7 @@ export function createEngine(opts = {}) {
     grantTempHp: CombatBase.grantTempHp,
     applyDamage: (actor, args) => {
       const wasDead = actor.deathSaves?.dead ?? false;
-      const wasUnconscious = (actor.conditions ?? []).includes('unconscious');
+      const wasUnconscious = ConditionsBase.has(actor, 'unconscious');
       const result = CombatBase.applyDamage(actor, args);
       if (result.outcome === 'dead' && !wasDead) {
         hooks.fire('onDeath', { actor: result.actor, cause: 'damage', previous: actor });

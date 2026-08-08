@@ -1,19 +1,19 @@
 {
   "chrome": {
-    "title": "DnD – Dan's Dungeons",
+    "title": "DnD \u2013 Dan's Dungeons",
     "turn": "Beurt {{n}}",
     "costTitle": "Geschatte AI-kosten deze sessie",
     "toggleSettings": "Instellingen",
     "roleplayMode": "Rollenspelmodus",
-    "loading": "Dan's Dungeons wordt geladen…"
+    "loading": "Dan's Dungeons wordt geladen\u2026"
   },
   "sidebar": {
     "title": "Instellingen",
     "language": "Taal",
     "copyKey": "Kopieer API-sleutel",
     "close": "Instellingen sluiten",
-    "sceneSketch": "Scèneschets",
-    "sceneSketchTitle": "Genereer na elke beurt een AI-scèneschets",
+    "sceneSketch": "Sc\u00e8neschets",
+    "sceneSketchTitle": "Genereer na elke beurt een AI-sc\u00e8neschets",
     "sketch": "Schets",
     "sketchMin": "Schets minimaliseren",
     "sketchWin": "Schets in venster",
@@ -26,7 +26,7 @@
     "allSketches": "Alle Schetsen",
     "import": "Importeren",
     "journalTitle": "Download je avontuur als een HTML-dagboek",
-    "screenshotTitle": "Sla de huidige scèneschets op als PNG",
+    "screenshotTitle": "Sla de huidige sc\u00e8neschets op als PNG",
     "allSketchesTitle": "Download alle sessieschetsen als HTML",
     "importTitle": "Importeer een opgeslagen spelbestand"
   },
@@ -48,10 +48,10 @@
   },
   "input": {
     "placeholder": "Wat doe je?",
-    "disabled": "…",
+    "disabled": "\u2026",
     "pickDefault": "Voer een nummer of naam in, of druk op Enter voor standaard:",
     "pickNoDefault": "Voer een nummer of naam in:",
-    "pickError": "Voer 1–{{n}} of de optienaam in.",
+    "pickError": "Voer 1\u2013{{n}} of de optienaam in.",
     "micError": "Microfoonfout: {{msg}}",
     "micLabel": "Spraakinvoer opnemen",
     "micTitle": "Spreek je actie in (spatiebalk)",
@@ -62,7 +62,7 @@
   },
   "timeline": {
     "label": "Tijdlijn",
-    "title": "Tijdlijn — spring naar een beurt of vertakking",
+    "title": "Tijdlijn \u2014 spring naar een beurt of vertakking",
     "start": "Start",
     "others": "Andere tijdlijnen ({{n}})",
     "turns": "{{n}} beurten",
@@ -70,15 +70,15 @@
     "justNow": "zojuist",
     "minutesAgo": "{{n}}m geleden",
     "hoursAgo": "{{n}}u geleden",
-    "branchHint": "↳ Je bent teruggespoeld — een nieuwe actie start hier een vertakking (gebruikt AI)."
+    "branchHint": "\u21b3 Je bent teruggespoeld \u2014 een nieuwe actie start hier een vertakking (gebruikt AI)."
   },
   "audit": {
-    "ok": "✓ {{n}} gevechtsworpen geverifieerd — reproduceerbaar vanaf de seed.",
+    "ok": "\u2713 {{n}} gevechtsworpen geverifieerd \u2014 reproduceerbaar vanaf de seed.",
     "empty": "Nog geen geseede gevechtsworpen vastgelegd.",
-    "diverged": "✗ Worp-audit mislukt — afwijking bij item {{i}}."
+    "diverged": "\u2717 Worp-audit mislukt \u2014 afwijking bij item {{i}}."
   },
   "transcript": {
-    "thinking": "De Dungeon Master overdenkt…",
+    "thinking": "De Dungeon Master overdenkt\u2026",
     "readAloud": "Voorlezen"
   },
   "debug": {
@@ -91,25 +91,25 @@
   "setup": {
     "gameName": "Dan's Dungeons",
     "needKey": "Om te spelen heb je een gratis OpenRouter API-sleutel nodig.",
-    "signUp": "Meld je aan op openrouter.ai → API Keys.",
+    "signUp": "Meld je aan op openrouter.ai \u2192 API Keys.",
     "pasteKey": "Plak je OpenRouter API-sleutel:",
     "defaultUrl": "Standaard basis-URL: {{url}}",
     "customUrl": "Aangepaste basis-URL (druk op Enter voor standaard):",
     "keySaved": "Sleutel opgeslagen. Je kunt deze later wijzigen met /settings.",
-    "keyRejected": "API-sleutel geweigerd — Authenticatieheader ontbreekt (401).",
+    "keyRejected": "API-sleutel geweigerd \u2014 Authenticatieheader ontbreekt (401).",
     "pasteValid": "Plak een geldige OpenRouter API-sleutel om door te gaan:",
-    "keyUpdated": "Sleutel bijgewerkt — opnieuw proberen…",
-    "reRunSetup": "Sleutelinstellingen opnieuw uitvoeren…",
+    "keyUpdated": "Sleutel bijgewerkt \u2014 opnieuw proberen\u2026",
+    "reRunSetup": "Sleutelinstellingen opnieuw uitvoeren\u2026",
     "createCancelled": "Personage aanmaken geannuleerd. Ververs de pagina om opnieuw te proberen.",
     "connectQuestion": "Hoe wil je verbinden?",
     "connectOAuth": "Verbind met OpenRouter (gratis, 30 seconden)",
     "connectPaste": "Ik heb al een API-sleutel",
     "connectTry": "Probeer zonder account (gedeeld, kan traag zijn)",
-    "connectingOAuth": "Doorverwijzen naar OpenRouter…",
+    "connectingOAuth": "Doorverwijzen naar OpenRouter\u2026",
     "oauthSuccess": "Verbonden! Je persoonlijke API-sleutel is opgeslagen.",
     "oauthFail": "Verbinding mislukt. Je kunt handmatig een sleutel plakken met /settings.",
     "demoNotice": "Demomodus: deze sleutel wordt door alle spelers gedeeld, dus er geldt een limiet en je tekst loopt via het account van de host. Verbind je eigen sleutel voor een volledige campagne.",
-    "modelHealed": "Het '{{tier}}'-model ({{from}}) is niet meer beschikbaar — overgeschakeld naar {{to}}.",
+    "modelHealed": "Het '{{tier}}'-model ({{from}}) is niet meer beschikbaar \u2014 overgeschakeld naar {{to}}.",
     "oauthStateFail": "Die aanmelding is niet hier begonnen en is daarom niet voltooid. Open Instellingen en verbind opnieuw."
   },
   "tier": {
@@ -127,53 +127,53 @@
     "imageLabel": "Beeldgeneratie",
     "worldgenLabel": "Wereldgeneratie",
     "autoplayLabel": "Automatisch spelen",
-    "upgraded": "Geüpgraded naar Deluxe. Alle functies ontgrendeld.",
-    "downgraded": "Sleutel ongeldig — terugvallen op Gratis versie."
+    "upgraded": "Ge\u00fcpgraded naar Deluxe. Alle functies ontgrendeld.",
+    "downgraded": "Sleutel ongeldig \u2014 terugvallen op Gratis versie."
   },
   "chapter": {
     "untitled": "Hoofdstuk {{n}}",
-    "banner": "── Hoofdstuk {{n}} — {{title}} ──",
+    "banner": "\u2500\u2500 Hoofdstuk {{n}} \u2014 {{title}} \u2500\u2500",
     "previously": "Eerder, in {{title}}: {{digest}}",
-    "recapHeader": "Wat er eerder gebeurde…"
+    "recapHeader": "Wat er eerder gebeurde\u2026"
   },
   "progress": {
-    "xpGained": "+{{xp}} XP — {{reason}}",
+    "xpGained": "+{{xp}} XP \u2014 {{reason}}",
     "levelUp": "Je bereikt niveau {{level}}.",
     "levelUpStats": "Je maximale levenspunten zijn nu {{hp}}; vaardigheidsbonus +{{prof}}. Je voelt het verschil.",
-    "xpLine": "XP {{xp}}{{next}} — niveau {{level}}",
+    "xpLine": "XP {{xp}}{{next}} \u2014 niveau {{level}}",
     "killReason": "{{name}} verslagen",
     "dungeonReason": "{{name}} gezuiverd",
     "questReason": "een opdracht voltooid",
     "beatReason": "het verhaal vooruitgeholpen"
   },
   "storage": {
-    "autosaveFailed": "Automatisch opslaan werkt niet meer — de browseropslag is vol. Alles vanaf nu bestaat alleen in dit tabblad. Exporteer je spel (Instellingen → Opslaan) nu.",
-    "autosaveRecovered": "Automatisch opslaan werkt weer — je voortgang wordt weer weggeschreven.",
+    "autosaveFailed": "Automatisch opslaan werkt niet meer \u2014 de browseropslag is vol. Alles vanaf nu bestaat alleen in dit tabblad. Exporteer je spel (Instellingen \u2192 Opslaan) nu.",
+    "autosaveRecovered": "Automatisch opslaan werkt weer \u2014 je voortgang wordt weer weggeschreven.",
     "nearlyFull": "De browseropslag is {{pct}}% vol. Overweeg je spel te exporteren als back-up.",
     "corruptSave": "Een eerdere opgeslagen game kon niet gelezen worden en is apart gezet. Importeer een savebestand om die run voort te zetten.",
-    "secondTab": "Deze campagne staat al open in een ander tabblad. Dit tabblad slaat niets op — sluit het andere en herlaad om hier te spelen."
+    "secondTab": "Deze campagne staat al open in een ander tabblad. Dit tabblad slaat niets op \u2014 sluit het andere en herlaad om hier te spelen."
   },
   "meta": {
     "saved": "Spel opgeslagen in localStorage.",
-    "saveFailed": "Opslaan MISLUKT — de browseropslag is vol. Exporteer je spel (Instellingen → Opslaan) voordat je dit tabblad sluit.",
-    "status": "{{name}} — HP {{hp}}/{{max}}, AC {{ac}}",
-    "helpList": "/save · /status · /settings · /restart · /help",
+    "saveFailed": "Opslaan MISLUKT \u2014 de browseropslag is vol. Exporteer je spel (Instellingen \u2192 Opslaan) voordat je dit tabblad sluit.",
+    "status": "{{name}} \u2014 HP {{hp}}/{{max}}, AC {{ac}}",
+    "helpList": "/save \u00b7 /status \u00b7 /settings \u00b7 /restart \u00b7 /help",
     "unknownCmd": "Onbekend commando: {{cmd}}  (probeer /help)"
   },
   "newgame": {
     "modeQuestion": "Hoe wil je spelen?",
-    "modeCampaign": "Nieuwe Campagne (AI-wereld — ~60s)",
+    "modeCampaign": "Nieuwe Campagne (AI-wereld \u2014 ~60s)",
     "modeQuickDungeon": "Snelle Kerker (direct)",
-    "sketchHint": "(zwarte inkt op sepia perkament — kost een paar extra credits per beurt)",
-    "sketchQuestion": "Na elke beurt een AI-scèneschets genereren?",
-    "sketchYes": "Ja, schets elke scène",
+    "sketchHint": "(zwarte inkt op sepia perkament \u2014 kost een paar extra credits per beurt)",
+    "sketchQuestion": "Na elke beurt een AI-sc\u00e8neschets genereren?",
+    "sketchYes": "Ja, schets elke sc\u00e8ne",
     "sketchNo": "Nee, bedankt",
     "ttsQuestion": "Spraakvertelling inschakelen?",
     "ttsYes": "Ja, lees het verhaal voor",
     "ttsNo": "Nee, bedankt"
   },
   "settlement": {
-    "banner": "── {{name}} ──────────────────────────────────",
+    "banner": "\u2500\u2500 {{name}} \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500",
     "youAreIn": "Je staat in {{name}}.",
     "npcList": "Mensen hier:",
     "exitList": "Paden vanaf hier:",
@@ -185,7 +185,7 @@
     "rest": "Rust in de herberg",
     "restCmd": "Ik rust in de herberg",
     "questReceived": "Opdracht: {{hook}}",
-    "travelDungeon": "Je vertrekt richting {{name}}…",
+    "travelDungeon": "Je vertrekt richting {{name}}\u2026",
     "returnSettlement": "Je keert terug naar {{name}}.",
     "goldLine": "Je draagt {{gold}} goud bij je.",
     "goldWord": "goud",
@@ -203,27 +203,27 @@
     "questAccepted": "Opdracht aangenomen: {{hook}}",
     "questDeclined": "Je wijst het voorlopig af.",
     "leaveChip": "Stop met praten met {{name}}",
-    "leaveCmd": "Ik beëindig het gesprek",
+    "leaveCmd": "Ik be\u00ebindig het gesprek",
     "npcSilent": "{{name}} kijkt je wantrouwig aan en zegt niets.",
-    "secretRevealed": "{{name}} laat iets ontvallen — {{secret}}",
+    "secretRevealed": "{{name}} laat iets ontvallen \u2014 {{secret}}",
     "shopEmpty": "Niemand hier heeft iets te verkopen.",
     "shopBanner": "Te koop (je hebt {{gold}} goud):",
-    "buyChip": "{{name}} — {{price}} gp",
+    "buyChip": "{{name}} \u2014 {{price}} gp",
     "leaveShop": "Verlaat de winkel",
     "leaveShopCmd": "Ik ben klaar met winkelen",
     "noSuchItem": "Dat zie je niet te koop staan.",
-    "cantAfford": "Je kunt de {{name}} niet betalen — je hebt {{short}} goud meer nodig.",
+    "cantAfford": "Je kunt de {{name}} niet betalen \u2014 je hebt {{short}} goud meer nodig.",
     "bought": "Je koopt de {{name}} voor {{price}} goud. ({{gold}} goud over)",
-    "cantAffordRest": "Je kunt geen kamer betalen — je hebt {{short}} goud meer nodig.",
+    "cantAffordRest": "Je kunt geen kamer betalen \u2014 je hebt {{short}} goud meer nodig.",
     "restDone": "Je neemt een kamer en slaapt diep, volledig uitgerust wakker. ({{gold}} goud over)",
     "restFree": "Je vindt een rustig hoekje en rust tot je volledig hersteld bent.",
     "questsHeader": "Jouw opdrachten:",
     "questsEmpty": "Je hebt geen actieve opdrachten.",
-    "questLine": "  • {{desc}} — {{status}} (van {{npc}})",
+    "questLine": "  \u2022 {{desc}} \u2014 {{status}} (van {{npc}})",
     "inventoryHeader": "Je draagt bij je:",
     "inventoryEmpty": "Je rugzak is leeg.",
-    "invLine": "  • {{name}}{{qty}}",
-    "roadNotReady": "De weg strekt zich uit naar de wildernis — maar die reis is nog niet voor jou weggelegd.",
+    "invLine": "  \u2022 {{name}}{{qty}}",
+    "roadNotReady": "De weg strekt zich uit naar de wildernis \u2014 maar die reis is nog niet voor jou weggelegd.",
     "status": {
       "active": "actief",
       "completed": "voltooid",
@@ -237,9 +237,9 @@
     "rumourHeader": "Waar men over praat:"
   },
   "adventure": {
-    "banner": "── HET AVONTUUR BEGINT ───────────────────────",
+    "banner": "\u2500\u2500 HET AVONTUUR BEGINT \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500",
     "exits": "Uitgangen: {{dirs}}",
-    "resumeBanner": "── AVONTUUR HERVATTEN ────────────────────────",
+    "resumeBanner": "\u2500\u2500 AVONTUUR HERVATTEN \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500",
     "resumeStats": "HP: {{hp}}/{{max}}  Beurt: {{turn}}"
   },
   "describe": {
@@ -260,43 +260,43 @@
     "template": "Je bent {{name}}, een {{health}} {{exp}} {{class}} met {{armor}}."
   },
   "loop": {
-    "retrying": "Opnieuw proberen… ({{n}}/{{total}})",
+    "retrying": "Opnieuw proberen\u2026 ({{n}}/{{total}})",
     "authFail": "Nog steeds mislukt na herauthenticatie. Gebruik /settings om je API-sleutel bij te werken.",
     "gmUnavailable": "De Game Master was niet beschikbaar. Probeer het opnieuw wanneer je klaar bent.",
     "error": "Fout: {{msg}}",
     "turnFail": "De beurt kon niet worden afgehandeld. Probeer opnieuw of typ /restart.",
     "restart": "Herstarten",
-    "narrationMissing": "(De woorden van de Spelleider kwamen niet aan. Er is niets in de wereld veranderd — probeer het opnieuw.)"
+    "narrationMissing": "(De woorden van de Spelleider kwamen niet aan. Er is niets in de wereld veranderd \u2014 probeer het opnieuw.)"
   },
   "victory": {
-    "banner": "══ OVERWINNING ══════════════════════════════",
-    "text": "Je hebt {{treasure}} gevonden en bent levend ontsnapt. Het avontuur eindigt in triomf — voor nu.",
+    "banner": "\u2550\u2550 OVERWINNING \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550",
+    "text": "Je hebt {{treasure}} gevonden en bent levend ontsnapt. Het avontuur eindigt in triomf \u2014 voor nu.",
     "hint": "Typ /restart om opnieuw te spelen."
   },
   "defeat": {
-    "banner": "══ NEDERLAAG ═════════════════════════════════",
-    "text": "De wereld vervaagt en je zakt ineen op de koude vloer. Je avontuur eindigt hier — voor nu.",
+    "banner": "\u2550\u2550 NEDERLAAG \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550",
+    "text": "De wereld vervaagt en je zakt ineen op de koude vloer. Je avontuur eindigt hier \u2014 voor nu.",
     "hint": "Typ /restart om het opnieuw te proberen.",
-    "textBy": "De wereld vervaagt. {{killer}} staat over je heen terwijl je ineenzakt op de koude vloer. Je avontuur eindigt hier — voor nu.",
-    "textByIn": "De wereld vervaagt. {{killer}} staat over je heen, en {{place}} is het laatste wat je ziet. Je avontuur eindigt hier — voor nu."
+    "textBy": "De wereld vervaagt. {{killer}} staat over je heen terwijl je ineenzakt op de koude vloer. Je avontuur eindigt hier \u2014 voor nu.",
+    "textByIn": "De wereld vervaagt. {{killer}} staat over je heen, en {{place}} is het laatste wat je ziet. Je avontuur eindigt hier \u2014 voor nu."
   },
   "deathsave": {
-    "strike": "{{enemy}} doemt op boven je bewusteloze lichaam en haalt uit voor {{damage}} schade — een slag tegen de stervende.",
-    "success": "Je hart vecht door. (Doodsworp: {{d20}} gegooid — succes {{n}}/3)",
-    "failure": "Je leven sijpelt verder weg in het duister. (Doodsworp: {{d20}} gegooid — mislukking {{n}}/3)",
+    "strike": "{{enemy}} doemt op boven je bewusteloze lichaam en haalt uit voor {{damage}} schade \u2014 een slag tegen de stervende.",
+    "success": "Je hart vecht door. (Doodsworp: {{d20}} gegooid \u2014 succes {{n}}/3)",
+    "failure": "Je leven sijpelt verder weg in het duister. (Doodsworp: {{d20}} gegooid \u2014 mislukking {{n}}/3)",
     "stable": "Je ademhaling stabiliseert. Met geen vijand meer overeind sleep je jezelf terug van de rand en sta je op met 1 levenspunt.",
     "revived": "Een natuurlijke 20! Je hapt naar adem en krabbelt terug overeind met 1 levenspunt.",
     "dead": "Je ogen breken en je strijd valt stil. Hier eindigt je verhaal."
   },
   "charCreate": {
-    "banner1": "═══════════════════════════",
+    "banner1": "\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550",
     "banner2": "    PERSONAGE AANMAKEN",
     "namePrompt": "Hoe heet je avonturier? [Dan]:",
     "classPrompt": "Kies je klasse:",
     "speciesPrompt": "Kies je ras:",
     "bgPrompt": "Kies je achtergrond:",
-    "forging": "Het lot van {{name}} wordt gesmeed…",
-    "default": "← standaard"
+    "forging": "Het lot van {{name}} wordt gesmeed\u2026",
+    "default": "\u2190 standaard"
   },
   "world": {
     "houseStyles": [
@@ -341,25 +341,25 @@
         },
         {
           "name": "Feestzaal",
-          "desc": "Een enorme feestzaal met een kroonluchter die scheef aan een enkele ketting hangt. Borden staan nog op tafel — een feest dat tientallen jaren geleden werd onderbroken."
+          "desc": "Een enorme feestzaal met een kroonluchter die scheef aan een enkele ketting hangt. Borden staan nog op tafel \u2014 een feest dat tientallen jaren geleden werd onderbroken."
         },
         {
           "name": "Galerij",
           "desc": "Een lange galerij met lege portretlijsten. De schilderijen zijn weg, maar vage omtrekken op de muren suggereren wat er ooit hing."
         },
         {
-          "name": "Audiëntiekamer",
-          "desc": "Een verhoogd podium aan het ene uiteinde suggereert dat dit ooit een audiëntiekamer was. De stoel erop is tot brandhout geslagen."
+          "name": "Audi\u00ebntiekamer",
+          "desc": "Een verhoogd podium aan het ene uiteinde suggereert dat dit ooit een audi\u00ebntiekamer was. De stoel erop is tot brandhout geslagen."
         }
       ],
       "corridor": [
         {
           "name": "Stenen Gang",
-          "desc": "Een lange gang doorkruist het hart van het gebouw. Wandlamphouders bevatten niets meer dan kaarsenstompjes. Je voetstappen echoën tegen het kale steen."
+          "desc": "Een lange gang doorkruist het hart van het gebouw. Wandlamphouders bevatten niets meer dan kaarsenstompjes. Je voetstappen echo\u00ebn tegen het kale steen."
         },
         {
           "name": "Smalle Doorgang",
-          "desc": "Een smalle doorgang, amper breed genoeg voor één persoon. De muren drukken dicht en de lucht is muf. Iets krast zwak in het donker voor je."
+          "desc": "Een smalle doorgang, amper breed genoeg voor \u00e9\u00e9n persoon. De muren drukken dicht en de lucht is muf. Iets krast zwak in het donker voor je."
         },
         {
           "name": "Gewelfde Gang",
@@ -377,19 +377,19 @@
       "chamber": [
         {
           "name": "Stoffige Kamer",
-          "desc": "Een vierkante kamer dik onder het stof. Voetstappen anders dan de jouwe kruisen de vloer — iemand was hier recent."
+          "desc": "Een vierkante kamer dik onder het stof. Voetstappen anders dan de jouwe kruisen de vloer \u2014 iemand was hier recent."
         },
         {
           "name": "Ronde Kamer",
-          "desc": "Een merkwaardige ronde kamer met een koepelplafond. Akoestische trucs laten elk geluid weergalmen — zelfs je ademhaling voelt versterkt."
+          "desc": "Een merkwaardige ronde kamer met een koepelplafond. Akoestische trucs laten elk geluid weergalmen \u2014 zelfs je ademhaling voelt versterkt."
         },
         {
           "name": "Voorkamer",
-          "desc": "Een kleine voorkamer met een mozaïekvloer, de meeste tegels gebarsten of ontbrekend. Wat rest toont een slang die zijn eigen staart opeet."
+          "desc": "Een kleine voorkamer met een moza\u00efekvloer, de meeste tegels gebarsten of ontbrekend. Wat rest toont een slang die zijn eigen staart opeet."
         },
         {
           "name": "Wachtkamer",
-          "desc": "Een wachtkamer met wapenrekken aan elke muur — allemaal leeg. Een tafel bevat dobbelstenen en de resten van een onderbroken kaartspel."
+          "desc": "Een wachtkamer met wapenrekken aan elke muur \u2014 allemaal leeg. Een tafel bevat dobbelstenen en de resten van een onderbroken kaartspel."
         },
         {
           "name": "Koude Kamer",
@@ -407,7 +407,7 @@
         },
         {
           "name": "Wijnkelder",
-          "desc": "Gebroken vaten staan langs de muren van deze wijnkelder. Een donkere vlek bedekt de vloer — wijn of bloed, moeilijk te zeggen. Eén vat blijft verzegeld."
+          "desc": "Gebroken vaten staan langs de muren van deze wijnkelder. Een donkere vlek bedekt de vloer \u2014 wijn of bloed, moeilijk te zeggen. E\u00e9n vat blijft verzegeld."
         },
         {
           "name": "Wapenkamer",
@@ -425,7 +425,7 @@
         },
         {
           "name": "Slaapkamer",
-          "desc": "Een slaapkamer met een hemelbed — matras en gordijnen allang verdwenen. Krassen op de bedstijl tellen de dagen dat iemand hier opgesloten zat."
+          "desc": "Een slaapkamer met een hemelbed \u2014 matras en gordijnen allang verdwenen. Krassen op de bedstijl tellen de dagen dat iemand hier opgesloten zat."
         },
         {
           "name": "Studeerkamer",
@@ -433,7 +433,7 @@
         },
         {
           "name": "Kinderkamer",
-          "desc": "Een kinderkamer met een schommelwieg in de hoek. Speelgoed ligt verspreid op de vloer — houten soldaatjes en een stoffen pop zonder gezicht."
+          "desc": "Een kinderkamer met een schommelwieg in de hoek. Speelgoed ligt verspreid op de vloer \u2014 houten soldaatjes en een stoffen pop zonder gezicht."
         },
         {
           "name": "Monnikencel",
@@ -443,11 +443,11 @@
       "shrine": [
         {
           "name": "Vervallen Kapel",
-          "desc": "Een kleine kapel met omgeworpen kerkbanken en een bezoedeld altaar. Kaarsenstompjes omringen het gebroken altaar — iemand bad hier niet lang geleden."
+          "desc": "Een kleine kapel met omgeworpen kerkbanken en een bezoedeld altaar. Kaarsenstompjes omringen het gebroken altaar \u2014 iemand bad hier niet lang geleden."
         },
         {
           "name": "Crypte",
-          "desc": "Een crypte met nissen die stenen doodskisten bevatten. De meeste zijn verzegeld. Eén is open — en leeg. Grafstof bedekt alles."
+          "desc": "Een crypte met nissen die stenen doodskisten bevatten. De meeste zijn verzegeld. E\u00e9n is open \u2014 en leeg. Grafstof bedekt alles."
         },
         {
           "name": "Rituele Kamer",
@@ -455,7 +455,7 @@
         },
         {
           "name": "Ossuarium",
-          "desc": "Botten gestapeld van vloer tot plafond in nette rijen — schedels gerangschikt in geometrische patronen. De lucht is droog met een minerale smaak."
+          "desc": "Botten gestapeld van vloer tot plafond in nette rijen \u2014 schedels gerangschikt in geometrische patronen. De lucht is droog met een minerale smaak."
         },
         {
           "name": "Schrijn",
@@ -465,11 +465,11 @@
       "vault": [
         {
           "name": "Studeerkamer",
-          "desc": "De studeerkamer is in wanorde — boekenplanken geplunderd, papieren verspreid. Maar in het midden zit {{treasure}} onaangeroerd, alsof beschermd door een oude bezwering. Een uitweg wenkt."
+          "desc": "De studeerkamer is in wanorde \u2014 boekenplanken geplunderd, papieren verspreid. Maar in het midden zit {{treasure}} onaangeroerd, alsof beschermd door een oude bezwering. Een uitweg wenkt."
         },
         {
           "name": "Trofeekamer",
-          "desc": "Glazen vitrines staan langs de muren, de meeste gebroken en leeg. Maar één sokkel draagt nog zijn prijs: {{treasure}}. Een achteruitgang staat op een kier."
+          "desc": "Glazen vitrines staan langs de muren, de meeste gebroken en leeg. Maar \u00e9\u00e9n sokkel draagt nog zijn prijs: {{treasure}}. Een achteruitgang staat op een kier."
         },
         {
           "name": "Kluis",
@@ -477,11 +477,11 @@
         },
         {
           "name": "Verborgen Kamer",
-          "desc": "Een verborgen kamer achter een valse muur. Spinnenwebben wijken om {{treasure}} te onthullen, rustend op een fluwelen kussen. Licht filtert binnen door een scheur in het plafond — vrijheid."
+          "desc": "Een verborgen kamer achter een valse muur. Spinnenwebben wijken om {{treasure}} te onthullen, rustend op een fluwelen kussen. Licht filtert binnen door een scheur in het plafond \u2014 vrijheid."
         },
         {
           "name": "Schatkamer",
-          "desc": "Een kleine schatkamer met ijzeren kisten — allemaal leeg op één na. Erin: {{treasure}}. Een afvoerrooster in de vloer leidt naar de buitenlucht."
+          "desc": "Een kleine schatkamer met ijzeren kisten \u2014 allemaal leeg op \u00e9\u00e9n na. Erin: {{treasure}}. Een afvoerrooster in de vloer leidt naar de buitenlucht."
         }
       ]
     },
@@ -500,7 +500,7 @@
       },
       {
         "name": "botten sleutel",
-        "desc": "Een sleutel gesneden uit een enkel stuk bot — zijn herkomst kun je maar beter niet vragen."
+        "desc": "Een sleutel gesneden uit een enkel stuk bot \u2014 zijn herkomst kun je maar beter niet vragen."
       }
     ],
     "treasures": [
@@ -518,7 +518,7 @@
       },
       {
         "name": "juwelen ceremonieel zwaard",
-        "desc": "Een zwaard meer kunst dan wapen — het gevest bezet met robijnen en gegraveerd zilver."
+        "desc": "Een zwaard meer kunst dan wapen \u2014 het gevest bezet met robijnen en gegraveerd zilver."
       }
     ],
     "loot": [
@@ -598,14 +598,14 @@
     "enemyIntroGeneric": "{{name}} draait zich naar je toe, vijandig en klaar om te vechten.",
     "enemyIntros": {
       "acolyte": "Een gewaad-dragende acoliet kijkt op van een halfvoltooid ritueel; zijn blik verhardt terwijl hij naar een knuppel grijpt.",
-      "animated-armor": "Een leeg harnas klettert tot leven en heft een gepantserde vuist in verdediging — met niemand erin.",
+      "animated-armor": "Een leeg harnas klettert tot leven en heft een gepantserde vuist in verdediging \u2014 met niemand erin.",
       "ankheg": "De vloer barst open als een ankheg omhoogschiet, kaken wijd, zuur sissend over zijn chitine.",
       "bandit": "Een bandiet stapt uit de dekking, het zwaard al getrokken. \"Verkeerde plek, vriend.\"",
       "bandit-captain": "Een gelittekende kapitein staat op van een geplunderde troon, een kling in elke hand. \"Dood ze.\"",
       "banshee": "Een banshee ontvouwt zich uit de duisternis, haar mond open op een gil die belooft je hart stil te zetten.",
       "black-bear": "Een zwarte beer richt zich brullend op, klauwen die door de lucht harken.",
       "bugbear": "Een bugbear ontvouwt zich uit het donker, veel groter dan je dacht, een gepinde morgenster in zijn vuist.",
-      "cave-spider": "Zijden draden vangen het licht, een tel voordat je de spin ziet — opgezwollen, zwartpotig en snel.",
+      "cave-spider": "Zijden draden vangen het licht, een tel voordat je de spin ziet \u2014 opgezwollen, zwartpotig en snel.",
       "constrictor-snake": "Kronkels glijden over kronkels terwijl een reusachtige slang zich uit het donker ontrolt, de tong proevend van de lucht.",
       "crocodile": "Water stroomt van geschubde huid als een krokodil uit het ondiepe naar voren schiet, kaken wijd open.",
       "cult-fanatic": "Een fanaticus werpt zijn kap naar achteren, de ogen brandend van vreselijke toewijding, spreuken al op zijn lippen.",
@@ -614,7 +614,7 @@
       "flying-sword": "Een zwaard tilt zichzelf van het rek, de punt draait naar je toe, zoemend van koude vastberadenheid.",
       "fungal-zombie": "Een lijk doorzeefd met bleke paddenstoelen strompelt overeind; sporen stuiven uit zijn opengereten borst.",
       "ghoul": "Een ghoul krabbelt overeind op te lange ledematen, zwartgeblakerde klauwen trillend, stinkend naar het graf.",
-      "giant-rat": "Een rat zo groot als een terriër schiet uit het puin omhoog, nekharen overeind en gele tanden ontbloot.",
+      "giant-rat": "Een rat zo groot als een terri\u00ebr schiet uit het puin omhoog, nekharen overeind en gele tanden ontbloot.",
       "giant-spider": "Een reuzenspin laat zich vallen aan een dikke draad zijde, giftanden glinsterend, veel te snel voor haar formaat.",
       "gibbering-mouther": "Een deinende massa monden en ogen vloeit over de vloer, brabbelend in een dozijn gestolen stemmen.",
       "goblin": "Een goblin grist een gedeukt kromzwaard en ontbloot zijn tanden. \"Deze plek is van mij, grootvolk!\"",
@@ -623,7 +623,7 @@
       "ice-mephit": "Een grillig wezentje van vorst en rijp sist; zijn adem beslaat de ijzige lucht.",
       "imp": "Een imp knippert in beeld met een venijnig gegiechel, de weerhaakstaart zwiepend, ogen als gloeiende kolen.",
       "kobold": "Een kobold jankt en grijpt een ruwe speer; zijn geschubde huid trilt van angst en venijn.",
-      "lesser-demon": "Iets klauwt zich door de scheur — enkel tanden en gehaakte ledematen, stinkend naar zwavel.",
+      "lesser-demon": "Iets klauwt zich door de scheur \u2014 enkel tanden en gehaakte ledematen, stinkend naar zwavel.",
       "magma-mephit": "Een klein wezen van sintels en gesmolten steen kakelt en werpt vonken terwijl het op je af schiet.",
       "myconid-sovereign": "Een torenhoog paddenstoelwezen keert zijn hoed naar je toe en laat een wolk hallucinogene sporen los.",
       "ogre": "Een oger bukt onder de latei door, zijn knuppel slepend, de doffe ogen lichten op van honger bij het zien van jou.",
@@ -633,14 +633,14 @@
       "skeleton": "Botten ratelen als een skelet overeind komt, holle oogkassen op je gericht terwijl een verroest zwaard rijst.",
       "specter": "De lucht wordt koud als een schim samenkomt, zijn holle gejammer trekt aan de warmte in je bloed.",
       "spider": "Een spin scharrelt in beeld, kaken klikkend, ogen glinsterend als natte kralen.",
-      "spy": "Een onopvallende gestalte richt zich op, en opeens is er een dolk in de hand. Geen woorden — enkel bedoeling.",
+      "spy": "Een onopvallende gestalte richt zich op, en opeens is er een dolk in de hand. Geen woorden \u2014 enkel bedoeling.",
       "stone-sentinel": "Een standbeeld draait knarsend zijn hoofd om je te volgen en stapt dan van zijn sokkel met een geluid als een lawine.",
-      "swarm-of-rats": "De vloer zelf lijkt te bewegen — een kronkelend tapijt van ratten stroomt piepend op je af.",
+      "swarm-of-rats": "De vloer zelf lijkt te bewegen \u2014 een kronkelend tapijt van ratten stroomt piepend op je af.",
       "vampire-spawn": "Een bleke gestalte glimlacht, hoektanden helder, ogen rood. \"Blijf. Je wordt een prima maaltijd.\"",
       "veteran": "Een veteraan in gedeukt plaatharnas zet haar voeten schrap en heft een langzwaard. \"Laatste waarschuwing.\"",
       "violet-fungus": "Een tros violette schimmel huivert en ontvouwt rubberachtige tentakels, druipend van bijtende rot.",
-      "wight": "Een grafgeest in eeuwenoude maliën neemt je op met koude, weloverwogen haat en trekt dan een gekarteld zwaard.",
-      "will-o-wisp": "Een dobberend lichtje drijft dichterbij, bijna vriendelijk — en knettert dan witheet en schiet toe.",
+      "wight": "Een grafgeest in eeuwenoude mali\u00ebn neemt je op met koude, weloverwogen haat en trekt dan een gekarteld zwaard.",
+      "will-o-wisp": "Een dobberend lichtje drijft dichterbij, bijna vriendelijk \u2014 en knettert dan witheet en schiet toe.",
       "wolf": "Een wolf sluipt uit de schaduw, lippen teruggetrokken van zijn hoektanden, een laag gegrom in zijn borst.",
       "worg": "Een worg zo groot als een pony sluipt naderbij, intelligente boosaardigheid glinsterend in zijn rode ogen.",
       "young-drake": "Een jonge draak ontrolt zich boven op de schat, rook krult uit zijn neusgaten, goud kletterend van zijn schubben.",
@@ -649,7 +649,7 @@
     "dressing": {
       "abandoned mine": [
         "Een houweel leunt tegen de muur waar iemand hem neerzette en nooit terugkwam.",
-        "De stutbalken buigen naar binnen, en één heeft het al opgegeven.",
+        "De stutbalken buigen naar binnen, en \u00e9\u00e9n heeft het al opgegeven.",
         "Een kanariekooi hangt open en leeg aan een spijker.",
         "Krijtstrepen op de rots tellen diensten die midden in de week ophouden.",
         "Een ertskar staat halfbeladen op rails die in puin eindigen.",
@@ -700,14 +700,14 @@
         "Een gebed is zo vaak op de muur geschreven dat het pleisterwerk is doorgesleten.",
         "Bij de deur staat een collecteschaal, leeg op drie tanden na.",
         "Gekapte gewaden hangen aan haken, elk met een naam in de kraag genaaid.",
-        "De vloer is smetteloos geschrobd, op één vlek na die niemand eruit krijgt.",
+        "De vloer is smetteloos geschrobd, op \u00e9\u00e9n vlek na die niemand eruit krijgt.",
         "Een liedbord toont nog de nummers van een dienst waar niemand kwam."
       ],
       "demonic hellgate": [
-        "Bindzegels bedekken elk oppervlak, en één ervan is uitgeveegd.",
+        "Bindzegels bedekken elk oppervlak, en \u00e9\u00e9n ervan is uitgeveegd.",
         "De steen is warm, en warmer naarmate je dichter bij de boog staat.",
         "Een kring van zout is van binnenuit doorbroken.",
-        "Iets heeft afdrukken achtergelaten in de vloer — ín de vloer, niet erop.",
+        "Iets heeft afdrukken achtergelaten in de vloer \u2014 \u00edn de vloer, niet erop.",
         "Een vuurkorf brandt zonder brandstof en geeft geen warmte.",
         "Overal staan namen gekerfd, in een schrift dat pijn doet om te volgen."
       ],
@@ -715,7 +715,7 @@
         "Munten zijn de steen in gedrukt door iets enorms dat erop lag.",
         "Een harnas ligt platgeslagen, het metaal gevouwen als doek.",
         "Goud is gesmolten en opnieuw gestold in de kieren van de vloer.",
-        "Eén schub, groter dan een schild, staat tegen de muur.",
+        "E\u00e9n schub, groter dan een schild, staat tegen de muur.",
         "De hitte hier is droog en komt van beneden.",
         "Een kroon ligt vergeten onderin een berg munten."
       ],
@@ -757,7 +757,7 @@
         "Grafgiften liggen uitgestald op een plank van massief ijs.",
         "Een bevroren hand steekt uit de vloer, de palm omhoog.",
         "Het ijs kreunt af en toe, alsof het gewicht draagt.",
-        "Iemands rugzak ligt open, de inhoud tot één massa bevroren."
+        "Iemands rugzak ligt open, de inhoud tot \u00e9\u00e9n massa bevroren."
       ],
       "fungal depths": [
         "Bleke hoeden gloeien net genoeg om schaduwen de verkeerde kant op te werpen.",
@@ -788,7 +788,7 @@
         "Een deuropening is smaller geworden sinds je ernaar keek.",
         "De vloer is geribbeld, als het gehemelte van een mond.",
         "Ergens beneden slikt iets.",
-        "Een gang die er zojuist niet was, is er nu — en weet dat.",
+        "Een gang die er zojuist niet was, is er nu \u2014 en weet dat.",
         "De steen kleurt zwak roze waar je hand rustte."
       ],
       "petrified giant": [
@@ -796,7 +796,7 @@
         "Aders van bleek mineraal kloppen zwak onder het oppervlak.",
         "Een rib welft boven je, zo dik als een scheepsmast.",
         "De vloer helt zoals een keel dat doet.",
-        "Er zit iets in de wand — een speer, van binnenuit.",
+        "Er zit iets in de wand \u2014 een speer, van binnenuit.",
         "De lucht beweegt in en uit, heel langzaam."
       ],
       "planar rift": [
@@ -811,13 +811,13 @@
         "In zijde gewikkelde bundels hangen op ongelijke hoogtes aan het plafond.",
         "De vloer is zacht van laag op laag web en wat eronder ligt.",
         "Een afgeworpen pantser, mensgroot, leunt tegen de muur.",
-        "Elke deuropening is met web dichtgeweven, en door één is heen gescheurd.",
+        "Elke deuropening is met web dichtgeweven, en door \u00e9\u00e9n is heen gescheurd.",
         "Kleine omhulsels kleven in een keurige verticale lijn aan de muur.",
         "Het web hier trilt terwijl niets het heeft aangeraakt."
       ],
       "sunken temple": [
         "Zeepokken korsten op een altaar dat nooit onder water bedoeld was.",
-        "Een mozaïek van een zon ligt half verborgen onder grijs slib.",
+        "Een moza\u00efek van een zon ligt half verborgen onder grijs slib.",
         "Offerschalen staan op een rij, elk gevuld met brak water.",
         "Visgraten knerpen onder je voeten op een plek die droog hoort te zijn.",
         "Een kloktouw hangt gezwollen en groen omlaag, van een klok die er niet meer is.",
@@ -846,7 +846,7 @@
       "Een verroeste ijzeren ring zit op heuphoogte in de muur.",
       "De vloer hier is geveegd, recent, en slecht.",
       "Een gevallen lantaarn ligt op zijn zij, het glas ongebroken.",
-      "De specie tussen de stenen is op één plek uitgekrabd, als met vingernagels."
+      "De specie tussen de stenen is op \u00e9\u00e9n plek uitgekrabd, als met vingernagels."
     ]
   },
   "chips": {
@@ -865,7 +865,7 @@
     "waitCmd": "Ik wacht en observeer",
     "attackWith": "Ik val aan met mijn {{name}}",
     "useSkill": "Ik gebruik {{name}}",
-    "spellInfo": "Spreuk DC {{dc}} · spreukaanval +{{bonus}}"
+    "spellInfo": "Spreuk DC {{dc}} \u00b7 spreukaanval +{{bonus}}"
   },
   "skills": {
     "athletics": {
@@ -992,31 +992,31 @@
     }
   },
   "exports": {
-    "noJournal": "Nog niets te exporteren — speel eerst een paar beurten.",
-    "worldBibleBuilding": "Wereldbijbel EPUB wordt samengesteld…",
-    "worldBibleDone": "Wereldbijbel geëxporteerd.",
+    "noJournal": "Nog niets te exporteren \u2014 speel eerst een paar beurten.",
+    "worldBibleBuilding": "Wereldbijbel EPUB wordt samengesteld\u2026",
+    "worldBibleDone": "Wereldbijbel ge\u00ebxporteerd.",
     "worldBibleFail": "Wereldbijbel export mislukt: {{msg}}",
-    "step1": "Vertellingen verzamelen…",
-    "step2": "Naar de verteller sturen…",
-    "step3detail": "{{n}} hoofdstukken weven…",
-    "step4": "EPUB samenstellen…",
-    "step5": "Klaar — download gestart.",
-    "craftFail": "Kon geen verhaal genereren — ruwe versie wordt geëxporteerd.",
+    "step1": "Vertellingen verzamelen\u2026",
+    "step2": "Naar de verteller sturen\u2026",
+    "step3detail": "{{n}} hoofdstukken weven\u2026",
+    "step4": "EPUB samenstellen\u2026",
+    "step5": "Klaar \u2014 download gestart.",
+    "craftFail": "Kon geen verhaal genereren \u2014 ruwe versie wordt ge\u00ebxporteerd.",
     "craftFallback": "Terugvallen op ruw HTML-dagboek.",
     "craftError": "Verhaalgeneratie mislukt: {{msg}}",
     "epubError": "EPUB samenstellen mislukt: {{msg}}",
-    "noSketch": "Nog geen scèneschets om te exporteren.",
+    "noSketch": "Nog geen sc\u00e8neschets om te exporteren.",
     "noSketches": "Nog geen schetsen gegenereerd deze sessie.",
-    "openingScene": "Openingsscène",
+    "openingScene": "Openingssc\u00e8ne",
     "turnN": "Beurt {{n}}",
-    "sketchesTitle": "Schetsen — {{name}}",
+    "sketchesTitle": "Schetsen \u2014 {{name}}",
     "sketchesOf": "Schetsen van {{name}}",
-    "imported": "Opgeslagen spel geïmporteerd: {{file}}",
-    "importFail": "Importeren mislukt — bestand is geen geldig opgeslagen spel.",
-    "exported": "Opgeslagen spel geëxporteerd: {{file}}",
+    "imported": "Opgeslagen spel ge\u00efmporteerd: {{file}}",
+    "importFail": "Importeren mislukt \u2014 bestand is geen geldig opgeslagen spel.",
+    "exported": "Opgeslagen spel ge\u00ebxporteerd: {{file}}",
     "adventureBegins": "Het Avontuur Begint",
     "journalOf": "Dagboek van {{name}}",
-    "subtitle": "Een {{class}} — Dan's Dungeons"
+    "subtitle": "Een {{class}} \u2014 Dan's Dungeons"
   },
   "directions": {
     "north": "noorden",
@@ -1029,33 +1029,33 @@
     "segment": "De weg kronkelt verder door het {{climate}}. De uren verstrijken zonder voorval.",
     "arrive": "Eindelijk komt {{destination}} aan de horizon in zicht.",
     "encounterRoom": "Onderweg",
-    "encounterResume": "Je komt bij je positieven midden in het gevecht — het gevaar is niet verdwenen.",
+    "encounterResume": "Je komt bij je positieven midden in het gevecht \u2014 het gevaar is niet verdwenen.",
     "encounterWin": "De dreiging afgehandeld, vervolg je je weg.",
     "encounterFlee": "Je breekt los en schept afstand tussen jezelf en het gevaar, en hervat de weg.",
     "fleeChip": "Vluchten",
     "fleeCmd": "Ik vlucht weg van het gevecht",
     "discoveryLoot": "Half begraven naast het pad vind je een {{name}} en steekt het bij je.",
     "discoveryShrine": "Je stuit op een stil heiligdom langs de weg. Je rust een poos en voelt je wonden sluiten.",
-    "discoveryClue": "In een wegwijzer gekrast staat een symbool dat je herkent — weer een draad van het verhaal valt op zijn plaats.",
+    "discoveryClue": "In een wegwijzer gekrast staat een symbool dat je herkent \u2014 weer een draad van het verhaal valt op zijn plaats.",
     "discoveryWanderer": "Een rondtrekkende reiziger deelt een poos de weg en drukt je {{gold}} goud in de hand voor het gezelschap.",
-    "discovering": "Het pad leidt ergens nieuws heen — {{name}} ligt vlak voor je.",
+    "discovering": "Het pad leidt ergens nieuws heen \u2014 {{name}} ligt vlak voor je.",
     "deadEnd": "Het spoor naar {{name}} loopt dood, en je keert terug langs dezelfde weg.",
     "fastTravel": "Je maakt de vertrouwde reis naar {{name}}."
   },
   "map": {
     "empty": "Je hebt de wereld nog niet in kaart gebracht.",
-    "header": "── Bekende wereld ──",
+    "header": "\u2500\u2500 Bekende wereld \u2500\u2500",
     "youAreHere": " (je bent hier)",
-    "regionLine": "{{name}} — {{climate}}{{here}}",
-    "settlementLine": "    • {{name}}{{here}}",
-    "connectsLine": "    → leidt naar: {{names}}",
+    "regionLine": "{{name}} \u2014 {{climate}}{{here}}",
+    "settlementLine": "    \u2022 {{name}}{{here}}",
+    "connectsLine": "    \u2192 leidt naar: {{names}}",
     "rumouredHeader": "Voorbij de kaart die je gelopen hebt:",
-    "rumouredLine": "  {{name}} — {{hook}}"
+    "rumouredLine": "  {{name}} \u2014 {{hook}}"
   },
   "story": {
-    "header": "── Verhaal ──",
+    "header": "\u2500\u2500 Verhaal \u2500\u2500",
     "progress": "Mijlpalen bereikt: {{done}} / {{total}}.",
-    "nextHint": "De draad trekt je verder — er is meer te doen.",
+    "nextHint": "De draad trekt je verder \u2014 er is meer te doen.",
     "complete": "Elke draad van dit verhaal is geweven. Het verhaal is compleet.",
     "noThread": "Geen overkoepelend verhaal drijft dit avontuur.",
     "factionsHeader": "Factie-aanzien:",
@@ -1069,50 +1069,51 @@
       "champion": "kampioen",
       "nemesis": "aartsvijand"
     },
-    "stallNudge": "De draad die je hebt genegeerd vindt je alsnog — een boodschapper, een gerucht, een gezicht dat je niet verwachtte. Waar je ook voor wegliep, het wacht niet langer."
+    "stallNudge": "De draad die je hebt genegeerd vindt je alsnog \u2014 een boodschapper, een gerucht, een gezicht dat je niet verwachtte. Waar je ook voor wegliep, het wacht niet langer."
   },
   "common": {
     "yes": "Ja",
     "no": "Nee"
   },
   "ai": {
-    "canonPrompt": "Je haalt blijvende wereldfeiten uit de vertelling van een Dungeon Master zodat het spel ze kan onthouden.\n\nDe scène bevat precies deze entity-ids:\n{{ids}}\nHuidige plek: {{place}}\n\nGeef twee lijsten terug.\n\nfacts — beweringen die de vertelling doet over een entity HIERBOVEN. Verzin nooit een id; gebruik er een letterlijk uit de lijst. Alleen blijvende zaken die later nog tellen (een blijvende toestand, een veranderde stemming of houding, een beschrijving van een plek). Sla vluchtige dingen over (een misgeslagen aanval, een zin dialoog). Zet scope alleen op 'regional' als de wijde omgeving ervan zou horen; anders 'local'.\n\nmint — dingen die de vertelling introduceert die nog niet bestaan en dat wel verdienen: een persoon met naam (npc), een monster of beest (creature), een opvallend kenmerk van de ruimte (detail), of een locatie (site). Geef de gewone naam, een korte notitie, of het een dreiging is, en voor creatures het dichtstbijzijnde gangbare monstertype (bv. ghoul, wolf, bandit) of een lege string. Mint NIETS dat al in de id-lijst staat. De meeste beurten minten niets.\n\nWees terughoudend: een fout feit vergiftigt de wereld voorgoed. Schrijf waarden en redenen in {{language}}. Geef alleen JSON terug.",
-    "summarizePrompt": "Je houdt een lopend geheugen bij van een hoofdstuk uit een tafelrolspel-campagne zodat de Spelleider nooit vergeet wat er gebeurd is.\n\nVorige samenvatting:\n{{previous}}\n\nVastgelegde gebeurtenissen: {{events}}\n\nHerschrijf de samenvatting zodat die alles tot nu toe dekt, inclusief de nieuwe beurten hieronder. Houd het onder de 200 woorden. Lopende tekst, geen kopjes of lijsten. Noem mensen, plaatsen en losse eindjes expliciet — deze tekst is alles wat de Spelleider zich later herinnert, dus een naam die je weglaat is een naam die vergeten wordt. Geef concrete feiten (wie, waar, wat er veranderde, wat er nog openstaat) de voorkeur boven sfeer. Schrijf in {{language}}. Geef alleen de samenvattende tekst terug.",
+    "canonPrompt": "Je haalt blijvende wereldfeiten uit de vertelling van een Dungeon Master zodat het spel ze kan onthouden.\n\nDe sc\u00e8ne bevat precies deze entity-ids:\n{{ids}}\nHuidige plek: {{place}}\n\nGeef twee lijsten terug.\n\nfacts \u2014 beweringen die de vertelling doet over een entity HIERBOVEN. Verzin nooit een id; gebruik er een letterlijk uit de lijst. Alleen blijvende zaken die later nog tellen (een blijvende toestand, een veranderde stemming of houding, een beschrijving van een plek). Sla vluchtige dingen over (een misgeslagen aanval, een zin dialoog). Zet scope alleen op 'regional' als de wijde omgeving ervan zou horen; anders 'local'.\n\nmint \u2014 dingen die de vertelling introduceert die nog niet bestaan en dat wel verdienen: een persoon met naam (npc), een monster of beest (creature), een opvallend kenmerk van de ruimte (detail), of een locatie (site). Geef de gewone naam, een korte notitie, of het een dreiging is, en voor creatures het dichtstbijzijnde gangbare monstertype (bv. ghoul, wolf, bandit) of een lege string. Mint NIETS dat al in de id-lijst staat. De meeste beurten minten niets.\n\nWees terughoudend: een fout feit vergiftigt de wereld voorgoed. Schrijf waarden en redenen in {{language}}. Geef alleen JSON terug.",
+    "summarizePrompt": "Je houdt een lopend geheugen bij van een hoofdstuk uit een tafelrolspel-campagne zodat de Spelleider nooit vergeet wat er gebeurd is.\n\nVorige samenvatting:\n{{previous}}\n\nVastgelegde gebeurtenissen: {{events}}\n\nHerschrijf de samenvatting zodat die alles tot nu toe dekt, inclusief de nieuwe beurten hieronder. Houd het onder de 200 woorden. Lopende tekst, geen kopjes of lijsten. Noem mensen, plaatsen en losse eindjes expliciet \u2014 deze tekst is alles wat de Spelleider zich later herinnert, dus een naam die je weglaat is een naam die vergeten wordt. Geef concrete feiten (wie, waar, wat er veranderde, wat er nog openstaat) de voorkeur boven sfeer. Schrijf in {{language}}. Geef alleen de samenvattende tekst terug.",
     "chapterTitlePrompt": "Geef dit hoofdstuk van een fantasycampagne een korte sprekende titel: 2 tot 5 woorden, geen aanhalingstekens, geen nummering, in {{language}}. Geef alleen de titel terug.",
-    "beatCheckPrompt": "You judge whether a story beat was just fulfilled. The beat's dramatic purpose is:\n\"{{purpose}}\"\n\nGiven the GM narration the user provides, set fulfilled=true ONLY if the narration CLEARLY accomplishes that dramatic purpose (the key event happened on screen). If it merely hints at, sets up, or is unrelated to the purpose, set fulfilled=false. Be strict — when in doubt, false. Antwoord met fulfilled (alleen true als de scène dat doel duidelijk vervult) en een reason van één zin.",
+    "beatCheckPrompt": "You judge whether a story beat was just fulfilled. The beat's dramatic purpose is:\n\"{{purpose}}\"\n\nGiven the GM narration the user provides, set fulfilled=true ONLY if the narration CLEARLY accomplishes that dramatic purpose (the key event happened on screen). If it merely hints at, sets up, or is unrelated to the purpose, set fulfilled=false. Be strict \u2014 when in doubt, false. Antwoord met fulfilled (alleen true als de sc\u00e8ne dat doel duidelijk vervult) en een reason van \u00e9\u00e9n zin.",
     "travelPrompt": "You are a travel narrator for a fantasy RPG. Write ONE vivid prose paragraph (2-4 sentences) for a single travel beat. No dialogue, no game mechanics, no lists, no headings. Beat and details:\n{{context}}\nWrite in {{language}}.",
     "travelUserMsg": "Narrate this travel beat.",
-    "settlementClassifierPrompt": "Je bent een classifier voor een tekst-RPG in een nederzetting. Vertaal de vrije tekst van de speler (Engels of Nederlands) naar één gestructureerde actie.\n\nIntenties:\n- talk: een NPC aanspreken of benaderen. Zet target op de naam of rol van de NPC.\n- buy: koopwaar bekijken of kopen bij een handelaar.\n- travel: vertrekken via een uitgang (een kerker, weg of wildernis). Zet target op de bestemmingsnaam of richting.\n- rest: slapen / herstellen in een herberg.\n- quest: aangenomen opdrachten / het opdrachtenlogboek bekijken.\n- inventory: meegedragen spullen en goud bekijken.\n- look: rondkijken, of alles wat niet bij het bovenstaande past.\n\nContext van de huidige locatie (de geldige NPC- en uitgangnamen):\n{{context}}\n\nGeef één JSON-object terug. Zet target op de relevante NPC-/uitgang-/itemnaam, anders null.",
-    "npcDialoguePrompt": "Je speelt één NPC in een fantasystadje. Blijf volledig in je rol. Antwoord met ÉÉN korte gesproken zin (1-3 zinnen) — geen verteltekst, geen aanhalingstekens eromheen.\n\nNPC: {{name}}, een {{role}} ({{attitude}}).\nPersoonlijkheid: {{personality}}\nFactie: {{faction}} (aanzien van de speler: {{reputation}})\nBekende opdrachthaak: {{questHook}}\nBewaard geheim: {{secret}}\nMag het geheim deze beurt onthullen: {{mayReveal}}\n\nRegels:\n- Als 'Mag het geheim onthullen' NO is, onthul of hint nooit sterk naar het geheim; ontwijk als erop wordt aangedrongen.\n- Als YES en de speler vraagt door of heeft vertrouwen verdiend, MAG je het geheim laten ontvallen — zet revealsSecret alleen op true als je antwoord het daadwerkelijk prijsgeeft.\n- Laat je houding en het factie-aanzien van de speler doorklinken in je toon.\n- Antwoord in {{language}}.\n\nRecent gesprek:\n{{transcript}}",
-    "classifierPrompt": "You are a D&D action classifier. Classify the player's intent from their free-text input.\n\nIMPORTANT: The player writes in Dutch (Nederlands). Interpret Dutch input correctly.\nExamples: \"ga naar het noorden\" → move north, \"pak de sleutel\" → take, \"val aan\" → attack, \"sluip langs\" → skill stealth.\nCardinal directions in Dutch: noorden=north, zuiden=south, oosten=east, westen=west.\n\nCurrent scene (use this to identify valid targets):\n{{scene}}\n\nOutput a single JSON object. Be generous in interpretation.\n- movement → move (set direction to north/south/east/west in ENGLISH)\n- pick up items → take (set target_id to the item's id from scene loot)\n- open/unlock → unlock\n- direction: the cardinal direction for move (ENGLISH), null otherwise\n- target_id: NPC id for attack, item id for take, null otherwise\n- \"ik spreek vuurstraal uit op de goblin\" / \"verbrand hem\" → cast (zet spell_id op de id van de spreuk uit scene.spells, target_id op de NPC-id)\n- spell_id: alleen ids die in scene.spells voorkomen. Noemt de speler een spreuk die hij niet heeft, classificeer dan alsnog als cast en zet spell_id op wat hij zei — de regellaag weigert het en legt uit waarom.\nDC-richtlijn (een check buiten 5-25 is geen check maar een uitgemaakte zaak):\n  5  triviaal · 10 makkelijk · 13 gemiddeld · 15 lastig · 18 zeer lastig · 20 heldhaftig · 25 bijna onmogelijk\nKies de band die het verhaal echt vraagt; blaas een DC niet op om een scène spannend te maken.",
-    "narratorPrompt": "Je bent de Spelleider van een lopende tafelrolspel-campagne en vertelt één beurt.\n\nToon van de setting: {{tone}}. Tweede persoon (\"je slaat toe\", \"je ontwijkt\"). Vertel in het Nederlands.\n\nWAT JE JE HERINNERT (eerdere hoofdstukken, oudste eerst):\n{{memory}}\n\nRecente uitwisseling:\n{{transcript}}\n\nHuidige scène:\n{{scene}}\n\nAfgehandelde mechanica (al beslist — dit zijn feiten):\n{{resolved}}\n\nHARDE REGELS — deze overtreden breekt het spel:\n- Verzin nooit dobbelresultaten, schade, treffers of missers. Gebruik exact de afgehandelde feiten.\n- Verzin nooit een uitgang, deur, ruimte, voorwerp of NPC die niet in de scène staat. Als de speler naar iets grijpt dat er niet is, zeg dat dan.\n- Verander nooit de wereldtoestand in de vertelling: geen genezing, geen dood, geen gewonnen of verloren voorwerpen, geen ontgrendelde deuren, tenzij de afgehandelde feiten dat zeggen.\n- Als resolved.noEffect waar is, veranderde deze actie mechanisch niets. Vertel alleen sfeer, gedachte of dialoog. Impliceer geen blijvende verandering.\n- Als de intentie 'impossible' is, beschrijf alleen het falen en waarom. Er verandert niets.\n- De knownDetails in de scène heb je eerder zelf vastgelegd. Ze zijn nog steeds waar — eer ze; ze tegenspreken is een continuïteitsfout.\n\nWAT JE VRIJ MAG VERZINNEN: zintuiglijke textuur. Geuren, geluiden, licht, weer, slijtage en schade, hoe het stof of vocht in een ruimte eruitziet, een achteloos gebaar. Daar komt het karakter van de wereld vandaan — een gebarsten klok, schimmel op een gordijn, een pop zonder gezicht. Verzin op die schaal gerust vaak.\nAls je een persoon, wezen of plaats een naam geeft, doe dat bewust: het wordt echt en blijvend.\n\nPRIVÉ, ALLEEN VOOR JOU (zeg hier nooit iets van hardop, breek nooit uit je rol):\n{{gm}}\n\nStuur de scène subtiel richting de directive.\n\n2–4 zinnen. Eindig op spanning of gevolg.\n- story.activeSetups bevat al geplante aanwijzingen die nog niet zijn ingelost. Laat er terloops één terugkomen wanneer het bij de scène past — een detail dat opnieuw opvalt, een naam die je opvangt. Leg het nooit uit en los het nooit op: dat is de taak van het verhaal, niet van deze alinea.\n\nGeef ALLEEN een JSON-object terug — geen markdown, geen extra tekst:\n{\"narration\":\"...\",\"combat_ended\":true/false,\"outcome\":\"continue\"|\"victory\"|\"defeat\"|\"flee\"}",
+    "settlementClassifierPrompt": "Je bent een classifier voor een tekst-RPG in een nederzetting. Vertaal de vrije tekst van de speler (Engels of Nederlands) naar \u00e9\u00e9n gestructureerde actie.\n\nIntenties:\n- talk: een NPC aanspreken of benaderen. Zet target op de naam of rol van de NPC.\n- buy: koopwaar bekijken of kopen bij een handelaar.\n- travel: vertrekken via een uitgang (een kerker, weg of wildernis). Zet target op de bestemmingsnaam of richting.\n- rest: slapen / herstellen in een herberg.\n- quest: aangenomen opdrachten / het opdrachtenlogboek bekijken.\n- inventory: meegedragen spullen en goud bekijken.\n- look: rondkijken, of alles wat niet bij het bovenstaande past.\n\nContext van de huidige locatie (de geldige NPC- en uitgangnamen):\n{{context}}\n\nGeef \u00e9\u00e9n JSON-object terug. Zet target op de relevante NPC-/uitgang-/itemnaam, anders null.",
+    "npcDialoguePrompt": "Je speelt \u00e9\u00e9n NPC in een fantasystadje. Blijf volledig in je rol. Antwoord met \u00c9\u00c9N korte gesproken zin (1-3 zinnen) \u2014 geen verteltekst, geen aanhalingstekens eromheen.\n\nNPC: {{name}}, een {{role}} ({{attitude}}).\nPersoonlijkheid: {{personality}}\nFactie: {{faction}} (aanzien van de speler: {{reputation}})\nBekende opdrachthaak: {{questHook}}\nBewaard geheim: {{secret}}\nMag het geheim deze beurt onthullen: {{mayReveal}}\n\nRegels:\n- Als 'Mag het geheim onthullen' NO is, onthul of hint nooit sterk naar het geheim; ontwijk als erop wordt aangedrongen.\n- Als YES en de speler vraagt door of heeft vertrouwen verdiend, MAG je het geheim laten ontvallen \u2014 zet revealsSecret alleen op true als je antwoord het daadwerkelijk prijsgeeft.\n- Laat je houding en het factie-aanzien van de speler doorklinken in je toon.\n- Antwoord in {{language}}.\n\nRecent gesprek:\n{{transcript}}",
+    "classifierPrompt": "You are a D&D action classifier. Classify the player's intent from their free-text input.\n\nIMPORTANT: The player writes in Dutch (Nederlands). Interpret Dutch input correctly.\nExamples: \"ga naar het noorden\" \u2192 move north, \"pak de sleutel\" \u2192 take, \"val aan\" \u2192 attack, \"sluip langs\" \u2192 skill stealth.\nCardinal directions in Dutch: noorden=north, zuiden=south, oosten=east, westen=west.\n\nCurrent scene (use this to identify valid targets):\n{{scene}}\n\nOutput a single JSON object. Be generous in interpretation.\n- movement \u2192 move (set direction to north/south/east/west in ENGLISH)\n- pick up items \u2192 take (set target_id to the item's id from scene loot)\n- open/unlock \u2192 unlock\n- direction: the cardinal direction for move (ENGLISH), null otherwise\n- target_id: NPC id for attack, item id for take, null otherwise\n- \"ik spreek vuurstraal uit op de goblin\" / \"verbrand hem\" \u2192 cast (zet spell_id op de id van de spreuk uit scene.spells, target_id op de NPC-id)\n- spell_id: alleen ids die in scene.spells voorkomen. Noemt de speler een spreuk die hij niet heeft, classificeer dan alsnog als cast en zet spell_id op wat hij zei \u2014 de regellaag weigert het en legt uit waarom.\nDC-richtlijn (een check buiten 5-25 is geen check maar een uitgemaakte zaak):\n  5  triviaal \u00b7 10 makkelijk \u00b7 13 gemiddeld \u00b7 15 lastig \u00b7 18 zeer lastig \u00b7 20 heldhaftig \u00b7 25 bijna onmogelijk\nKies de band die het verhaal echt vraagt; blaas een DC niet op om een sc\u00e8ne spannend te maken.",
+    "narratorPrompt": "Je bent de Spelleider van een lopende tafelrolspel-campagne en vertelt \u00e9\u00e9n beurt.\n\nToon van de setting: {{tone}}. Tweede persoon (\"je slaat toe\", \"je ontwijkt\"). Vertel in het Nederlands.\n\nWAT JE JE HERINNERT (eerdere hoofdstukken, oudste eerst):\n{{memory}}\n\nRecente uitwisseling:\n{{transcript}}\n\nHuidige sc\u00e8ne:\n{{scene}}\n\nAfgehandelde mechanica (al beslist \u2014 dit zijn feiten):\n{{resolved}}\n\nHARDE REGELS \u2014 deze overtreden breekt het spel:\n- Verzin nooit dobbelresultaten, schade, treffers of missers. Gebruik exact de afgehandelde feiten.\n- Verzin nooit een uitgang, deur, ruimte, voorwerp of NPC die niet in de sc\u00e8ne staat. Als de speler naar iets grijpt dat er niet is, zeg dat dan.\n- Verander nooit de wereldtoestand in de vertelling: geen genezing, geen dood, geen gewonnen of verloren voorwerpen, geen ontgrendelde deuren, tenzij de afgehandelde feiten dat zeggen.\n- Als resolved.noEffect waar is, veranderde deze actie mechanisch niets. Vertel alleen sfeer, gedachte of dialoog. Impliceer geen blijvende verandering.\n- Als de intentie 'impossible' is, beschrijf alleen het falen en waarom. Er verandert niets.\n- De knownDetails in de sc\u00e8ne heb je eerder zelf vastgelegd. Ze zijn nog steeds waar \u2014 eer ze; ze tegenspreken is een continu\u00efteitsfout.\n\nWAT JE VRIJ MAG VERZINNEN: zintuiglijke textuur. Geuren, geluiden, licht, weer, slijtage en schade, hoe het stof of vocht in een ruimte eruitziet, een achteloos gebaar. Daar komt het karakter van de wereld vandaan \u2014 een gebarsten klok, schimmel op een gordijn, een pop zonder gezicht. Verzin op die schaal gerust vaak.\nAls je een persoon, wezen of plaats een naam geeft, doe dat bewust: het wordt echt en blijvend.\n\nPRIV\u00c9, ALLEEN VOOR JOU (zeg hier nooit iets van hardop, breek nooit uit je rol):\n{{gm}}\n\nStuur de sc\u00e8ne subtiel richting de directive.\n\n2\u20134 zinnen. Eindig op spanning of gevolg.\n- story.activeSetups bevat al geplante aanwijzingen die nog niet zijn ingelost. Laat er terloops \u00e9\u00e9n terugkomen wanneer het bij de sc\u00e8ne past \u2014 een detail dat opnieuw opvalt, een naam die je opvangt. Leg het nooit uit en los het nooit op: dat is de taak van het verhaal, niet van deze alinea.\n\nGeef ALLEEN een JSON-object terug \u2014 geen markdown, geen extra tekst:\n{\"narration\":\"...\",\"combat_ended\":true/false,\"outcome\":\"continue\"|\"victory\"|\"defeat\"|\"flee\"}",
     "narrateTurnPrompt": "Narrate the outcome of this turn. Respond in Dutch.",
-    "autoplayPrompt": "Je bent een moedige avonturier in een D&D kerkerverkenning.\n\nBeslissingsprioriteit:\n1. Als er een vijand is — vecht met je beste wapen of klassevaardigheid\n2. Als er voorwerpen op de grond liggen (scene.room.loot) — pak ze op\n3. Als er een vergrendelde uitgang is (scene.room.exits met locked:true) EN je hebt een sleutel — ontgrendel\n4. Beweeg naar een ONBEZOCHTE kamer (zie navigatie-info hieronder)\n5. Gebruik een vaardigheid als het past (Waarneming, Sluipen, Onderzoek)\n6. Rondkijken ALLEEN als niets anders van toepassing is\n\n{{navigation}}\n\nKRITIEKE REGELS:\n- Kies ALLEEN uit de beschikbare actielijst. Verzin GEEN acties.\n- Kies ALTIJD eerst een uitgang met ONBEZOCHT of \"GA HIER\".\n- Als er geen onbezochte uitgangen zijn, keer terug via \"LEIDT NAAR ONBEZOCHTE KAMERS\".\n- Beweeg NOOIT naar een \"doodlopend\" uitgang tenzij er geen andere optie is.\n- Herhaal NOOIT dezelfde actie twee keer achter elkaar.\n\nHuidige scène:\n{{scene}}\n\nBeschikbare acties (kies ALLEEN uit deze lijst):\n{{actions}}\n\nRecente transcriptie:\n{{transcript}}\n\nAntwoord in het Nederlands. Geef ALLEEN een JSON-object:\n{\"action\": \"kies één actie uit de beschikbare actielijst hierboven\"}",
+    "autoplayPrompt": "Je bent een moedige avonturier in een D&D kerkerverkenning.\n\nBeslissingsprioriteit:\n1. Als er een vijand is \u2014 vecht met je beste wapen of klassevaardigheid\n2. Als er voorwerpen op de grond liggen (scene.room.loot) \u2014 pak ze op\n3. Als er een vergrendelde uitgang is (scene.room.exits met locked:true) EN je hebt een sleutel \u2014 ontgrendel\n4. Beweeg naar een ONBEZOCHTE kamer (zie navigatie-info hieronder)\n5. Gebruik een vaardigheid als het past (Waarneming, Sluipen, Onderzoek)\n6. Rondkijken ALLEEN als niets anders van toepassing is\n\n{{navigation}}\n\nKRITIEKE REGELS:\n- Kies ALLEEN uit de beschikbare actielijst. Verzin GEEN acties.\n- Kies ALTIJD eerst een uitgang met ONBEZOCHT of \"GA HIER\".\n- Als er geen onbezochte uitgangen zijn, keer terug via \"LEIDT NAAR ONBEZOCHTE KAMERS\".\n- Beweeg NOOIT naar een \"doodlopend\" uitgang tenzij er geen andere optie is.\n- Herhaal NOOIT dezelfde actie twee keer achter elkaar.\n\nHuidige sc\u00e8ne:\n{{scene}}\n\nBeschikbare acties (kies ALLEEN uit deze lijst):\n{{actions}}\n\nRecente transcriptie:\n{{transcript}}\n\nAntwoord in het Nederlands. Geef ALLEEN een JSON-object:\n{\"action\": \"kies \u00e9\u00e9n actie uit de beschikbare actielijst hierboven\"}",
     "autoplayUserMsg": "Kies je volgende actie.",
-    "journalPrompt": "Je bent een fantasy-auteur die een D&D-avontuur navertelt als een samenhangend, meeslepend verhaal.\n\nPersonage: {{name}}, een {{class}}.\n\nSchrijf in de tweede persoon verleden tijd (\"Je trok je zwaard…\"). Weef de beurt-voor-beurt vertellingen hieronder tot vloeiend literair proza — geen transcript, maar een echt verhaal met sfeer, spanning en ritme.\n\nRegels:\n- Maak hoofdstukonderbrekingen bij natuurlijke verhaalmomenten (een nieuwe kamer betreden, een gevechtsontmoeting, een ontdekking)\n- Elk hoofdstuk heeft een korte, sfeervolle kop nodig (bijv. \"De Zaal van Gebroken Tafels\", \"Staal Tegen Bot\")\n- Voeg zintuiglijke details, overgangen tussen scènes en emotionele momenten toe\n- Bewaar alle belangrijke gebeurtenissen en uitkomsten uit de vertellingen — verzin geen nieuwe plotpunten\n- Open met sfeer, sluit af met gewicht of reflectie\n- Behoud de grimmige low-fantasy toon\n\nVertellingen om tot het verhaal te verweven:\n{{narrations}}{{context}}\n\nGeef ALLEEN een JSON-object:\n{\"title\": \"een sfeervolle verhaaltitel\", \"chapters\": [{\"heading\": \"hoofdstukkop\", \"text\": \"het proza\"}, ...]}",
+    "journalPrompt": "Je bent een fantasy-auteur die een D&D-avontuur navertelt als een samenhangend, meeslepend verhaal.\n\nPersonage: {{name}}, een {{class}}.\n\nSchrijf in de tweede persoon verleden tijd (\"Je trok je zwaard\u2026\"). Weef de beurt-voor-beurt vertellingen hieronder tot vloeiend literair proza \u2014 geen transcript, maar een echt verhaal met sfeer, spanning en ritme.\n\nRegels:\n- Maak hoofdstukonderbrekingen bij natuurlijke verhaalmomenten (een nieuwe kamer betreden, een gevechtsontmoeting, een ontdekking)\n- Elk hoofdstuk heeft een korte, sfeervolle kop nodig (bijv. \"De Zaal van Gebroken Tafels\", \"Staal Tegen Bot\")\n- Voeg zintuiglijke details, overgangen tussen sc\u00e8nes en emotionele momenten toe\n- Bewaar alle belangrijke gebeurtenissen en uitkomsten uit de vertellingen \u2014 verzin geen nieuwe plotpunten\n- Open met sfeer, sluit af met gewicht of reflectie\n- Behoud de grimmige low-fantasy toon\n\nVertellingen om tot het verhaal te verweven:\n{{narrations}}{{context}}\n\nGeef ALLEEN een JSON-object:\n{\"title\": \"een sfeervolle verhaaltitel\", \"chapters\": [{\"heading\": \"hoofdstukkop\", \"text\": \"het proza\"}, ...]}",
     "journalUserMsg": "Schrijf het verhaal.",
-    "worldSeedPrompt": "Je bent een fantasy-wereldarchitect. Creëer een unieke D&D-wereld met een centraal dramatisch conflict.\n\nGenereer:\n- Een wereldnaam (suggestief, 1-2 woorden)\n- Een toon: grimdark, heroic, of mysterious\n- Een scheppingsmythe (max 2 zinnen)\n- 2-3 goden met naam en domein\n- Een rode draad: een centraal dramatisch uitgangspunt (het overkoepelende conflict) en een starthaak (wat de speler eerst tegenkomt)\n- Een digest: een beknopte samenvatting van ~30 woorden voor kindgeneratoren\n\nWees origineel. Vermijd generieke fantasyclichés. De wereld moet geleefd en specifiek aanvoelen.\n\nAntwoord volledig in het Nederlands.\n\nGeef ALLEEN een JSON-object dat het schema volgt.",
-    "worldSeedUserMsg": "Creëer de wereld.",
-    "beatsPrompt": "Je bent een campagneplanner voor een D&D-avontuur. Gegeven de werelddigest hieronder, creëer 3-5 verhaalslagen die de rode draad van de campagne vormen.\n\nWerelddigest:\n{{parentDigest}}\n\nElke slag is een abstract verhaalknooppunt — geen concrete scène, maar een dramatisch doel. Bijvoorbeeld: \"de autoriteitsfiguur confronteren\", \"het verraad ontdekken\", \"de bres dichten\".\n\nGenereer per slag:\n- id (slug: beat.01.korte-naam)\n- dramaticPurpose: wat deze slag narratief bereikt (1 zin)\n- targetPlaytimeMinutes: geschatte speeltijd (30-90)\n- prerequisites: array van vlag-ids die waar moeten zijn (leeg voor slag 1)\n- setRequiredFlags: array van vlag-ids die deze slag instelt bij voltooiing\n- preferredLocation: null (wordt later aan regio's toegewezen)\n- requiredArchetypes: array van {role, notes} — welke NPC's nodig zijn (rollen: authority, antagonist, informant, mentor, fixer, muscle, herald)\n- successors: lege array (v1 is lineair)\n\nSlagen moeten escaleren in drama. Slag 1 is de haak, laatste slag is het hoogtepunt.\n\nAntwoord volledig in het Nederlands.\n\nGeef ALLEEN een JSON-object: {\"beats\": [...]}",
-    "beatsUserMsg": "Creëer de verhaalslagen.",
-    "factionsPrompt": "Je definieert de politieke facties van een fantasywereld. Gegeven de werelddigest hieronder, creëer 2-3 facties die de machtsdynamiek van de wereld vormgeven.\n\nWerelddigest:\n{{parentDigest}}\n\nGenereer per factie:\n- id (slug: faction-naam)\n- naam (suggestief, 2-4 woorden)\n- beschrijving (waar ze voor staan, 1-2 zinnen)\n- waarden (komma-gescheiden: bijv. \"orde, traditie, geheimhouding\")\n- allies: array van bondgenoot factie-ids (kan leeg zijn)\n- enemies: array van vijandige factie-ids (minstens één factie moet een vijand hebben)\n- territory: array van regio-ids (leeg voor nu)\n- digest: ~20 woorden samenvatting\n\nMaak de facties met echte spanning. Minstens twee facties moeten in conflict zijn.\n\nBELANGRIJK: Laat geen enkel veld weg. Elke factie moet alle 8 velden hebben. allies en enemies gebruiken de NAAM van de factie, niet het id.\n\nAntwoord volledig in het Nederlands.\n\nGeef ALLEEN een JSON-object: {\"factions\": [...]}",
-    "factionsUserMsg": "Creëer de facties.",
-    "regionPrompt": "Je breidt een fantasywereld uit. Gegeven de werelddigest hieronder, creëer een startregio (land/territorium).\n\nWerelddigest:\n{{parentDigest}}\n\nGenereer:\n- Een regio-id (slug-formaat: region-naam)\n- Regionaam, klimaat en een levendige beschrijving van 2-3 zinnen\n- De naam van de hoofdnederzetting (dorp of stad)\n- De naam van een nabijgelegen kerker/ruïne/grot\n- Een gerucht dat de lokale bevolking fluistert en dat verbonden is met de rode draad\n- 2-3 hints over wat in aangrenzende regio's ligt\n- Een digest: ~40 woorden samenvatting voor kindgeneratoren\n\nAntwoord volledig in het Nederlands.\n\nGeef ALLEEN een JSON-object dat het schema volgt.",
-    "regionUserMsg": "Creëer de startregio.",
-    "settlementPrompt": "Je werkt een nederzetting uit in een fantasywereld. Gegeven de regiodigest hieronder, creëer een dorp of stad.\n\nRegiodigest:\n{{parentDigest}}\n\nGenereer:\n- Nederzetting-id (slug: settlement-naam) en regionId: \"{{regionId}}\"\n- Naam en een levendige beschrijving van 2-3 zinnen\n- 3-4 NPC's, elk met:\n  - id (slug: npc-naam), naam, rol (innkeeper/questgiver/merchant/guard/elder/blacksmith/healer/hermit)\n  - houding (friendly/neutral/suspicious/hostile)\n  - begroeting (hun openingszin bij een gesprek)\n  - questHook (string of null — de questgiver MOET er een hebben die naar de kerker wijst)\n  - personality (levendige 2-3 woorden: \"nors maar vriendelijk\", \"paranoïde fluisteraar\")\n  - secret (iets wat ze weten of verbergen — null als niets. bijv. \"zag de cultisten 's nachts de crypte ingaan\")\n  - factionId (null voor v1)\n  - relationships: array van {targetId, type} met type: spouse/parent/child/rival/ally/employer/mentor. Minstens 1 NPC moet een relatie met een andere NPC hebben.\n  - inventory: array van {name, price, description} voor handelaren, null voor anderen. Handelaren: 3-5 items.\n- 2-3 uitgangen: richting, doelnaam, doeltype (dungeon/road/wilderness), targetId (slug voor kerkers, null voor wegen)\n- Een digest: ~30 woorden samenvatting voor kindgeneratoren\n\nMaak NPC's echt: geef ze persoonlijkheid, geheimen en onderlinge banden.\n\nAntwoord volledig in het Nederlands.\n\nGeef ALLEEN een JSON-object dat het schema volgt.",
-    "settlementUserMsg": "Creëer de nederzetting.",
-    "polishPrompt": "Je bent een D&D-loreauteur die een Wereldbijbel omschrijft tot gepolijst, meeslepend proza voor een fantasy-bronboek.\n\nDe gebruiker levert ruwe hoofdstuktekst met technische data. Herschrijf elk hoofdstuk tot prachtig proza.\n\nRegels:\n- Verwijder ALLE technische IDs: slugs als \"beat.01.x\", \"flag.x\", \"npc-x\", \"room-0\", \"faction-x\". Vervang ze door de werkelijke namen.\n- Zet mechanische taal (\"Sets flags:\", \"Requires:\", \"Exits: north → room-3\") om in verhalend proza.\n- Zet NPC-relatiereferenties van IDs naar namen om (\"spouse of npc-torva\" → \"getrouwd met Torva\").\n- Behoud ALLE feitelijke inhoud — verzin geen nieuwe lore, namen of gebeurtenissen.\n- Schrijf in D&D-bronboekstijl: sfeervol, gezaghebbend, suggestief.\n- Beschrijf kerkerruimtes als een rondleiding, niet als een gegevensblad.\n- Het laatste hoofdstuk moet een kort \"Wereld in een Oogopslag\" prozasamenvatting zijn (3-5 zinnen).\n- Antwoord volledig in {{language}}.\n\nGeef een JSON-object: {\"title\": \"korte sfeervolle boektitel\", \"chapters\": [{\"heading\": \"hoofdstukkop\", \"text\": \"het gepolijste proza\"}, ...]}",
-    "worldgenStep1": "De wereld wordt gesmeed…",
-    "worldgenStep2": "Facties worden gevormd…",
-    "worldgenStep3": "De rode draad wordt gesponnen…",
-    "worldgenStep4": "De regio krijgt vorm…",
-    "worldgenStep5": "De nederzetting wordt gebouwd…",
-    "worldgenStep6": "De kerker wordt gegenereerd…",
+    "worldSeedPrompt": "Je bent een fantasy-wereldarchitect. Cre\u00eber een unieke D&D-wereld met een centraal dramatisch conflict.\n\nGenereer:\n- Een wereldnaam (suggestief, 1-2 woorden)\n- Een toon: grimdark, heroic, of mysterious\n- Een scheppingsmythe (max 2 zinnen)\n- 2-3 goden met naam en domein\n- Een rode draad: een centraal dramatisch uitgangspunt (het overkoepelende conflict) en een starthaak (wat de speler eerst tegenkomt)\n- Een digest: een beknopte samenvatting van ~30 woorden voor kindgeneratoren\n\nWees origineel. Vermijd generieke fantasyclich\u00e9s. De wereld moet geleefd en specifiek aanvoelen.\n\nAntwoord volledig in het Nederlands.\n\nGeef ALLEEN een JSON-object dat het schema volgt.",
+    "worldSeedUserMsg": "Cre\u00eber de wereld.",
+    "beatsPrompt": "Je bent een campagneplanner voor een D&D-avontuur. Gegeven de werelddigest hieronder, cre\u00eber 3-5 verhaalslagen die de rode draad van de campagne vormen.\n\nWerelddigest:\n{{parentDigest}}\n\nElke slag is een abstract verhaalknooppunt \u2014 geen concrete sc\u00e8ne, maar een dramatisch doel. Bijvoorbeeld: \"de autoriteitsfiguur confronteren\", \"het verraad ontdekken\", \"de bres dichten\".\n\nGenereer per slag:\n- id (slug: beat.01.korte-naam)\n- dramaticPurpose: wat deze slag narratief bereikt (1 zin)\n- targetPlaytimeMinutes: geschatte speeltijd (30-90)\n- prerequisites: array van vlag-ids die waar moeten zijn (leeg voor slag 1)\n- setRequiredFlags: array van vlag-ids die deze slag instelt bij voltooiing\n- preferredLocation: null (wordt later aan regio's toegewezen)\n- requiredArchetypes: array van {role, notes} \u2014 welke NPC's nodig zijn (rollen: authority, antagonist, informant, mentor, fixer, muscle, herald)\n- successors: lege array (v1 is lineair)\n\nSlagen moeten escaleren in drama. Slag 1 is de haak, laatste slag is het hoogtepunt.\n\nAntwoord volledig in het Nederlands.\n\nGeef ALLEEN een JSON-object: {\"beats\": [...]}",
+    "beatsUserMsg": "Cre\u00eber de verhaalslagen.",
+    "factionsPrompt": "Je definieert de politieke facties van een fantasywereld. Gegeven de werelddigest hieronder, cre\u00eber 2-3 facties die de machtsdynamiek van de wereld vormgeven.\n\nWerelddigest:\n{{parentDigest}}\n\nGenereer per factie:\n- id (slug: faction-naam)\n- naam (suggestief, 2-4 woorden)\n- beschrijving (waar ze voor staan, 1-2 zinnen)\n- waarden (komma-gescheiden: bijv. \"orde, traditie, geheimhouding\")\n- allies: array van bondgenoot factie-ids (kan leeg zijn)\n- enemies: array van vijandige factie-ids (minstens \u00e9\u00e9n factie moet een vijand hebben)\n- territory: array van regio-ids (leeg voor nu)\n- digest: ~20 woorden samenvatting\n\nMaak de facties met echte spanning. Minstens twee facties moeten in conflict zijn.\n\nBELANGRIJK: Laat geen enkel veld weg. Elke factie moet alle 8 velden hebben. allies en enemies gebruiken de NAAM van de factie, niet het id.\n\nAntwoord volledig in het Nederlands.\n\nGeef ALLEEN een JSON-object: {\"factions\": [...]}",
+    "factionsUserMsg": "Cre\u00eber de facties.",
+    "regionPrompt": "Je breidt een fantasywereld uit. Gegeven de werelddigest hieronder, cre\u00eber een startregio (land/territorium).\n\nWerelddigest:\n{{parentDigest}}\n\nGenereer:\n- Een regio-id (slug-formaat: region-naam)\n- Regionaam, klimaat en een levendige beschrijving van 2-3 zinnen\n- De naam van de hoofdnederzetting (dorp of stad)\n- De naam van een nabijgelegen kerker/ru\u00efne/grot\n- Een gerucht dat de lokale bevolking fluistert en dat verbonden is met de rode draad\n- 2-3 hints over wat in aangrenzende regio's ligt\n- Een digest: ~40 woorden samenvatting voor kindgeneratoren\n\nAntwoord volledig in het Nederlands.\n\nGeef ALLEEN een JSON-object dat het schema volgt.",
+    "regionUserMsg": "Cre\u00eber de startregio.",
+    "settlementPrompt": "Je werkt een nederzetting uit in een fantasywereld. Gegeven de regiodigest hieronder, cre\u00eber een dorp of stad.\n\nRegiodigest:\n{{parentDigest}}\n\nGenereer:\n- Nederzetting-id (slug: settlement-naam) en regionId: \"{{regionId}}\"\n- Naam en een levendige beschrijving van 2-3 zinnen\n- 3-4 NPC's, elk met:\n  - id (slug: npc-naam), naam, rol (innkeeper/questgiver/merchant/guard/elder/blacksmith/healer/hermit)\n  - houding (friendly/neutral/suspicious/hostile)\n  - begroeting (hun openingszin bij een gesprek)\n  - questHook (string of null \u2014 de questgiver MOET er een hebben die naar de kerker wijst)\n  - personality (levendige 2-3 woorden: \"nors maar vriendelijk\", \"parano\u00efde fluisteraar\")\n  - secret (iets wat ze weten of verbergen \u2014 null als niets. bijv. \"zag de cultisten 's nachts de crypte ingaan\")\n  - factionId (null voor v1)\n  - relationships: array van {targetId, type} met type: spouse/parent/child/rival/ally/employer/mentor. Minstens 1 NPC moet een relatie met een andere NPC hebben.\n  - inventory: array van {name, price, description} voor handelaren, null voor anderen. Handelaren: 3-5 items.\n- 2-3 uitgangen: richting, doelnaam, doeltype (dungeon/road/wilderness), targetId (slug voor kerkers, null voor wegen)\n- Een digest: ~30 woorden samenvatting voor kindgeneratoren\n\nMaak NPC's echt: geef ze persoonlijkheid, geheimen en onderlinge banden.\n\nAntwoord volledig in het Nederlands.\n\nGeef ALLEEN een JSON-object dat het schema volgt.",
+    "settlementUserMsg": "Cre\u00eber de nederzetting.",
+    "polishPrompt": "Je bent een D&D-loreauteur die een Wereldbijbel omschrijft tot gepolijst, meeslepend proza voor een fantasy-bronboek.\n\nDe gebruiker levert ruwe hoofdstuktekst met technische data. Herschrijf elk hoofdstuk tot prachtig proza.\n\nRegels:\n- Verwijder ALLE technische IDs: slugs als \"beat.01.x\", \"flag.x\", \"npc-x\", \"room-0\", \"faction-x\". Vervang ze door de werkelijke namen.\n- Zet mechanische taal (\"Sets flags:\", \"Requires:\", \"Exits: north \u2192 room-3\") om in verhalend proza.\n- Zet NPC-relatiereferenties van IDs naar namen om (\"spouse of npc-torva\" \u2192 \"getrouwd met Torva\").\n- Behoud ALLE feitelijke inhoud \u2014 verzin geen nieuwe lore, namen of gebeurtenissen.\n- Schrijf in D&D-bronboekstijl: sfeervol, gezaghebbend, suggestief.\n- Beschrijf kerkerruimtes als een rondleiding, niet als een gegevensblad.\n- Het laatste hoofdstuk moet een kort \"Wereld in een Oogopslag\" prozasamenvatting zijn (3-5 zinnen).\n- Antwoord volledig in {{language}}.\n\nGeef een JSON-object: {\"title\": \"korte sfeervolle boektitel\", \"chapters\": [{\"heading\": \"hoofdstukkop\", \"text\": \"het gepolijste proza\"}, ...]}",
+    "worldgenStep1": "De wereld wordt gesmeed\u2026",
+    "worldgenStep2": "Facties worden gevormd\u2026",
+    "worldgenStep3": "De rode draad wordt gesponnen\u2026",
+    "worldgenStep4": "De regio krijgt vorm\u2026",
+    "worldgenStep5": "De nederzetting wordt gebouwd\u2026",
+    "worldgenStep6": "De kerker wordt gegenereerd\u2026",
     "worldgenDone": "De wereld is gereed.",
     "defaultTone": "rauwe, aardse fantasy",
-    "actPrompt": "Je bent de auteur van een lopende fantasycampagne en schrijft Akte {{actNumber}}.\n\n{{finale}}\n\nWat er tot nu toe gebeurd is:\n{{context}}\n\nSchrijf de volgende akte als 5 tot 7 beats. Regels:\n- Bouw voort op wat er echt gebeurd is. Noem de plaatsen, facties en gebeurtenissen uit de context bij naam — de speler heeft ze verdiend.\n- Alle unpaidSetups MOETEN in deze akte worden ingelost, of bewust in iets anders veranderen. Een aanwijzing die nooit landt is een gebroken belofte.\n- Elke beat heeft een id (kebab-case, uniek), een title, en een dramaticPurpose: één zin die zegt wat waar moet worden voordat de beat voorbij is. Schrijf het doel zo dat een lezer kan zien of het gebeurd is.\n- Zet location op een plaatsnaam uit de context als de beat ergens specifiek hoort, anders null.\n- Gebruik requires om een beat achter een eerdere te zetten, als [\"beat-done-<id>\"]. Houd de akte grotendeels lineair met één of twee optionele vertakkingen.\n- Zet completesOn op de mechanische vlaggen die de slag vanzelf zouden afsluiten, uitsluitend gekozen uit: [\"enemy-slain\", \"boss-slain\", \"treasure-taken\", \"gate-unlocked\", \"settlement-reached\", \"region-reached\"]. Gebruik het wanneer de slag draait om iets dat de dobbelstenen bepalen (een gedode vijand, een deur, een aankomst); gebruik [] wanneer de slag om een gesprek, een ontdekking of een keuze gaat.\n- Escaleer: deze akte moet de speler meer kosten dan de vorige.\n\nSchrijf in het {{language}}. Geef alleen JSON terug.",
-    "actFinaleNote": "Dit is de LAATSTE akte. Die moet het centrale conflict van de campagne oplossen en de speler een beslissende confrontatie geven — een echt einde, geen volgend klusje.",
-    "actUserMsg": "Schrijf de volgende akte."
+    "actPrompt": "Je bent de auteur van een lopende fantasycampagne en schrijft Akte {{actNumber}}.\n\n{{finale}}\n\nWat er tot nu toe gebeurd is:\n{{context}}\n\nSchrijf de volgende akte als 5 tot 7 beats. Regels:\n- Bouw voort op wat er echt gebeurd is. Noem de plaatsen, facties en gebeurtenissen uit de context bij naam \u2014 de speler heeft ze verdiend.\n- Alle unpaidSetups MOETEN in deze akte worden ingelost, of bewust in iets anders veranderen. Een aanwijzing die nooit landt is een gebroken belofte.\n- Elke beat heeft een id (kebab-case, uniek), een title, en een dramaticPurpose: \u00e9\u00e9n zin die zegt wat waar moet worden voordat de beat voorbij is. Schrijf het doel zo dat een lezer kan zien of het gebeurd is.\n- Zet location op een plaatsnaam uit de context als de beat ergens specifiek hoort, anders null.\n- Gebruik requires om een beat achter een eerdere te zetten, als [\"beat-done-<id>\"]. Houd de akte grotendeels lineair met \u00e9\u00e9n of twee optionele vertakkingen.\n- Zet completesOn op de mechanische vlaggen die de slag vanzelf zouden afsluiten, uitsluitend gekozen uit: [\"enemy-slain\", \"boss-slain\", \"treasure-taken\", \"gate-unlocked\", \"settlement-reached\", \"region-reached\"]. Gebruik het wanneer de slag draait om iets dat de dobbelstenen bepalen (een gedode vijand, een deur, een aankomst); gebruik [] wanneer de slag om een gesprek, een ontdekking of een keuze gaat.\n- Escaleer: deze akte moet de speler meer kosten dan de vorige.\n\nSchrijf in het {{language}}. Geef alleen JSON terug.",
+    "actFinaleNote": "Dit is de LAATSTE akte. Die moet het centrale conflict van de campagne oplossen en de speler een beslissende confrontatie geven \u2014 een echt einde, geen volgend klusje.",
+    "actUserMsg": "Schrijf de volgende akte.",
+    "redigestPrompt": "Je werkt de beschrijving bij van een {{kind}} in een fantasycampagne: {{name}}.\n\nHet bericht van de speler is de HUIDIGE beschrijving. Sindsdien is daar het volgende gebeurd:\n{{changes}}\n\nHerschrijf de beschrijving zodat die rekening houdt met wat er gebeurd is, in dezelfde stem en ongeveer dezelfde lengte. Houd alles wat nog waar is overeind \u2014 een plaats verliest zijn karakter niet omdat het een herberg kwijt is. Verander alleen wat de gebeurtenissen veranderd hebben. Verzin geen nieuwe gebeurtenissen buiten de genoemde.\n\nSchrijf in het {{language}}. Geef ALLEEN de herschreven beschrijving, zonder inleiding."
   },
   "thinking": {
     "reading": "De Dungeon Master overweegt je woorden",
@@ -1125,26 +1126,26 @@
     "threatLabel": "{{name}} is er nog altijd",
     "stirring": "Mensen noemen {{subject}}, half als grap.",
     "building": "Het gesprek komt telkens terug op {{subject}}. Niemand lacht meer.",
-    "imminent": "{{subject}} — en de zaal valt stil als het ter sprake komt.",
+    "imminent": "{{subject}} \u2014 en de zaal valt stil als het ter sprake komt.",
     "breaking": "{{subject}}. Het is voorbij praten.",
     "resolved": "Ze vertellen het verhaal van {{subject}} nog steeds."
   },
   "error": {
     "auth": "Je API-sleutel is geweigerd (401). Open Instellingen en controleer de sleutel, of log opnieuw in.",
-    "credit": "Je OpenRouter-tegoed is op (402). Vul het aan op openrouter.ai — opnieuw proberen helpt pas daarna.",
+    "credit": "Je OpenRouter-tegoed is op (402). Vul het aan op openrouter.ai \u2014 opnieuw proberen helpt pas daarna.",
     "refused": "Het model heeft dit verzoek geweigerd (403). Herformuleer wat je typte, of kies een ander model in Instellingen.",
-    "noModel": "Dat model bestaat niet meer (404). Kies een ander in Instellingen — de standaardmodellen herstellen zichzelf bij de volgende herlaadbeurt.",
+    "noModel": "Dat model bestaat niet meer (404). Kies een ander in Instellingen \u2014 de standaardmodellen herstellen zichzelf bij de volgende herlaadbeurt.",
     "tooLong": "Deze beurt was te lang voor het model (413). Zeg het in minder woorden.",
     "rateLimited": "Het model is tijdelijk overbelast (429). Wacht een paar seconden en probeer dezelfde actie opnieuw.",
-    "provider": "De aanbieder had een serverfout ({{status}}). Niet jouw schuld — probeer het zo dadelijk opnieuw.",
+    "provider": "De aanbieder had een serverfout ({{status}}). Niet jouw schuld \u2014 probeer het zo dadelijk opnieuw.",
     "badRequest": "Het model heeft het verzoek geweigerd (400). Herformuleer het, of wissel van model in Instellingen.",
-    "network": "Het model was niet bereikbaar — de verbinding viel weg of duurde te lang. Controleer je verbinding en probeer opnieuw.",
+    "network": "Het model was niet bereikbaar \u2014 de verbinding viel weg of duurde te lang. Controleer je verbinding en probeer opnieuw.",
     "unknown": "Er ging iets mis in het gesprek met het model ({{detail}}). Probeer dezelfde actie opnieuw.",
-    "retryHint": "Je beurt is niet verloren — stuur hem opnieuw wanneer je klaar bent."
+    "retryHint": "Je beurt is niet verloren \u2014 stuur hem opnieuw wanneer je klaar bent."
   },
   "budget": {
     "near": "Budgetmelding: ${{spent}} van je sessiebudget van ${{cap}} is besteed.",
-    "over": "Budgetmelding: je bent over je sessiebudget van ${{cap}} heen (${{spent}} besteed). Het spel gaat gewoon door — pas de limiet aan in Instellingen.",
+    "over": "Budgetmelding: je bent over je sessiebudget van ${{cap}} heen (${{spent}} besteed). Het spel gaat gewoon door \u2014 pas de limiet aan in Instellingen.",
     "label": "Sessiebudget (USD)",
     "none": "geen limiet"
   },
@@ -1160,13 +1161,13 @@
     "castCmd": "Ik spreek {{name}} uit"
   },
   "worldbible": {
-    "documenting": "De wereldbijbel voor je lopende campagne wordt geschreven…",
-    "generating": "Geen lopende campagne — er wordt een nieuwe wereld gegenereerd om te beschrijven…"
+    "documenting": "De wereldbijbel voor je lopende campagne wordt geschreven\u2026",
+    "generating": "Geen lopende campagne \u2014 er wordt een nieuwe wereld gegenereerd om te beschrijven\u2026"
   },
   "slots": {
     "prompt": "Opslagplekken ({{n}} van {{max}} in gebruik). Kies er een, of sla op in een nieuwe.",
-    "entry": "{{name}} — {{pc}}, beurt {{turn}} ({{when}})",
-    "saveNew": "Opslaan in een nieuwe plek…",
+    "entry": "{{name}} \u2014 {{pc}}, beurt {{turn}} ({{when}})",
+    "saveNew": "Opslaan in een nieuwe plek\u2026",
     "namePrompt": "Geef deze plek een naam:",
     "whatNow": "Wat moet er met \"{{name}}\" gebeuren?",
     "load": "Deze plek laden",
@@ -1174,13 +1175,20 @@
     "delete": "Verwijderen",
     "cancel": "Annuleren",
     "saved": "Opgeslagen in \"{{name}}\".",
-    "loaded": "Plek geladen — de pagina wordt herladen…",
+    "loaded": "Plek geladen \u2014 de pagina wordt herladen\u2026",
     "deleted": "Plek verwijderd.",
     "loadFail": "Die plek kon niet worden gelezen. Mogelijk is hij door een nieuwere versie van het spel geschreven.",
     "fail": {
       "empty-name": "Een plek heeft een naam nodig.",
       "full": "Alle plekken zijn in gebruik. Overschrijf of verwijder er eerst een.",
       "quota": "Er was geen ruimte om de plek te schrijven. Maak ruimte vrij en probeer opnieuw."
+    }
+  },
+  "clock": {
+    "faction": {
+      "expand": "{{faction}} breidt zijn invloed uit",
+      "consolidate": "{{faction}} verstevigt zijn greep op wat het bezit",
+      "strike": "{{faction}} bereidt een zet voor tegen {{enemy}}"
     }
   }
 }

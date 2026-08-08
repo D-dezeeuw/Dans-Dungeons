@@ -34,7 +34,18 @@ function makeRoller(seed, cursor) {
     attack(o)    { const r = engine.Combat.attackRoll(o);   log.push({ op: 'attackRoll', attackBonus: o.attackBonus, ac: o.ac, stance: 'normal', d20: r.d20, hit: r.hit }); return r; },
     damage(o)    { const r = engine.Combat.damageRoll(o);   log.push({ op: 'damageRoll', damageDice: o.damageDice, damageMod: o.damageMod ?? 0, baseRolls: r.baseRolls, critRolls: r.critRolls }); return r; },
     check(o)     { const r = engine.Checks.abilityCheck(o); log.push({ op: 'abilityCheck', abilityScore: o.abilityScore, proficient: o.proficient ?? false, proficiencyBonus: o.proficiencyBonus ?? 2, dc: o.dc, d20: r.d20, success: r.success }); return r; },
-    deathSave(a) { const r = engine.Combat.deathSave(a);    if (r.outcome !== 'noop') log.push({ op: 'rollDie', sides: 20, value: r.d20 }); return r; },
+    // Engine 2.2.1+ replays its own `deathSave` op, so the log records the
+    // outcome and the pre-roll tracker instead of flattening the save to an
+    // anonymous d20 — replay now catches a forged outcome, not just a forged die.
+    deathSave(a) {
+      const r = engine.Combat.deathSave(a);
+      if (r.outcome !== 'noop') {
+        const prev = a?.deathSaves ?? {};
+        log.push({ op: 'deathSave', d20: r.d20, outcome: r.outcome,
+                   previousSuccesses: prev.successes ?? 0, previousFailures: prev.failures ?? 0 });
+      }
+      return r;
+    },
     draws: () => rng.draws(),
   };
 }
@@ -73,12 +84,31 @@ describe('seeded combat rolls — determinism + verifyLog audit (Phase 5)', () =
     assert.equal(verifyLog({ seed: 77, log: tampered }).ok, false);   // d20 no longer matches the seed
   });
 
-  it('logs a death save as a replayable rollDie(20)', () => {
+  it('logs a death save as a replayable deathSave, outcome and all', () => {
     const r = makeRoller(31415, 0);
     r.deathSave({ deathSaves: Combat.freshDeathSaves() });
     assert.equal(r.log.length, 1);
-    assert.equal(r.log[0].op, 'rollDie');
+    assert.equal(r.log[0].op, 'deathSave');
     assert.equal(verifyLog({ seed: 31415, log: r.log }).ok, true);
+  });
+
+  it('replay rejects a death save whose outcome was rewritten', () => {
+    // The old workaround logged the save as an anonymous rollDie(20), so a
+    // tampered outcome replayed clean — the die was all replay could see.
+    const r = makeRoller(31415, 0);
+    r.deathSave({ deathSaves: Combat.freshDeathSaves() });
+    const forged = [{ ...r.log[0], outcome: 'revived' }];
+    assert.equal(verifyLog({ seed: 31415, log: forged }).ok, false);
+  });
+
+  it('replay keeps a death save honest about the tracker it landed in', () => {
+    const r = makeRoller(2718, 0);
+    r.deathSave({ deathSaves: { successes: 0, failures: 2, stable: false, dead: false } });
+    assert.equal(verifyLog({ seed: 2718, log: r.log }).ok, true);
+    // Same die, different history → a different outcome, so it must not verify.
+    const rewritten = [{ ...r.log[0], previousFailures: 0 }];
+    const res = verifyLog({ seed: 2718, log: rewritten });
+    if (r.log[0].outcome === 'dead') assert.equal(res.ok, false);
   });
 });
 

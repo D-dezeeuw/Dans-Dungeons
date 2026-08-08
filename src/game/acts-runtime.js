@@ -63,11 +63,20 @@ export function raiseFlag(flag) {
 
 // Complete a beat. Returns { completed, actClosed } so the caller can run the
 // act-transition ceremony (and generate the next act) at the right moment.
+//
+// Completing a beat also settles any clue that was planted to pay off into it:
+// a setup whose `paysInto` names this beat has now landed, so it stops being an
+// obligation the next act has to carry.
 export function completeBeat(beatId) {
   const before = thread();
   const turn   = appState.session?.turnCount ?? 0;
-  const after  = completeActBeat(before, beatId, { turn });
+  let after    = completeActBeat(before, beatId, { turn });
   if (after === before) return { completed: false, actClosed: false };
+
+  for (const setup of after.payoffs.filter(p => !p.paid && p.paysInto === beatId)) {
+    after = paySetup(after, setup.id, { turn });
+  }
+
   save(after);
   return { completed: true, actClosed: after.actIndex > before.actIndex };
 }
@@ -84,6 +93,13 @@ export function payClue(id) {
 }
 
 export function unpaidSetups() { return duePayoffs(thread()); }
+
+// Clues the GM is currently carrying: planted, not yet paid off. These go into
+// the narrator's GM-private slice so it can seed them naturally over several
+// scenes — a setup the player is *told* about is not foreshadowing.
+export function activeSetups() {
+  return thread().payoffs.filter(p => !p.paid).map(p => p.clue).filter(Boolean);
+}
 
 // ─── Flag-primary completion ─────────────────────────────────────────────────
 //
@@ -144,15 +160,38 @@ export function nextActContext() {
 }
 
 // Store a generated act and make it current.
+//
+// An act also plants its foreshadowing: each `setup` is a clue this act drops
+// that a LATER act has to pay off. Without this the payoff ledger never
+// receives anything, `duePayoffs` is permanently empty, and the generator's
+// "unpaidSetups MUST be paid off" instruction is addressed to an empty list.
 export function adoptAct(generated) {
   if (!generated?.beats?.length) return null;
   const t = thread();
+  const actNo = t.acts.length + 1;
   const act = makeAct({
-    id:      `act-${t.acts.length + 1}`,
-    title:   generated.title   ?? `Act ${t.acts.length + 1}`,
+    id:      `act-${actNo}`,
+    title:   generated.title   ?? `Act ${actNo}`,
     premise: generated.premise ?? '',
     beats:   generated.beats,
   });
+
   save(pushAct(t, act));
+
+  // Planting goes through plantClue so there is exactly one way a setup enters
+  // the ledger — an act transition happens a handful of times per campaign, so
+  // the per-clue write costs nothing and a single path cannot drift.
+  for (const s of generated.setups ?? []) {
+    if (!s?.id || !s?.clue) continue;
+    plantClue({
+      id:       `${act.id}.${s.id}`,
+      clue:     s.clue,
+      paysInto: s.paysInto ?? null,
+      // Unstated deadlines default to the next act: a clue that can be deferred
+      // forever is how the audit's "cosmetic" foreshadowing happened.
+      dueByAct: s.dueByAct ?? actNo + 1,
+    });
+  }
+
   return act;
 }

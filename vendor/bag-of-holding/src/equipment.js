@@ -2,7 +2,11 @@
 // don/doff time, tool proficiency. Pure helpers the host calls
 // alongside Character.deriveSheet.
 
-const ENCUMBRANCE_MULT = Object.freeze({
+// Exported at module level, not only inside the `Equipment` bundle below: the
+// engine factory builds its namespace from `import * as EquipmentBase`, so a
+// value that exists only as a property of `Equipment` reads as undefined there
+// — which is exactly what `engine.Equipment.ENCUMBRANCE_MULT` was.
+export const ENCUMBRANCE_MULT = Object.freeze({
   none: 1,
   encumbered: 5,
   heavilyEncumbered: 10

@@ -103,6 +103,28 @@ Every story in this plan serves at least one. When two conflict, the lower numbe
 
 Test counts after the follow-up pass: game **427** (was 267), client **187** (was 92), engine **1,574** (was 1,561), MCP 99 — **2,287 passing, 0 failing** across four repos, all gated by CI.
 
+#### Audit pass — the plan verified against the code
+
+> [`2026-08-implementation-audit.md`](2026-08-implementation-audit.md) checked every story
+> by finding the call site rather than the export. At the commit it audited, this log
+> overstated coverage: of 49 stories, 18 complete, 18 partial, 13 not started — ten of them
+> undeclared, including **E1.S5, a P0 showstopper the log never mentioned**. The third pass
+> above has since closed most of that list independently; what follows is what it did not.
+
+| Landed | Status |
+|---|---|
+| **Orphans wired** | Four capabilities were built, tested, exported and called by nothing — the plan's own antipattern, reproduced by the passes that were closing it. Acts now declare the setups they generate and `adoptAct` plants them, so the payoff ledger finally has a producer: `activeSetups` reached the narrator prompt in the third pass, but `plantClue` still had zero callers, so it was reading a permanently empty ledger. Completing a beat settles the clue that paid into it. Chapter close re-renders the digests the ledger invalidated (`staleDigests` had no consumer, so a region digest described hour zero forever) and names the chapter from its own summary (`titleChapter` was never called). Every faction runs chapter-scale projects — `addClock` had exactly one caller, so "the world moved while you were away" only ever meant an invented threat got worse. |
+| **Guard fixed** | `wiring.test.js` missed all four because its regex counted an unused `import` as a consumer. It now strips imports before looking. |
+| **E1.S5** replay | Engine **2.4.1**. Death saves replay through `Combat.deathSave` from the tracker snapshot the entry carries, so a log whose **outcome** was rewritten no longer verifies clean — `2.3.0` had unblocked verification but still only checked the die. The game's `rollDie(20)` workaround is deleted. The condition-record shape the 2.1.0 merge dropped is restored along with `conditionName` / `conditionsRequiringSave`, which `index.d.ts` had gone on declaring the whole time. `Equipment.ENCUMBRANCE_MULT` is reachable again. |
+| **Client** | `digestScopeOf` / `causesFor`: the pure half of digest re-rendering, so the host can turn an invalidated id into a re-render without re-implementing the id grammar. |
+
+**Rejected, against the plan's own text:** E2.S3 asked for canon extraction to run *after*
+`finalizeTurn`. That is unsafe — `finalizeTurn` stamps the undo boundary at the current
+history length, so writes moved past it fall outside the turn and an undo would scrub the
+minted entities. The third pass reached the same conclusion by a better route: extraction
+and the beat check now run *concurrently* inside the boundary, which is the latency win
+without the cost.
+
 #### Third pass — the deferrals closed for real
 
 The three items above were carried, and are now done: E8.S2 shipped after the
