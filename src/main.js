@@ -15,7 +15,7 @@ import { verifyCombatLog }                                                      
 import { getSpend, onSpendChange, budgetWarningDue, setBudget, getBudget, TIERS }           from './ai/spend.js';
 import * as UI from './ui/console.js';
 import { locale, setLocale, t } from './i18n/i18n.js';
-import { claimTab, isPrimaryTab, onPrimaryChange } from './core/tabs.js';
+import { claimTab, onPrimaryChange } from './core/tabs.js';
 import { onSchemaViolation } from './ai/validate.js';
 
 async function boot() {
@@ -25,11 +25,13 @@ async function boot() {
 
   // One campaign, one writer. Claimed before anything can autosave; a second
   // tab becomes a read-only spectator rather than overwriting the first.
-  claimTab();
+  // Announced on the CHANGE, never on the initial value: the claim resolves a
+  // beat after boot, so reading it immediately would accuse the only open tab
+  // of being the second one.
   onPrimaryChange((primary) => {
     if (!primary) UI.appendEntry('error', t('storage.secondTab'));
   });
-  if (!isPrimaryTab()) UI.appendEntry('error', t('storage.secondTab'));
+  claimTab();
 
   // Expose game state for console debugging: game.world, game.party, etc.
   window.game = appState;

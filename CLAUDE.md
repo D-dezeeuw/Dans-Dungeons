@@ -52,7 +52,9 @@ src/
 │   ├── state.js          Spektrum wrapper (setValue, tick, computed, etc.)
 │   └── utils.js          escHtml and other small helpers
 ├── game/
-│   ├── flow.js           Game lifecycle FSM: setup, play loop, towns, travel, end states
+│   ├── flow.js           Game lifecycle FSM: play loop, towns, travel, end states
+│   ├── session-setup.js  Key acquisition (OAuth/paste/demo), tier, model healing
+│   ├── views.js          Read-only screens: /story, region map, quests, inventory
 │   ├── loop.js           Turn engine: classify → resolve → narrate → commit
 │   ├── resolver.js       Pure D&D rules: attack, skill, move, take, unlock
 │   ├── character.js      Character creation wizard

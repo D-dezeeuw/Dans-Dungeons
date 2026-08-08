@@ -61,24 +61,20 @@ function claimByBeacon() {
 
 // Start the claim. Idempotent; safe to call once at boot.
 export function claimTab() {
-  // Web Locks: the primary tab holds the lock for its whole lifetime, so a
-  // second tab's request simply never resolves while the first is open, and
-  // resolves the instant it closes — which is exactly the handover we want.
+  // `ifAvailable` is the whole reason this is simple: it answers immediately
+  // and deterministically — the callback gets the lock, or it gets null because
+  // someone else holds it. The first shape of this raced a plain request()
+  // against a locks.query(), which answered differently depending on which
+  // resolved first and made the second-tab behaviour intermittent.
   if (navigator.locks?.request) {
-    let settled = false;
-    navigator.locks.request(LOCK_NAME, { mode: 'exclusive' }, () => {
-      settled = true;
+    navigator.locks.request(LOCK_NAME, { mode: 'exclusive', ifAvailable: true }, (lock) => {
+      if (!lock) { setPrimary(false); return; }
       setPrimary(true);
-      // Held until the tab goes away. The promise never resolves on purpose.
+      // Held for the tab's whole life. The promise never resolves on purpose:
+      // that is what makes a second tab's `ifAvailable` request come back null,
+      // and what releases the lock the instant this tab goes away.
       return new Promise(() => {});
-    }).catch(() => { if (!settled) setPrimary(true); });
-
-    // We do not know yet whether we won. Assume not, so a second tab cannot
-    // autosave over the first in the moments before the lock is decided.
-    navigator.locks.query?.().then((state) => {
-      const held = (state?.held ?? []).some(l => l.name === LOCK_NAME);
-      if (held && !settled) setPrimary(false);
-    }).catch(() => { /* query is optional */ });
+    }).catch(() => { /* refused entirely — assume we are alone rather than refusing to save */ });
     return;
   }
 
