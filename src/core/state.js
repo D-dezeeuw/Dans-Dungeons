@@ -205,6 +205,11 @@ export function pickPersisted() {
 // whatever host the file named. Strip both — the importer keeps their own.
 const CREDENTIAL_FIELDS = ['key', 'baseUrl'];
 
+// Transient session facts that must never travel in a save: whether THIS tab
+// is a spectator says nothing about the campaign and would follow an exported
+// file into someone else's browser.
+const TRANSIENT_SESSION = ['spectator'];
+
 function withoutCredentials(snapshot) {
   if (!snapshot?.ai) return snapshot;
   const ai = { ...snapshot.ai };
@@ -220,6 +225,10 @@ export function sanitizeImported(data) {
 
 function buildSaveSnapshot() {
   const snap = pickPersisted();
+  if (snap.session) {
+    snap.session = { ...snap.session };
+    for (const k of TRANSIENT_SESSION) delete snap.session[k];
+  }
   const tt = _timeTravelProvider?.();
   if (tt) snap._timeTravel = tt;
   return snap;

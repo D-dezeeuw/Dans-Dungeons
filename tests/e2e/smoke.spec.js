@@ -197,8 +197,14 @@ test('a second tab refuses to save over the first', async ({ browser }) => {
   await mockOpenRouter(second);
   await second.goto('/');
   // Same origin, same storage: the second tab must announce itself as a
-  // spectator rather than quietly overwriting the first tab's turns.
-  await expect(second.locator('#transcript')).toContainText(/another tab/i, { timeout: 10_000 });
+  // spectator rather than quietly overwriting the first tab's turns — and it
+  // must KEEP saying so. A transcript line did not survive character
+  // creation's UI.clear(), leaving a tab that never saves and no longer says
+  // why; the notice is a persistent banner now.
+  await expect(second.locator('#spectator-banner')).toBeVisible({ timeout: 10_000 });
+  await expect(second.locator('#spectator-banner')).toContainText(/another tab/i);
+  // And the first tab must not be wearing it.
+  await expect(first.locator('#spectator-banner')).toBeHidden();
   await ctx.close();
 });
 

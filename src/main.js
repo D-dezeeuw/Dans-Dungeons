@@ -29,7 +29,8 @@ async function boot() {
   // beat after boot, so reading it immediately would accuse the only open tab
   // of being the second one.
   onPrimaryChange((primary) => {
-    if (!primary) UI.appendEntry('error', t('storage.secondTab'));
+    setValue('session.spectator', !primary);
+    tick();
   });
   claimTab();
 

@@ -208,6 +208,7 @@ html.styles-loaded #brand-bar {
       <div id="chrome-row3" data-cloak data-if="ui.enemyStatsVisible">
         <span id="enemy-header-stats" :innerHTML="ui.enemyStats"></span>
       </div>
+      <div id="spectator-banner" data-cloak data-if="ui.spectator" role="status">{{ui.spectatorText}}</div>
     </header>
 
     <div id="sidebar-backdrop" aria-hidden="true"></div>

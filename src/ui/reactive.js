@@ -84,6 +84,12 @@ export function registerReactiveSidebar() {
     return [...attacks, ...spells, ...abilities];
   });
 
+  // A second tab is a spectator, and it has to KEEP saying so. This was a
+  // transcript line, which character creation's UI.clear() wiped a moment
+  // later — leaving a tab that silently never saves and no longer says why.
+  computed('ui.spectator',     ['session.spectator'], (s) => s.session?.spectator === true);
+  computed('ui.spectatorText', ['session.spectator'], () => t('storage.secondTab'));
+
   // Slots left, as one line under the class words — the only number a caster
   // checks every turn.
   computed('ui.slotLine', ['party.magic'], (s) => {
