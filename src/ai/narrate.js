@@ -7,6 +7,7 @@ import { _callStream, repairJson, chatCompletion, aiConfig } from './client.js';
 import { generateImage } from 'bag-of-holding-client';
 import { NARRATOR_SCHEMA } from './schemas.js';
 import { salvageJson } from './parse.js';
+import { validateNarration } from './validate.js';
 import { t, locale } from '../i18n/i18n.js';
 import { transcriptWindow } from '../game/chapters.js';
 
@@ -70,7 +71,7 @@ export async function narrate(resolvedFacts, sceneContext, recentTranscript, onC
   const raw = await _callStream({ tier: 'medium', messages, schema: NARRATOR_SCHEMA }, onChunk);
 
   try {
-    return JSON.parse(raw);
+    return narration(JSON.parse(raw));
   } catch { /* fall through to local salvage */ }
 
   // Salvage locally before paying anyone. Almost every "unparseable" narration
@@ -78,9 +79,15 @@ export async function narrate(resolvedFacts, sceneContext, recentTranscript, onC
   // has ALREADY watched the streamed text, so a repair call that comes back
   // with different words shows them one story and commits another.
   const salvaged = salvageJson(raw);
-  if (salvaged) return salvaged;
+  if (salvaged) return narration(salvaged);
 
-  return repairJson(raw, { tier: 'medium', schema: NARRATOR_SCHEMA }, messages);
+  return narration(await repairJson(raw, { tier: 'medium', schema: NARRATOR_SCHEMA }, messages));
+}
+
+// A missing `narration` used to render the literal string "undefined" into the
+// transcript, and from there into the save, the journal and the world bible.
+function narration(out) {
+  return validateNarration(out, { fallback: t('loop.narrationMissing') });
 }
 
 // ─── Scene image generation ───────────────────────────────────────────────────

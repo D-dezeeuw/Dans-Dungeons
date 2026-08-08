@@ -380,9 +380,15 @@ html.styles-loaded #brand-bar {
   <script src="vendor/app.bundle.js" defer></script>
   <script>
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/Dans-Dungeons/sw.js');
+      // Relative to wherever the page is actually served from. These were
+      // absolute /Dans-Dungeons/… paths, so the service worker never registered
+      // and the version check 404'd (or was refused) anywhere but that exact
+      // GitHub Pages subpath — a local server, a fork under another repo name,
+      // a custom domain.
+      var base = location.pathname.replace(/[^/]*$/, '');
+      navigator.serviceWorker.register(base + 'sw.js');
       // Eagerly check for a new version on every page load.
-      fetch('/Dans-Dungeons/vendor/app.version', { cache: 'no-store' })
+      fetch(base + 'vendor/app.version', { cache: 'no-store' })
         .then(r => r.ok ? r.text() : null)
         .then(remote => {
           if (!remote) return;

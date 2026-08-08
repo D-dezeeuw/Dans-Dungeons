@@ -85,4 +85,61 @@ describe('Spektrum bindings reference real markup', () => {
       assert.match(rest, /data-as="/, `data-each="${expr}" has no data-as alias`);
     }
   });
+
+  // ── The other half of the contract ────────────────────────────────────────
+  //
+  // The id scan above catches markup that JavaScript reaches for and cannot
+  // find. This catches the inverse: markup that binds to a state path nothing
+  // ever produces. Both fail the same way — silently — and a `data-if` on a
+  // path that is never computed renders as permanently hidden, which looks
+  // exactly like a feature that was never built.
+
+  const srcText = uiSourceFiles().map(f => fs.readFileSync(f, 'utf8')).join('\n');
+
+  // Every top-level path the markup binds to, from data-if / data-each /
+  // :attr= / {{…}} interpolation.
+  function boundPaths() {
+    const paths = new Set();
+    const add = (expr) => {
+      const root = String(expr).trim().split(/[.[\s]/)[0];
+      if (root && /^[a-zA-Z_$][\w$]*$/.test(root)) paths.add(String(expr).trim());
+    };
+    for (const m of html.matchAll(/data-(?:if|each)="([^"]+)"/g)) add(m[1]);
+    for (const m of html.matchAll(/\s:[a-zA-Z]+="([^"]+)"/g))     add(m[1]);
+    for (const m of html.matchAll(/\{\{([^}]+)\}\}/g))            add(m[1]);
+    return paths;
+  }
+
+  // Paths under a data-as alias belong to the loop item, not to appState.
+  function loopAliases() {
+    return new Set([...html.matchAll(/data-as="([^"]+)"/g)].map(m => m[1]));
+  }
+
+  it('every ui.* binding has a computed that produces it', () => {
+    const aliases = loopAliases();
+    const missing = [];
+    for (const expr of boundPaths()) {
+      const root = expr.split(/[.[]/)[0];
+      if (aliases.has(root)) continue;          // loop-local
+      if (root !== 'ui') continue;              // other roots are plain state paths
+      // `computed('ui.x', …)` is the only thing that can produce a ui.* value.
+      const name = expr.split(/[.[]/).slice(0, 2).join('.');
+      if (!srcText.includes(`'${name}'`)) missing.push(name);
+    }
+    assert.deepEqual([...new Set(missing)], [],
+      'the markup binds to computed values nothing computes — those elements render blank or stay hidden forever');
+  });
+
+  it('every top-level state root a binding names is a real appState path', () => {
+    const ROOTS = new Set(['ui', 'world', 'party', 'flags', 'transcript', 'session', 'ai', 'settings']);
+    const aliases = loopAliases();
+    const strays = [];
+    for (const expr of boundPaths()) {
+      const root = expr.split(/[.[]/)[0];
+      if (aliases.has(root) || ROOTS.has(root)) continue;
+      strays.push(expr);
+    }
+    assert.deepEqual([...new Set(strays)], [],
+      'a binding rooted outside appState resolves to undefined on every render');
+  });
 });

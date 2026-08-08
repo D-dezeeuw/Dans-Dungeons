@@ -265,7 +265,8 @@
     "gmUnavailable": "The Game Master was not available. Try again when you are ready.",
     "error": "Error: {{msg}}",
     "turnFail": "The turn was not resolved. Try again or type /restart.",
-    "restart": "Restart"
+    "restart": "Restart",
+    "narrationMissing": "(The Game Master's words did not arrive. Nothing in the world changed — try that again.)"
   },
   "victory": {
     "banner": "══ VICTORY ══════════════════════════════════",

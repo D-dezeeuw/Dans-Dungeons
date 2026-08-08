@@ -16,8 +16,13 @@ import { getSpend, onSpendChange, budgetWarningDue, setBudget, getBudget, TIERS 
 import * as UI from './ui/console.js';
 import { locale, setLocale, t } from './i18n/i18n.js';
 import { claimTab, isPrimaryTab, onPrimaryChange } from './core/tabs.js';
+import { onSchemaViolation } from './ai/validate.js';
 
 async function boot() {
+  // A provider quietly ignoring a schema is otherwise invisible: the turn just
+  // comes out strange. Say it once, where a bug report can find it.
+  onSchemaViolation((where, detail) => console.warn(`[ai] ${where} broke its schema: ${detail}`));
+
   // One campaign, one writer. Claimed before anything can autosave; a second
   // tab becomes a read-only spectator rather than overwriting the first.
   claimTab();

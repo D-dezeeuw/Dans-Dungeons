@@ -265,7 +265,8 @@
     "gmUnavailable": "De Game Master was niet beschikbaar. Probeer het opnieuw wanneer je klaar bent.",
     "error": "Fout: {{msg}}",
     "turnFail": "De beurt kon niet worden afgehandeld. Probeer opnieuw of typ /restart.",
-    "restart": "Herstarten"
+    "restart": "Herstarten",
+    "narrationMissing": "(De woorden van de Spelleider kwamen niet aan. Er is niets in de wereld veranderd — probeer het opnieuw.)"
   },
   "victory": {
     "banner": "══ OVERWINNING ══════════════════════════════",

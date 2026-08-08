@@ -3,6 +3,7 @@
 // that have already been transformed aren't re-processed on subsequent exports.
 
 import { chatCompletion } from './client.js';
+import { validateChapters } from './validate.js';
 import { JOURNAL_SCHEMA } from './schemas.js';
 import { t } from '../i18n/i18n.js';
 
@@ -79,7 +80,12 @@ export async function generateJournalStory(entries, pcName, pcClass) {
     schema: JOURNAL_SCHEMA,
   });
 
-  if (!result?.chapters?.length) return null;
+  // A chapter with no text renders as a blank page in the EPUB, which is worse
+  // than one chapter fewer.
+  const validated = validateChapters(result, { fallbackTitle: `The Tale of ${pcName}` });
+  if (!validated) return null;
+  result.title    = validated.title;
+  result.chapters = validated.chapters;
 
   // Merge cached + new chapters.
   const story = {
