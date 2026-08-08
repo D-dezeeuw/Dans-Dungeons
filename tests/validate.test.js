@@ -1,127 +1,214 @@
-// Client-side validation of model responses (Epic E11.S2).
+// tests/validate.test.js — what happens when the model ignores the schema.
 //
-// Every gameplay call sent a JSON schema and then used the answer as given.
-// Structured output is a provider FEATURE, not a guarantee: a fallback model
-// may not honour it, `additionalProperties: false` is enforced by whichever
-// provider is serving the request, and the repair path returns whatever the
-// model wrote. So a classifier could return intent 'yeet' and reach the
-// resolver, or a DC of 45 — turning a locked door into an impossible one and
-// leaving the player to conclude the GM is arbitrary.
-//
-// Imports the real module: validate.js is dependency-free precisely so this
-// test does not have to mirror it.
+// Every structured call ships a JSON schema and, until now, trusted the answer.
+// `strict` json_schema is a request: providers vary, and a call that walks the
+// tier's fallback chain can land on a model that honours it loosely or not at
+// all. The failures were all silent and downstream — an out-of-enum intent fell
+// through every resolver branch to the narrator, a missing `narration` rendered
+// as the literal string "undefined" into the transcript and then the save.
 
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+
 import {
-  validateClassified, validateNarration, clampDc, INTENTS, DC_MIN, DC_MAX,
+  validateClassification, validateNarration, validateBeatCheck,
+  validateAct, validateChapters, onSchemaViolation,
 } from '../src/ai/validate.js';
+import { clampDc } from '../src/ai/parse.js';
+import { CLASSIFIER_SCHEMA } from '../src/ai/schemas.js';
 
-const good = {
-  intent: 'skill', target_id: 'npc-1', direction: null, skill: 'stealth', dc: 15, reason: 'sneaking',
-};
+const INTENTS = CLASSIFIER_SCHEMA.properties.intent.enum;
+const classify = (out) => validateClassification(out, { intents: INTENTS, clampDc });
 
-describe('DC clamping', () => {
-  it('keeps a sensible DC exactly as rolled', () => {
-    for (const dc of [5, 10, 12, 15, 20, 25]) assert.equal(clampDc(dc), dc);
-  });
-
-  it('pulls a hallucinated DC back onto the ladder', () => {
-    assert.equal(clampDc(45), DC_MAX, 'DC 45 is not a check, it is a denial');
-    assert.equal(clampDc(1),  DC_MIN, 'DC 1 is not a check either');
-    assert.equal(clampDc(-30), DC_MIN);
-    assert.equal(clampDc(9999), DC_MAX);
-  });
-
-  it('rounds a fractional DC rather than passing it to the dice', () => {
-    assert.equal(clampDc(14.4), 14);
-    assert.equal(clampDc(14.6), 15);
-  });
-
-  it('reports "no DC" rather than inventing one', () => {
-    for (const bad of [null, undefined, 'hard', NaN, Infinity, {}]) {
-      assert.equal(clampDc(bad), null, `${JSON.stringify(bad)} must not become a number`);
-    }
-  });
-
-  it('clamps through the classifier path too', () => {
-    assert.equal(validateClassified({ ...good, dc: 45 }).dc, DC_MAX);
-  });
-});
+// Collect the reports a run produces, so "we noticed" is asserted rather than
+// assumed.
+function withReports(fn) {
+  const seen = [];
+  onSchemaViolation((where, detail) => seen.push({ where, detail }));
+  try { return { result: fn(), seen }; }
+  finally { onSchemaViolation(null); }
+}
 
 describe('classifier responses', () => {
-  it('passes a well-formed response through unchanged', () => {
-    const out = validateClassified(good);
-    assert.equal(out.intent, 'skill');
-    assert.equal(out.skill, 'stealth');
-    assert.equal(out.dc, 15);
-    assert.equal(out.fellBack, false);
+  it('passes a well-formed response through', () => {
+    const out = classify({
+      intent: 'attack', target_id: 'g1', direction: null, skill: null,
+      spell_id: null, dc: null, reason: 'they swung',
+    });
+    assert.equal(out.intent, 'attack');
+    assert.equal(out.target_id, 'g1');
+    assert.ok(!out.invalid);
   });
 
-  it('accepts every intent the schema declares', () => {
-    for (const intent of INTENTS) {
-      assert.equal(validateClassified({ ...good, intent }).intent, intent);
-    }
+  it('replaces an intent outside the enum with one that changes nothing', () => {
+    const { result, seen } = withReports(() => classify({ intent: 'yeet', reason: '' }));
+    assert.equal(result.intent, 'look', 'an unknown intent must not reach the narrator to improvise');
+    assert.equal(seen.length, 1);
+    assert.match(seen[0].detail, /yeet/);
   });
 
-  it('refuses an intent the resolver has never heard of', () => {
-    const out = validateClassified({ ...good, intent: 'yeet' });
-    assert.equal(out.intent, 'impossible', 'an unknown intent must not reach the resolver');
-    assert.equal(out.fellBack, true);
-  });
-
-  it('fails toward impossible, which changes nothing', () => {
-    // 'impossible' is the one intent guaranteed not to invent a state change —
-    // the only safe direction to fail in.
-    for (const junk of [null, undefined, 'a string', 42, []]) {
-      const out = validateClassified(junk);
-      assert.equal(out.intent, 'impossible');
-      assert.equal(out.fellBack, true);
-    }
+  it('normalises case and whitespace before judging', () => {
+    assert.equal(classify({ intent: '  ATTACK ' }).intent, 'attack');
+    assert.equal(classify({ intent: 'move', direction: ' North ' }).direction, 'north');
   });
 
   it('drops a direction that is not a direction', () => {
-    assert.equal(validateClassified({ ...good, intent: 'move', direction: 'up' }).direction, null);
-    assert.equal(validateClassified({ ...good, intent: 'move', direction: 'NORTH' }).direction, 'north');
+    const { result } = withReports(() => classify({ intent: 'look', direction: 'up' }));
+    assert.equal(result.direction, null);
   });
 
-  it('normalises empty and non-string fields to null', () => {
-    const out = validateClassified({ ...good, target_id: '   ', skill: 7 });
-    assert.equal(out.target_id, null);
-    assert.equal(out.skill, null);
+  it('a move with no direction is not a move', () => {
+    const { result, seen } = withReports(() => classify({ intent: 'move', direction: null }));
+    assert.equal(result.intent, 'look', 'a directionless move resolves to nothing at all');
+    assert.ok(seen.some(s => /move without a direction/.test(s.detail)));
   });
 
-  it('always returns the full shape the resolver destructures', () => {
-    for (const input of [good, {}, null, { intent: 'nonsense' }]) {
-      const out = validateClassified(input);
-      for (const k of ['intent', 'target_id', 'direction', 'skill', 'dc', 'reason']) {
-        assert.ok(k in out, `${k} missing — the resolver reads it unconditionally`);
-      }
+  it('coerces a numeric string DC and clamps it', () => {
+    assert.equal(classify({ intent: 'skill', dc: '18' }).dc, 18);
+    assert.equal(classify({ intent: 'skill', dc: '99' }).dc, 25);
+    assert.equal(classify({ intent: 'skill', dc: 'hard' }).dc, null);
+  });
+
+  it('accepts spell_id under either name and reports both', () => {
+    assert.equal(classify({ intent: 'cast', spell_id: 'fire-bolt' }).spellId, 'fire-bolt');
+    assert.equal(classify({ intent: 'cast', spellId: 'fire-bolt' }).spell_id, 'fire-bolt');
+  });
+
+  it('survives a response that is not an object at all', () => {
+    for (const junk of [null, undefined, 'nope', 42, []]) {
+      const out = classify(junk);
+      assert.equal(out.intent, 'look');
+      assert.equal(out.invalid, true);
     }
   });
 
-  it('keeps the model\'s reason when it gave one, even on a fallback', () => {
-    assert.equal(validateClassified({ intent: 'yeet', reason: 'tried to vault the rail' }).reason,
-      'tried to vault the rail');
+  it('always returns every field the resolver reads', () => {
+    const out = classify({ intent: 'wait' });
+    for (const k of ['intent', 'target_id', 'direction', 'skill', 'spell_id', 'dc', 'reason']) {
+      assert.ok(k in out, `missing '${k}'`);
+    }
   });
 });
 
-describe('narrator responses', () => {
-  it('passes narration through with its other fields intact', () => {
-    const out = validateNarration({ narration: 'The door groans open.', mood: 'tense' });
-    assert.equal(out.narration, 'The door groans open.');
-    assert.equal(out.mood, 'tense', 'unknown fields survive — only narration is required');
+describe('narration', () => {
+  it('passes a narration through untouched, with its other fields', () => {
+    const out = validateNarration({ narration: 'You step through.', mood: 'tense' }, { fallback: 'x' });
+    assert.equal(out.narration, 'You step through.');
+    assert.equal(out.mood, 'tense');
+    assert.ok(!out.invalid);
   });
 
-  it('trims, because a whitespace narration renders as a blank turn', () => {
-    assert.equal(validateNarration({ narration: '  The hall is silent.  ' }).narration, 'The hall is silent.');
+  it('substitutes the fallback rather than writing "undefined" into the save', () => {
+    for (const junk of [{}, { narration: '' }, { narration: 42 }, null, 'text']) {
+      const out = validateNarration(junk, { fallback: 'nothing arrived' });
+      assert.equal(out.narration, 'nothing arrived');
+      assert.equal(out.invalid, true);
+    }
+  });
+});
+
+describe('beat check', () => {
+  it('only true is true', () => {
+    assert.equal(validateBeatCheck({ fulfilled: true }).fulfilled, true);
+    assert.equal(validateBeatCheck({ fulfilled: false }).fulfilled, false);
+    // The string "false" is truthy in JavaScript, and used to advance the story.
+    assert.equal(validateBeatCheck({ fulfilled: 'false' }).fulfilled, false);
+    assert.equal(validateBeatCheck({ fulfilled: 1 }).fulfilled, false);
+    assert.equal(validateBeatCheck({}).fulfilled, false);
+    assert.equal(validateBeatCheck(null).fulfilled, false);
   });
 
-  it('rejects a response with nothing to read', () => {
-    for (const bad of [null, undefined, {}, { narration: '' }, { narration: '   ' },
-                       { narration: null }, { narration: 42 }, 'just a string']) {
-      assert.equal(validateNarration(bad), null,
-        `${JSON.stringify(bad)} must not commit a turn behind a blank screen`);
+  it('accepts the string "true", which providers do send', () => {
+    assert.equal(validateBeatCheck({ fulfilled: 'true' }).fulfilled, true);
+  });
+});
+
+describe('generated acts', () => {
+  const beat = (id) => ({ id, title: id, dramaticPurpose: `do ${id}`, location: null, requires: [], completesOn: [] });
+
+  it('passes a well-formed act through', () => {
+    const act = validateAct({ title: 'A', premise: 'p', beats: [beat('one'), beat('two')] });
+    assert.equal(act.beats.length, 2);
+    assert.equal(act.title, 'A');
+  });
+
+  it('refuses an act with nothing to do', () => {
+    const { result, seen } = withReports(() => validateAct({ title: 'A', premise: 'p', beats: [] }));
+    assert.equal(result, null, 'adopting it would leave the campaign with a title and no beats');
+    assert.ok(seen.length > 0);
+  });
+
+  it('drops beats missing the fields the runtime reads', () => {
+    const act = validateAct({ title: 'A', beats: [beat('ok'), { id: 'no-purpose' }, { dramaticPurpose: 'no id' }] });
+    assert.deepEqual(act.beats.map(b => b.id), ['ok']);
+  });
+
+  it('drops a duplicate id, which would make `requires` ambiguous', () => {
+    const { result, seen } = withReports(() =>
+      validateAct({ title: 'A', beats: [beat('one'), beat('one'), beat('two')] }));
+    assert.deepEqual(result.beats.map(b => b.id), ['one', 'two']);
+    assert.ok(seen.some(s => /duplicate beat id/.test(s.detail)));
+  });
+
+  it('normalises the list fields so the runtime never sees a bare string', () => {
+    const act = validateAct({ beats: [{ ...beat('one'), requires: 'beat-done-x', completesOn: 'boss-slain' }] });
+    assert.deepEqual(act.beats[0].requires, ['beat-done-x']);
+    assert.deepEqual(act.beats[0].completesOn, ['boss-slain']);
+  });
+
+  it('fills a missing title and premise rather than rendering undefined', () => {
+    const act = validateAct({ beats: [beat('one')] });
+    assert.equal(typeof act.title, 'string');
+    assert.equal(typeof act.premise, 'string');
+  });
+
+  it('returns null for a non-object', () => {
+    assert.equal(validateAct('nope'), null);
+    assert.equal(validateAct(null), null);
+  });
+});
+
+describe('journal chapters', () => {
+  it('drops chapters with no text — a blank EPUB page is worse than one fewer', () => {
+    const out = validateChapters(
+      { title: 'T', chapters: [{ heading: 'One', text: 'words' }, { heading: 'Two' }, { text: '' }] },
+      { fallbackTitle: 'F' },
+    );
+    assert.equal(out.chapters.length, 1);
+    assert.equal(out.title, 'T');
+  });
+
+  it('numbers a chapter that forgot its heading', () => {
+    const out = validateChapters({ chapters: [{ text: 'words' }] }, { fallbackTitle: 'F' });
+    assert.equal(out.chapters[0].heading, 'Chapter 1');
+    assert.equal(out.title, 'F');
+  });
+
+  it('returns null when nothing is usable, so the caller can fall back', () => {
+    assert.equal(validateChapters({ chapters: [] }, { fallbackTitle: 'F' }), null);
+    assert.equal(validateChapters(null, { fallbackTitle: 'F' }), null);
+  });
+});
+
+describe('validation never throws', () => {
+  it('survives every shape a broken provider can send', () => {
+    const junk = [null, undefined, 0, '', 'text', [], [1, 2], { a: 1 }, { beats: 'no' },
+                  { chapters: 'no' }, { intent: {} }, { narration: [] }];
+    for (const j of junk) {
+      assert.doesNotThrow(() => classify(j));
+      assert.doesNotThrow(() => validateNarration(j, { fallback: 'x' }));
+      assert.doesNotThrow(() => validateBeatCheck(j));
+      assert.doesNotThrow(() => validateAct(j));
+      assert.doesNotThrow(() => validateChapters(j, { fallbackTitle: 'x' }));
+    }
+  });
+
+  it('survives a reporter that throws', () => {
+    onSchemaViolation(() => { throw new Error('reporter is broken'); });
+    try {
+      assert.doesNotThrow(() => classify({ intent: 'nonsense' }));
+    } finally {
+      onSchemaViolation(null);
     }
   });
 });

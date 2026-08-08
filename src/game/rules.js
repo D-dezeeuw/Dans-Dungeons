@@ -22,4 +22,12 @@ export {
   Beats,
   createEngine,
   verifyLog,
+  // Casters: the slot/preparation/scaling machinery plus the class spell lists
+  // that say who may learn what (the spell records only ever carried mechanics).
+  Spellcasting,
+  spellsFor,
+  classesFor,
+  isOnClassList,
+  maxSpellLevel,
+  CASTER_CLASSES,
 } from 'bag-of-holding';

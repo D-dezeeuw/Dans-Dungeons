@@ -6,6 +6,7 @@
 import { _callStream, repairJson, chatCompletion, aiConfig } from './client.js';
 import { generateImage } from 'bag-of-holding-client';
 import { NARRATOR_SCHEMA } from './schemas.js';
+import { salvageJson } from './parse.js';
 import { validateNarration } from './validate.js';
 import { t, locale } from '../i18n/i18n.js';
 import { transcriptWindow } from '../game/chapters.js';
@@ -64,22 +65,29 @@ export async function narrate(resolvedFacts, sceneContext, recentTranscript, onC
     { role: 'user',   content: t('ai.narrateTurnPrompt') },
   ];
 
-  const raw = await _callStream({ tier: 'medium', messages }, onChunk);
+  // Schema-bound streaming: the narrator answering in prose or inside a markdown
+  // fence used to cost a second, paid repair call on top of the one the player
+  // already watched arrive.
+  const raw = await _callStream({ tier: 'medium', messages, schema: NARRATOR_SCHEMA }, onChunk);
 
-  let parsed = null;
-  try { parsed = JSON.parse(raw); } catch { /* fall through to repair */ }
+  try {
+    return narration(JSON.parse(raw));
+  } catch { /* fall through to local salvage */ }
 
-  // Narration is the only field the player actually reads, so a response that
-  // parses but carries none is worse than one that fails to parse: the turn
-  // commits and the screen stays blank. Validate, and let the repair pass have
-  // a second go before giving up.
-  let out = validateNarration(parsed);
-  if (out) return out;
+  // Salvage locally before paying anyone. Almost every "unparseable" narration
+  // is valid JSON wearing a markdown fence or trailing prose — and the player
+  // has ALREADY watched the streamed text, so a repair call that comes back
+  // with different words shows them one story and commits another.
+  const salvaged = salvageJson(raw);
+  if (salvaged) return narration(salvaged);
 
-  out = validateNarration(await repairJson(raw, { tier: 'medium', schema: NARRATOR_SCHEMA }, messages));
-  // Null tells flow.js to run its "GM unavailable" path rather than committing
-  // silence as though it were a turn.
-  return out;
+  return narration(await repairJson(raw, { tier: 'medium', schema: NARRATOR_SCHEMA }, messages));
+}
+
+// A missing `narration` used to render the literal string "undefined" into the
+// transcript, and from there into the save, the journal and the world bible.
+function narration(out) {
+  return validateNarration(out, { fallback: t('loop.narrationMissing') });
 }
 
 // ─── Scene image generation ───────────────────────────────────────────────────
@@ -98,5 +106,8 @@ export async function generateSceneImage(sceneDescription) {
 
   // The library owns the transport + the multi-shape provider response parsing;
   // it resolves the image-tier model from config and returns null on any failure.
-  return generateImage(aiConfig(), { prompt });
+  return generateImage(aiConfig('image'), { prompt });
 }
+
+// Re-exported so callers that reached for it through narrate.js still can.
+export { salvageJson };

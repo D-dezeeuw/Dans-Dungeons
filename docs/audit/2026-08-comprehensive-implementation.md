@@ -81,6 +81,15 @@ Every story in this plan serves at least one. When two conflict, the lower numbe
 | 2026-08-07 | **E9** emergence | Entity minting from narration with dedup and stat-block binding; detail persistence served back with the room; threat clocks and rumour surfacing. The FarStay-ghoul acceptance script is covered by tests. |
 | 2026-08-07 | **E10** presentation | Staged thinking indicator with elapsed time; stick-to-bottom scrolling; web app manifest + theme colour + apple-touch-icon; iOS input-zoom fix; focus-visible outlines; contrast/size floors; reduced-motion honoured. |
 | 2026-08-07 | **E11** quality | Prompt-contract regression suite (locale parity, placeholder parity, prompt↔schema agreement, strict-mode exhaustiveness) — which immediately caught `beatCheckPrompt` not asking for the `reason` its schema required. CI added to all three sibling repos; MCP peer dep corrected to ^2.1.0. |
+| 2026-08-08 | **engine 2.3.0** correctness | `verifyLog` had no case for `deathSave`, `mechanicApplied`, `hookFired` or `rngDraws`, so an unhandled entry desynced the stream and every later roll verified against the wrong draw. Seven un-logged RNG draw sites now record. Half-caster slots start at L1; `castSpell` consumes the level actually cast at; `longJump` reads the STR score; dice are bounded; `abilityCheck` reports its stance. Solo restore stopped promoting adopted NPCs to PCs. Monster templates reach CR 16–24 by scaling verified blocks. 1580 tests. |
+| 2026-08-08 | **engine 2.4.0** spell lists | `src/srd/spell-lists.js` — which classes may learn which spells, the half of the SRD spell data the records never carried. `maxSpellLevel` asserted against the slot tables for all 20 levels rather than its own arithmetic (two of three formulas were wrong until the tables said so). 1598 tests. |
+| 2026-08-08 | **client** hardening | Request deadlines + AbortSignal; a whitespace-tolerant JSON field streamer (pretty-printed JSON produced a silent, empty stream); strict save migrations that refuse gaps and future-version saves, with backup rotation; a resumable worldgen pipeline (`onCheckpoint` + `initialResults` + `PipelineError.results`); one shared tone vocabulary across blueprint, schema and EPUB palette; advisory beat successors; configurable dungeon scale; per-room dressing. 231 tests. |
+| 2026-08-08 | **E8.S2** casters | `cast` is a first-class intent. Slots spent through the engine so a refusal cites the SRD rule; spell attacks vs AC, save spells vs the caster's DC, auto-hit, cantrip scaling, upcasting. Slots spent whether or not the spell landed; a long rest is the only thing that returns them, which nothing previously did. Spell dice route through the replayable damage path. |
+| 2026-08-08 | **E5.S3 / E10.S4** cost + latency | `preClassify` removes an LLM round trip from roughly a third of turns (chips already knew their intent). Sketches cost something on a room change or on demand, not every turn at ~47x the text. Canon extraction and the beat check run concurrently. Beats declaring `completesOn` skip the judge entirely. Per-tier spend breakdown and a soft session budget. Errors name cause and next step: waiting fixes a 429 and can never fix a 402. |
+| 2026-08-08 | **E10.S5 / E6.S4** content | All 48 creature intros and names authored in both locales (39 and 45 were English-only); "de vlakten" → "de bestaansvlakken". 144 room details across 24 themes per locale. The defeat screen names the creature that actually killed you instead of Grizzik, whose data block is deleted. The world bible documents the campaign in progress — every region, the acts as they played, a Chronicle from the ledger. Two ledger writes that had never fired (item pickup, opened gate) now do. |
+| 2026-08-08 | **E10.S2 / security** | Real PKCE (verifier + S256 challenge + `state`); `?key=` removed. One campaign, one writer — a Web Lock makes the second tab a spectator with a persistent banner. Six save slots on the same envelope as the autosave. `pickFrom` options clickable. The spacebar stopped stealing activation from focused controls. Four named ARIA defects fixed. |
+| 2026-08-08 | **E11.S1–S2** quality | Responses validated against the schemas they were sent, with typed fallbacks and a violation hook — an out-of-enum intent reached no resolver branch, a missing `narration` rendered "undefined" into the save, and `fulfilled: "false"` advanced the story. The DOM contract runs both directions. A Playwright layer in CI found an absolute-path bug on its first run (the service worker and version check only worked on one Pages subpath). flow.js 1,817 → 1,512. 544 unit + 8 e2e. |
+| 2026-08-08 | **E11.S4** MCP | Spellcasting and monster-tier tools exposed (the server had tracked the engine to 2.1 and stopped); CI resolves the engine from source, because the registry only ever has the last release and these tools need the current one. 122 tests. |
 
 #### Follow-up pass — the deferrals, closed
 
@@ -92,39 +101,60 @@ Every story in this plan serves at least one. When two conflict, the lower numbe
 | **E8.S3** loot | Items carry mechanical fields (heals / gold / value / lore) in both locales; the resolver honours them and refuses to invent effects for the rest. |
 | **E8.S4** bestiary | Engine **v2.2.0** (the roadmap's reserved "Bestiary I" slot): Elite/Champion/Ancient templates *derive* CR 16–24 opponents from verified SRD entries rather than transcribing stat blocks from memory, and grant the multiattack/legendary blocks the monster-mechanics module had no data for. The vault boss now scales with party level — a CR 3 wight becomes a CR 11 Champion Wight. |
 
-#### Audit pass — verified against the code
+Test counts after the follow-up pass: game **427** (was 267), client **187** (was 92), engine **1,574** (was 1,561), MCP 99 — **2,287 passing, 0 failing** across four repos, all gated by CI.
+
+#### Audit pass — the plan verified against the code
 
 > [`2026-08-implementation-audit.md`](2026-08-implementation-audit.md) checked every story
-> by finding the call site rather than the export. It found this log overstating coverage:
-> of 49 stories, 18 complete, 18 partial, 13 not started — **ten of them undeclared**,
-> including **E1.S5, a P0 showstopper the log never mentioned**. It also found four
-> capabilities added by these very passes sitting as orphans, the plan's own antipattern.
+> by finding the call site rather than the export. At the commit it audited, this log
+> overstated coverage: of 49 stories, 18 complete, 18 partial, 13 not started — ten of them
+> undeclared, including **E1.S5, a P0 showstopper the log never mentioned**. The third pass
+> above has since closed most of that list independently; what follows is what it did not.
 
 | Landed | Status |
 |---|---|
-| **Orphans wired** | The payoff ledger, digest invalidation, chapter titling and faction project clocks were built, tested, exported and called by nothing. Acts now declare and plant the setups they generate, and completing a beat settles the clue that pays into it; chapter close re-renders the digests the ledger invalidated and names the chapter from its own summary; every faction runs chapter-scale projects whose payload lands on the region. `wiring.test.js` missed all four because an unused import satisfied its regex — it now strips imports before looking. |
-| **E1.S5** replay | Engine **2.2.1**. `verifyLog` threw on three ops its own recorder emits (`deathSave`, `mechanicApplied`, `hookFired`), so any session with a downed character was unverifiable; death saves now replay from the tracker snapshot, so the **outcome** is checked, and the game's rollDie(20) workaround is deleted. The condition-record shape the 2.1.0 merge dropped is restored, along with `conditionName` / `conditionsRequiringSave` — which `index.d.ts` had gone on declaring the whole time. |
-| **Per-turn cost** | The classifier no longer runs on our own chip commands (a whole round trip, on the majority of turns); prompts stopped shipping pretty-printed JSON; sketches are drawn on arrival and on demand rather than every turn (~47× a turn's text). |
-| **E11.S2** validation | `src/ai/validate.js` checks responses before the rules layer acts: unknown intents fail toward `impossible`, DCs clamp to the SRD ladder [5,25] (the prompt now quotes that ladder in both locales), and an empty narration throws before any commit instead of advancing the world behind a blank screen. |
-| **E0.S2** re-stamped | The doc-truth pass had gone stale within the day — docs 03/06/12 still said "not implemented" about systems that shipped the same afternoon, and `CLAUDE.md` was missing 12 modules, cited 2 files that do not exist, and reported 301 tests for a 476-test suite. |
+| **Orphans wired** | Four capabilities were built, tested, exported and called by nothing — the plan's own antipattern, reproduced by the passes that were closing it. Acts now declare the setups they generate and `adoptAct` plants them, so the payoff ledger finally has a producer: `activeSetups` reached the narrator prompt in the third pass, but `plantClue` still had zero callers, so it was reading a permanently empty ledger. Completing a beat settles the clue that paid into it. Chapter close re-renders the digests the ledger invalidated (`staleDigests` had no consumer, so a region digest described hour zero forever) and names the chapter from its own summary (`titleChapter` was never called). Every faction runs chapter-scale projects — `addClock` had exactly one caller, so "the world moved while you were away" only ever meant an invented threat got worse. |
+| **Guard fixed** | `wiring.test.js` missed all four because its regex counted an unused `import` as a consumer. It now strips imports before looking. |
+| **E1.S5** replay | Engine **2.4.1**. Death saves replay through `Combat.deathSave` from the tracker snapshot the entry carries, so a log whose **outcome** was rewritten no longer verifies clean — `2.3.0` had unblocked verification but still only checked the die. The game's `rollDie(20)` workaround is deleted. The condition-record shape the 2.1.0 merge dropped is restored along with `conditionName` / `conditionsRequiringSave`, which `index.d.ts` had gone on declaring the whole time. `Equipment.ENCUMBRANCE_MULT` is reachable again. |
+| **Client** | `digestScopeOf` / `causesFor`: the pure half of digest re-rendering, so the host can turn an invalidated id into a re-render without re-implementing the id grammar. |
 
-**Still open, and now named.** Declared before: E8.S2 (spell wiring — the engine's spell
-data needs its own correctness pass first), E11.S1's `flow.js` split and Playwright e2e,
-the MCP re-sync. Undeclared until the audit: **E3.S2** (multi-tab safety — two tabs are
-last-writer-wins), **E3.S3** (save slots; import does not reboot the flow FSM), **E6.S2**
-(history layer, continents), **E6.S4** (region density, side quests, rumour propagation),
-**E7.S3** (archetype casting — `preferredLocation` is still prompted to null), **E10.S2**
-(clickable `pickFrom`, the Spacebar hijack, the 9px type floor), **E10.S5** (39 missing
-Dutch keys), **E11.S3** (golden-scene evals, coherence soak). Partial and still short:
-`canonHits` recall, save envelope v3, the dungeon interior write-back, turn cancel,
-equipment effects and gold sinks, the epilogue renderer, the detail budget.
+**Rejected, against the plan's own text:** E2.S3 asked for canon extraction to run *after*
+`finalizeTurn`. That is unsafe — `finalizeTurn` stamps the undo boundary at the current
+history length, so writes moved past it fall outside the turn and an undo would scrub the
+minted entities. The third pass reached the same conclusion by a better route: extraction
+and the beat check now run *concurrently* inside the boundary, which is the latency win
+without the cost.
 
-**Not done, deliberately, against the plan's own text:** E2.S3 asked for canon extraction
-to run *after* `finalizeTurn`. That is unsafe now — `finalizeTurn` stamps the undo boundary
-at the current history length, so writes moved after it fall outside the turn and an undo
-would scrub the minted entities. The bullet predates time travel; `loop.js` records why.
+#### Third pass — the deferrals closed for real
 
-Test counts after the follow-up pass: game **427** (was 267), client **187** (was 92), engine **1,574** (was 1,561), MCP 99 — **2,287 passing, 0 failing** across four repos, all gated by CI.
+The three items above were carried, and are now done: E8.S2 shipped after the
+engine correctness pass it was waiting on, `flow.js` split along two seams, the
+Playwright layer runs in CI, and the MCP server exposes the capabilities the
+engine had gained since 2.1.
+
+Test counts after this pass: game **544** unit + **8** end-to-end (was 427),
+client **231** (was 187), engine **1,598** (was 1,574), MCP **122** (was 99) —
+**2,503 passing, 0 failing** across four repos.
+
+**What remains, and why:**
+
+- **Revoke the leaked OpenRouter key.** It shipped XOR-obfuscated in a public
+  bundle in a public repo and must be treated as compromised. Removed from
+  source in the first pass; only the account owner can revoke it.
+- **Publish engine 2.4.0 to npm.** The registry has 2.1.0. The MCP server's peer
+  range names 2.4.0 because that is what its spellcasting and monster-tier tools
+  require; CI resolves the engine from source so the gate is honest, and warns
+  when the declared version is unpublished. Until it ships, that package is
+  installable only from source.
+- **The `flow.js` settlement loop and travel** stayed in place. They are
+  mutually recursive with the play loop and share its state directly; separating
+  them needs the injectable-store refactor E11.S1 describes, and moving the text
+  without that would have produced two files that still cannot be reasoned about
+  apart. The two seams that were genuinely seams came out.
+- **E11.S3's prompt-eval harness** (golden scenes, coherence soak) is not built.
+  It needs live model calls to be worth anything, which means a budget and a
+  decision about which models to hold as the baseline — an owner call, not a
+  code change.
 
 ### Milestones
 

@@ -13,3 +13,9 @@ node_modules/
 
 # Generated in-game exports (journals, world bibles) — produced at play time
 docs/journals/
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/

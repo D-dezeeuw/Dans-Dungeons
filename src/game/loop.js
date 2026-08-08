@@ -23,10 +23,11 @@ import { assembleScope }                     from './scope.js';
 import { extractCanon }                      from '../ai/canon.js';
 import { memoryContext, maybeRefreshDigest } from './chapters.js';
 import { commitCanon }                       from './canon-commit.js';
-import { nextActContext, adoptAct, TARGET_ACTS } from './acts-runtime.js';
+import { nextActContext, adoptAct, beatSatisfiedByFlags, TARGET_ACTS } from './acts-runtime.js';
 import { generateAct }                       from '../ai/acts.js';
 import { awardXp, xpForKill, announcementFor } from './progression.js';
 import { statBlockFor }                      from './bestiary.js';
+import { castableSpells, slotSummary }       from './spells.js';
 import { t }                                 from '../i18n/i18n.js';
 
 // ─── Scene context (pure snapshot for AI) ────────────────────────────────────
@@ -62,6 +63,22 @@ export function buildScene() {
       alive:    n.alive,
     })),
   };
+
+  // A caster's live spell list, so the classifier names ids that exist and the
+  // narrator knows a Fire Bolt is a Fire Bolt. Absent entirely for non-casters,
+  // which keeps a fighter's prompt exactly as small as it was.
+  const magic = appState.party?.magic;
+  if (record && magic) {
+    const list = castableSpells(record, sheet, magic);
+    if (list.length) {
+      scene.spells = list.map(s => ({
+        id: s.id, name: s.name, level: s.level, castable: s.castable,
+        ...(s.damage ? { damage: s.damage } : {}),
+        ...(s.healing ? { healing: s.healing } : {}),
+      }));
+      scene.spellSlots = slotSummary(magic.slots);
+    }
+  }
 
   // Leaf-to-root digest path for world context (if campaign mode)
   const loc = appState.world?.location;
@@ -151,14 +168,14 @@ export async function processTurn(playerInput, onNarrationChunk) {
 
   // Capture a slain enemy BEFORE commit (so we can raise story flags after) —
   // the npc object still carries isBoss / creatureId here.
-  const killedNpc = (resolved.intent === 'attack' && resolved.targetDead)
+  const killedNpc = (['attack', 'cast'].includes(resolved.intent) && resolved.targetDead)
     ? appState.world?.npcs?.[resolved.targetId] : null;
 
   // 3. Compute goblin retaliation BEFORE committing PC's attack.
   //    A killed goblin must not retaliate.
-  const goblinTurnTriggered = ['attack', 'skill', 'wait', 'look', 'talk', 'move', 'take',
+  const goblinTurnTriggered = ['attack', 'cast', 'skill', 'wait', 'look', 'talk', 'move', 'take',
                                'unlock', 'rest', 'use', 'flee'].includes(resolved.intent);
-  const goblinSurvived      = resolved.intent !== 'attack' || !resolved.targetDead;
+  const goblinSurvived      = !['attack', 'cast'].includes(resolved.intent) || !resolved.targetDead;
   // Getting away means getting away: a successful flight is not punished by the
   // enemy it just escaped. This is the same class of contradiction as a stealth
   // success narrated alongside the hit it was supposed to prevent.
@@ -207,8 +224,20 @@ export async function processTurn(playerInput, onNarrationChunk) {
   //    (Each self-ticks; maybeAdvanceBeat is best-effort.)
   if (killedNpc) {
     setStoryFlag('enemy-slain');
-    if (killedNpc.isBoss) setStoryFlag(`boss-${killedNpc.creatureId ?? 'boss'}-slain`);
+    // Both the specific and the generic flag: a beat can name the creature it
+    // is about, and an act generator that only knows "a boss dies" can still
+    // write a beat that ends when one does.
+    if (killedNpc.isBoss) {
+      setStoryFlag('boss-slain');
+      setStoryFlag(`boss-${killedNpc.creatureId ?? 'boss'}-slain`);
+    }
   }
+  // The other mechanical facts an act can turn on. These are what make
+  // flag-primary beat completion possible: the dice write them, so a beat about
+  // them never needs a model to confirm what already happened.
+  if (resolved.intent === 'take' && resolved.itemType === 'treasure') setStoryFlag('treasure-taken');
+  if (resolved.intent === 'unlock' && resolved.unlocked)                setStoryFlag('gate-unlocked');
+  if (resolved.intent === 'move' && resolved.newRoomId)                 setStoryFlag(`room-${resolved.newRoomId}-entered`);
 
   // 6b. Record this turn's mechanical changes in the world ledger, then extract
   //     the durable claims the narration just made. Together these are what
@@ -225,23 +254,23 @@ export async function processTurn(playerInput, onNarrationChunk) {
     progression = awardXp(xpForKill(killedNpc.creatureId, block),
       t('progress.killReason', { name: killedNpc.name }));
   }
-  // The memory writes stay INSIDE the undo boundary, deliberately.
+  // Canon extraction and the beat check both read this turn's narration and
+  // write disjoint state (the ledger vs the red thread), so running them in
+  // series only ever cost the player latency — two tiny-tier round trips back
+  // to back at the end of every turn. Started together, awaited before the
+  // undo boundary so their writes still land INSIDE this turn.
   //
-  // The plan (E2.S3) asked for canon extraction to run after finalizeTurn, to
-  // keep it off the critical path. That is no longer safe: finalizeTurn stamps
-  // the undo boundary at the CURRENT history length, so anything written after
-  // it lands outside this turn's boundary — an undo to this turn would scrub
-  // the minted entities and canon patches, and the story flags above already
-  // carry a comment explaining why they must land before it. Latency is worth
-  // less than a save that survives time travel.
-  //
-  // The per-turn round trips this pass DID remove are the ones that cost
-  // nothing to remove: the classifier no longer runs on structured chip input,
-  // and prompts no longer ship pretty-printed JSON.
-  await absorbNarration(narratorResp.narration);
-  await maybeRefreshDigest();   // rolling chapter memory (Epic E4)
+  // Note that E2.S3 asked for extraction to run AFTER finalizeTurn. That is not
+  // safe: finalizeTurn stamps the undo boundary at the current history length,
+  // so anything written past it falls outside the turn and an undo would scrub
+  // the minted entities. Concurrency is the latency win that does not cost the
+  // save its integrity.
+  const canonPass = absorbNarration(narratorResp.narration);
+  const beatPass  = maybeAdvanceBeat(narratorResp.narration);
 
-  await maybeAdvanceBeat(narratorResp.narration);
+  await canonPass;
+  await maybeRefreshDigest();   // rolling chapter memory (Epic E4)
+  await beatPass;
 
   // 7. Turn fully committed (mechanics + flags) — register the undo boundary (a
   //    throw above never reaches here) and autosave once.
@@ -269,9 +298,12 @@ function recordTurnMechanics(resolved, goblinResult, killedNpc) {
       because: `${killedNpc.name} was slain by the party`,
     });
   }
-  if (resolved?.intent === 'take' && resolved.item?.name) {
-    recordMechanical(`${room}.item.${slugId(resolved.item.id ?? resolved.item.name)}`, 'taken', true, {
-      because: `the party took the ${resolved.item.name}`,
+  // The resolver returns itemId/itemName; this read `resolved.item`, which the
+  // take branch has never set — so no pickup has ever reached the ledger.
+  if (resolved?.intent === 'take' && resolved.itemName) {
+    recordMechanical(`${room}.item.${slugId(resolved.itemId ?? resolved.itemName)}`, 'taken', true, {
+      scope:   resolved.itemType === 'treasure' ? 'regional' : 'local',
+      because: `the party took the ${resolved.itemName}`,
     });
   }
   if (resolved?.intent === 'unlock' && resolved.unlocked) {
@@ -331,6 +363,16 @@ async function maybeAdvanceBeat(narration) {
   const beat = activeBeat();
   if (!beat || !narration) return false;
   try {
+    // Flags first. A beat whose mechanical conditions are met is over — the
+    // dice said so — and confirming it with a paid call would be both an
+    // expense and a way for the campaign to stall on a judge that says no.
+    const byFlags = beatSatisfiedByFlags();
+    if (byFlags) {
+      const { completed, actClosed } = completeBeatNow(byFlags);
+      if (actClosed) await onActClosed();
+      return completed;
+    }
+
     const res = await checkBeatFulfilled(beat.dramaticPurpose, narration);
     if (!res?.fulfilled) return false;
     const { completed, actClosed } = completeBeatNow(beat.id);

@@ -64,5 +64,5 @@ export function stopRecording() {
 export async function transcribeAudio(blob) {
   const format = blob.type.includes('ogg') ? 'ogg' : 'webm';
   const bytes  = await blob.arrayBuffer();
-  return libTranscribe(aiConfig(), { bytes, format, language: locale() });
+  return libTranscribe(aiConfig('stt'), { bytes, format, language: locale() });
 }

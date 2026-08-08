@@ -1,95 +1,167 @@
-// src/ai/validate.js — trust, but check (Epic E11.S2).
+// src/ai/validate.js — check what the model sent back against what we asked for.
 //
-// Every gameplay call sends a JSON schema and every response was then used as
-// given. Structured-output support is a provider feature, not a guarantee: a
-// fallback model may not honour it, a repair pass returns whatever the model
-// wrote, and `additionalProperties: false` is enforced by the provider that
-// happens to be serving the request — or isn't.
+// Every structured call ships a JSON schema and then trusts the answer. `strict`
+// json_schema is a request, not a guarantee: providers vary, fallback models
+// vary more, and a schema-bound call that walks the tier's fallback chain can
+// land on a model that honours it loosely or not at all. When that happens the
+// failure is silent and downstream — an intent outside the enum falls through
+// every resolver branch to "impossible", a missing `narration` renders as
+// `undefined`, a DC of null becomes NaN in a comparison — and it surfaces as a
+// weird turn, not as an error anyone can trace back here.
 //
-// So a classifier could return `intent: 'yeet'` and reach the resolver, or a
-// DC of 45 and turn a locked door into an impossible one. Nothing checked. This
-// module is the check: it normalises a response into something the rules layer
-// can consume, or says it could not.
+// So: validate on receipt, coerce what can be coerced, and fall back to a value
+// that is defined and safe. Never throw. A turn with a degraded classification
+// is a worse turn; a turn that throws is no turn at all.
 //
-// Pure and dependency-free on purpose — it is imported by the AI layer and
-// tested directly under `node --test`.
+// Dependency-free: schemas in, object in, object out. Testable under node.
 
-import { CLASSIFIER_SCHEMA } from './schemas.js';
-
-export const INTENTS = CLASSIFIER_SCHEMA.properties.intent.enum;
-
-// SRD 5.2 difficulty ladder. The classifier prompt now quotes this, and the
-// clamp below enforces it whatever the model says: DC 5 is "very easy" and
-// DC 25 is "nearly impossible", so anything outside the band is a hallucination
-// rather than a hard check. Unclamped, a stray 45 makes success impossible for
-// a level-20 character and the player just sees the GM being arbitrary.
-export const DC_MIN = 5;
-export const DC_MAX = 25;
-export const DC_DEFAULT = 12;
-
-export function clampDc(dc) {
-  // Deliberately not `Number(dc)`: that coerces null, '' and [] to 0, which
-  // would then clamp UP to DC_MIN and hand the resolver a check the model never
-  // asked for. "No DC" has to survive as null so the resolver applies its own
-  // default.
-  const n = typeof dc === 'number' ? dc
-          : (typeof dc === 'string' && dc.trim() ? Number(dc) : NaN);
-  if (!Number.isFinite(n)) return null;
-  return Math.min(DC_MAX, Math.max(DC_MIN, Math.round(n)));
+// Report, don't throw. The host wires this to console/telemetry; the tests
+// assert on it, which is how a provider quietly breaking its contract becomes
+// visible instead of becoming folklore.
+let _onViolation = null;
+export function onSchemaViolation(fn) { _onViolation = fn; }
+function violation(where, detail) {
+  try { _onViolation?.(where, detail); } catch { /* a reporter owns its errors */ }
 }
 
-const str = (v) => (typeof v === 'string' && v.trim() ? v.trim() : null);
+const isStr = (v) => typeof v === 'string' && v.length > 0;
+const isNum = (v) => typeof v === 'number' && Number.isFinite(v);
+// An array passes `typeof === 'object'` and would then read every field as
+// undefined, quietly producing a "valid" result out of nothing.
+const isObj = (v) => v != null && typeof v === 'object' && !Array.isArray(v);
 
-/**
- * Normalise a classifier response. Returns a well-formed intent object, always:
- * an unusable response becomes `impossible`, which the resolver already handles
- * as "describe the failure and change nothing" — the safe direction to fail,
- * because it never invents a state change.
- *
- * `fellBack` marks a response that could not be understood, so callers can log
- * it: a rising rate is a prompt or model problem, not a player problem.
- */
-export function validateClassified(raw) {
-  if (!raw || typeof raw !== 'object') {
-    return { ...blank(), intent: 'impossible', reason: 'The Game Master did not answer.', fellBack: true };
+// Numbers arrive as strings often enough to be worth coercing rather than
+// discarding — "15" is unambiguously the DC the model meant.
+function asNumber(v) {
+  if (isNum(v)) return v;
+  if (typeof v === 'string' && v.trim() !== '' && Number.isFinite(Number(v))) return Number(v);
+  return null;
+}
+
+function asArray(v) {
+  if (Array.isArray(v)) return v;
+  if (v == null) return [];
+  return [v];      // a single object where a list was asked for is a common miss
+}
+
+// ─── Classifier ──────────────────────────────────────────────────────────────
+
+// An intent outside the enum reaches no resolver branch and lands on the
+// narrator to improvise — the exact fiction-versus-state drift the deterministic
+// layer exists to prevent. `look` is the safe landing: it changes nothing, and
+// the narrator describes the scene rather than inventing an outcome.
+export function validateClassification(out, { intents, clampDc }) {
+  const safe = {
+    intent:    'look',
+    target_id: null,
+    direction: null,
+    skill:     null,
+    spell_id:  null,
+    spellId:   null,
+    dc:        null,
+    reason:    'the classifier returned nothing usable',
+    invalid:   true,
+  };
+  if (!isObj(out)) {
+    violation('classifier', 'response was not an object');
+    return safe;
   }
 
-  const intent = INTENTS.includes(raw.intent) ? raw.intent : null;
-  if (!intent) {
-    return { ...blank(), intent: 'impossible', reason: str(raw.reason) ?? 'Unrecognised action.', fellBack: true };
+  let intent = isStr(out.intent) ? out.intent.trim().toLowerCase() : null;
+  if (!intent || !intents.includes(intent)) {
+    violation('classifier', `intent '${out.intent}' is not in the schema enum`);
+    intent = 'look';
   }
+
+  const DIRECTIONS = ['north', 'south', 'east', 'west'];
+  let direction = isStr(out.direction) ? out.direction.trim().toLowerCase() : null;
+  if (direction && !DIRECTIONS.includes(direction)) {
+    violation('classifier', `direction '${out.direction}' is not a cardinal direction`);
+    direction = null;
+  }
+  // A move with no direction cannot be resolved; it is a look at what is here.
+  if (intent === 'move' && !direction) {
+    violation('classifier', 'move without a direction');
+    intent = 'look';
+  }
+
+  const spellId = isStr(out.spell_id) ? out.spell_id.trim() : (isStr(out.spellId) ? out.spellId.trim() : null);
 
   return {
     intent,
-    target_id: str(raw.target_id),
-    direction: normalizeDirection(raw.direction),
-    skill:     str(raw.skill),
-    dc:        clampDc(raw.dc),
-    reason:    str(raw.reason) ?? '',
-    fellBack:  false,
+    target_id: isStr(out.target_id) ? out.target_id : null,
+    direction,
+    skill:     isStr(out.skill) ? out.skill.trim().toLowerCase() : null,
+    spell_id:  spellId,
+    spellId,
+    dc:        clampDc ? clampDc(asNumber(out.dc)) : asNumber(out.dc),
+    reason:    isStr(out.reason) ? out.reason : '',
   };
 }
 
-const DIRECTIONS = ['north', 'south', 'east', 'west'];
+// ─── Narrator ────────────────────────────────────────────────────────────────
 
-function normalizeDirection(dir) {
-  const d = str(dir)?.toLowerCase();
-  return d && DIRECTIONS.includes(d) ? d : null;
+// The one field the UI cannot do without. A missing narration used to render
+// the string "undefined" into the transcript and then into the save, where the
+// journal and the world bible both read it back as if it were prose.
+export function validateNarration(out, { fallback }) {
+  if (!isObj(out) || !isStr(out.narration)) {
+    violation('narrator', 'no narration field in the response');
+    return { narration: fallback, invalid: true };
+  }
+  return { ...out, narration: out.narration };
 }
 
-function blank() {
-  return { target_id: null, direction: null, skill: null, dc: null, reason: '', fellBack: false };
+// ─── Beat check ──────────────────────────────────────────────────────────────
+
+// A non-boolean `fulfilled` used to be truthy for the string "false".
+export function validateBeatCheck(out) {
+  if (!isObj(out)) return { fulfilled: false, reason: '' };
+  const raw = out.fulfilled;
+  const fulfilled = raw === true || raw === 'true';
+  if (typeof raw !== 'boolean' && raw != null) violation('beatCheck', `fulfilled was ${typeof raw} '${raw}'`);
+  return { fulfilled, reason: isStr(out.reason) ? out.reason : '' };
 }
 
-/**
- * Narration is the one field the player actually reads, so a response missing
- * it is worse than useless — the turn commits and the screen stays blank.
- * Returns null when there is nothing renderable, letting the caller run its
- * existing "GM unavailable" path instead of committing silence.
- */
-export function validateNarration(raw) {
-  if (!raw || typeof raw !== 'object') return null;
-  const narration = str(raw.narration);
-  if (!narration) return null;
-  return { ...raw, narration };
+// ─── Acts ────────────────────────────────────────────────────────────────────
+
+// A generated act with no beats is not an act; adopting one would leave the
+// campaign with a title, a premise, and nothing to do.
+export function validateAct(out) {
+  if (!isObj(out)) { violation('act', 'response was not an object'); return null; }
+  const beats = asArray(out.beats)
+    .filter(b => isObj(b) && isStr(b.id) && isStr(b.dramaticPurpose))
+    .map(b => ({
+      id:              b.id.trim(),
+      title:           isStr(b.title) ? b.title : b.id,
+      dramaticPurpose: b.dramaticPurpose,
+      location:        isStr(b.location) ? b.location : null,
+      requires:        asArray(b.requires).filter(isStr),
+      completesOn:     asArray(b.completesOn).filter(isStr),
+    }));
+
+  if (!beats.length) { violation('act', 'act had no usable beats'); return null; }
+
+  // Duplicate ids make `requires` ambiguous and completion non-deterministic.
+  const seen = new Set();
+  const unique = beats.filter(b => (seen.has(b.id) ? (violation('act', `duplicate beat id '${b.id}'`), false) : seen.add(b.id)));
+
+  return {
+    title:   isStr(out.title)   ? out.title   : 'Untitled Act',
+    premise: isStr(out.premise) ? out.premise : '',
+    beats:   unique,
+  };
+}
+
+// ─── Journal / world bible ───────────────────────────────────────────────────
+
+// Chapters with no text render as blank pages in an EPUB, which is worse than
+// having one chapter fewer.
+export function validateChapters(out, { fallbackTitle }) {
+  if (!isObj(out)) { violation('journal', 'response was not an object'); return null; }
+  const chapters = asArray(out.chapters)
+    .filter(c => isObj(c) && isStr(c.text))
+    .map((c, i) => ({ heading: isStr(c.heading) ? c.heading : `Chapter ${i + 1}`, text: c.text }));
+  if (!chapters.length) { violation('journal', 'no usable chapters'); return null; }
+  return { title: isStr(out.title) ? out.title : fallbackTitle, chapters };
 }

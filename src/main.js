@@ -4,19 +4,36 @@
 import { appState, setValue, bindDOM, initState, restoreState, loadFromStorage, saveToStorage, run, tick,
          onSaveHealthChange, storagePressure, hasCorruptSaveBackup } from './core/state.js';
 import { registerReactiveSidebar }                                                           from './ui/reactive.js';
-import { createJournal, exportScreenshot, exportAllSketches, exportSave, importSave, handleImportFile, exportWorldBible } from './ui/exports.js';
-import { startNewGame, resumeGame, ensureKey, applySketchView, upgradeToDeluxe, requireDeluxe } from './game/flow.js';
+import { createJournal, exportScreenshot, exportAllSketches, exportSave, importSave, handleImportFile, exportWorldBible, manageSlots } from './ui/exports.js';
+import { startNewGame, resumeGame, ensureKey, applySketchView, sketchThisScene, upgradeToDeluxe, requireDeluxe } from './game/flow.js';
 import { reconcilePc }                                                                        from './game/character.js';
 import { initSpeakHover }                                                                   from './ui/transcript.js';
 import { initMicButton }                                                                    from './ui/input.js';
 import { initTimeTravel, importTimeTravel }                                                 from './game/undo.js';
 import { initTimeline }                                                                     from './ui/timeline.js';
 import { verifyCombatLog }                                                                  from './game/rng.js';
-import { getSpend, onSpendChange }                                                          from './ai/spend.js';
+import { getSpend, onSpendChange, budgetWarningDue, setBudget, getBudget, TIERS }           from './ai/spend.js';
 import * as UI from './ui/console.js';
 import { locale, setLocale, t } from './i18n/i18n.js';
+import { claimTab, onPrimaryChange } from './core/tabs.js';
+import { onSchemaViolation } from './ai/validate.js';
 
 async function boot() {
+  // A provider quietly ignoring a schema is otherwise invisible: the turn just
+  // comes out strange. Say it once, where a bug report can find it.
+  onSchemaViolation((where, detail) => console.warn(`[ai] ${where} broke its schema: ${detail}`));
+
+  // One campaign, one writer. Claimed before anything can autosave; a second
+  // tab becomes a read-only spectator rather than overwriting the first.
+  // Announced on the CHANGE, never on the initial value: the claim resolves a
+  // beat after boot, so reading it immediately would accuse the only open tab
+  // of being the second one.
+  onPrimaryChange((primary) => {
+    setValue('session.spectator', !primary);
+    tick();
+  });
+  claimTab();
+
   // Expose game state for console debugging: game.world, game.party, etc.
   window.game = appState;
   // Audit the current epoch's seeded combat rolls from the console:
@@ -30,9 +47,31 @@ async function boot() {
     if (!el) return;
     el.textContent   = s.tokens > 0 ? '$' + s.costUsd.toFixed(4) + ' · ' + s.tokens.toLocaleString() + ' tok' : '';
     el.style.display = s.tokens > 0 ? '' : 'none';
+    // The per-tier split lives in the tooltip: the running total never showed
+    // that a sketch costs many times the paragraph it illustrates.
+    const parts = TIERS
+      .filter(k => (s.byTier?.[k]?.tokens ?? 0) > 0 || (s.byTier?.[k]?.costUsd ?? 0) > 0)
+      .map(k => `${k}: $${(s.byTier[k].costUsd).toFixed(4)}`);
+    el.title = parts.length ? parts.join(' · ') : '';
+
+    // Soft budget cap: warn once per threshold, never interrupt a campaign.
+    const warn = budgetWarningDue();
+    if (warn) UI.appendEntry('system', t(warn.level >= 100 ? 'budget.over' : 'budget.near', {
+      spent: warn.spentUsd.toFixed(2), cap: warn.capUsd.toFixed(2),
+    }));
   };
   onSpendChange(renderSpend);
   renderSpend(getSpend());
+
+  // Session budget: a soft cap the player sets, warned on at 80% and 100%.
+  const budgetInput = document.getElementById('budget-cap');
+  if (budgetInput) {
+    const cap = getBudget().capUsd;
+    if (cap > 0) budgetInput.value = String(cap);
+    budgetInput.placeholder = t('budget.none');
+    budgetInput.previousElementSibling && (budgetInput.previousElementSibling.textContent = t('budget.label'));
+    budgetInput.addEventListener('change', () => setBudget(budgetInput.value));
+  }
 
   document.getElementById('skeleton-loading')?.remove();
   document.documentElement.classList.add('styles-loaded');
@@ -58,6 +97,9 @@ async function boot() {
   document.getElementById('sketch-btn-min')?.addEventListener('click', () => applySketchView('minimized'));
   document.getElementById('sketch-btn-win')?.addEventListener('click', () => applySketchView('windowed'));
   document.getElementById('sketch-btn-max')?.addEventListener('click', () => applySketchView('maximized'));
+  // Sketches are rationed to room changes now, so the player needs a way to ask
+  // for one of a scene they care about.
+  document.getElementById('sketch-btn-now')?.addEventListener('click', () => sketchThisScene());
 
   const actionBarToggle = document.getElementById('action-bar-toggle');
   actionBarToggle?.addEventListener('click', () => {
@@ -132,6 +174,7 @@ async function boot() {
   document.getElementById('export-sketches')?.addEventListener('click', exportAllSketches);
   document.getElementById('export-save')?.addEventListener('click', exportSave);
   document.getElementById('export-import')?.addEventListener('click', importSave);
+  document.getElementById('export-slots')?.addEventListener('click', manageSlots);
   document.getElementById('export-world-bible')?.addEventListener('click', () => {
     exportWorldBible().catch(e => {
       console.error('World Bible error:', e);
@@ -162,30 +205,43 @@ async function boot() {
   if (appState.settings?.roleplayMode) document.body.classList.add('roleplay-mode');
   if (appState.settings?.autoplay) document.getElementById('autoplay-btn')?.classList.add('active');
 
-  // Handle OAuth callback (?code=) or direct key (?key=) from URL.
-  const params = new URLSearchParams(location.search);
-  const urlKey  = params.get('key');
+  // Handle the OAuth callback (?code=).
+  //
+  // `?key=` used to be accepted here as a way to hand the game an API key
+  // directly. A key in a URL is a key in browser history, in the referrer of
+  // every outbound link, and in whatever chat window the link was pasted into —
+  // and it survives there long after the tab is closed. It is gone; the
+  // Settings field is the only way in.
+  const params  = new URLSearchParams(location.search);
   const urlCode = params.get('code');
 
   if (urlCode) {
+    const urlState = params.get('state');
+    // Clear the address bar before anything else: even a code we refuse should
+    // not sit in history.
     history.replaceState(null, '', location.pathname);
-    try {
-      const { exchangeCodeForKey } = await import('./ai/auth.js');
-      const key = await exchangeCodeForKey(urlCode);
-      setValue('ai.key', key);
-      saveToStorage();
+    const { exchangeCodeForKey, stateMatches } = await import('./ai/auth.js');
+    if (!stateMatches(urlState)) {
+      // Either this tab never started a sign-in, or someone planted the code.
+      // Neither is a reason to redeem it.
       import('./ui/transcript.js').then(({ appendEntry }) =>
-        appendEntry('system', t('setup.oauthSuccess'))
+        appendEntry('error', t('setup.oauthStateFail'))
       );
-    } catch (e) {
-      console.error('OAuth key exchange failed:', e);
-      import('./ui/transcript.js').then(({ appendEntry }) =>
-        appendEntry('error', t('setup.oauthFail'))
-      );
+    } else {
+      try {
+        const key = await exchangeCodeForKey(urlCode);
+        setValue('ai.key', key);
+        saveToStorage();
+        import('./ui/transcript.js').then(({ appendEntry }) =>
+          appendEntry('system', t('setup.oauthSuccess'))
+        );
+      } catch (e) {
+        console.error('OAuth key exchange failed:', e);
+        import('./ui/transcript.js').then(({ appendEntry }) =>
+          appendEntry('error', t('setup.oauthFail'))
+        );
+      }
     }
-  } else if (urlKey) {
-    setValue('ai.key', urlKey.trim());
-    history.replaceState(null, '', location.pathname);
   }
 
   tick();

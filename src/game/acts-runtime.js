@@ -101,6 +101,26 @@ export function activeSetups() {
   return thread().payoffs.filter(p => !p.paid).map(p => p.clue).filter(Boolean);
 }
 
+// ─── Flag-primary completion ─────────────────────────────────────────────────
+//
+// A beat that turns on something the dice decided — a boss killed, a gate
+// opened, a settlement reached — is already known to be over. Asking a tiny
+// model to confirm it is a paid call to learn what the game just wrote down,
+// and a judge that keeps answering "no" can freeze a campaign with no way out.
+// The LLM judge is now the fallback for beats about conversations, discoveries
+// and choices, which is what it was always good at.
+
+// Does the active beat's `completesOn` sit entirely inside the raised flags?
+// Returns the beat id to complete, or null.
+export function beatSatisfiedByFlags() {
+  const t = thread();
+  const beat = activeActBeat(t);
+  const on = beat?.completesOn;
+  if (!beat || !Array.isArray(on) || !on.length) return null;
+  const flags = t.flags ?? {};
+  return on.every(f => flags[f]) ? beat.id : null;
+}
+
 // ─── Stalls ──────────────────────────────────────────────────────────────────
 
 // Has the story stopped moving? The caller escalates — the world comes to the

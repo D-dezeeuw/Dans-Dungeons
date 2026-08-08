@@ -13,16 +13,20 @@ export const CLASSIFIER_SCHEMA = {
       // 'flee' and 'use' are resolved mechanically (opposed check, consumables);
       // every intent here either changes the world or is marked noEffect by the
       // resolver, so the narrator is never left to improvise a state change.
-      enum: ['attack', 'skill', 'talk', 'move', 'take', 'unlock', 'look', 'inventory',
+      enum: ['attack', 'cast', 'skill', 'talk', 'move', 'take', 'unlock', 'look', 'inventory',
              'wait', 'travel', 'rest', 'buy', 'flee', 'use', 'impossible', 'meta'],
     },
     target_id:  { type: ['string', 'null'] },
     direction:  { type: ['string', 'null'] },
     skill:      { type: ['string', 'null'] },
+    // The spell the player named, for `cast`. Matched against what they
+    // actually have prepared — a spell they don't have comes back as a refusal
+    // with the reason, not as an improvised success.
+    spell_id:   { type: ['string', 'null'] },
     dc:         { type: ['number', 'null'] },
     reason:     { type: 'string' },
   },
-  required: ['intent', 'target_id', 'direction', 'skill', 'dc', 'reason'],
+  required: ['intent', 'target_id', 'direction', 'skill', 'spell_id', 'dc', 'reason'],
   additionalProperties: false,
 };
 
@@ -169,8 +173,13 @@ export const ACT_SCHEMA = {
           dramaticPurpose: { type: 'string' },
           location:        { type: ['string', 'null'] },
           requires:        { type: 'array', items: { type: 'string' } },
+          // Mechanical flags that complete this beat outright. When the dice
+          // already decided the beat happened, asking a model whether it did is
+          // a paid call to confirm something the game knows — and a judge that
+          // keeps answering "no" can freeze a campaign indefinitely.
+          completesOn:     { type: 'array', items: { type: 'string' } },
         },
-        required: ['id', 'title', 'dramaticPurpose', 'location', 'requires'],
+        required: ['id', 'title', 'dramaticPurpose', 'location', 'requires', 'completesOn'],
         additionalProperties: false,
       },
     },

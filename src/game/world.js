@@ -31,6 +31,17 @@ function dungeonContent() {
   return {
     houseStyles:     tRaw('world.houseStyles'),
     roomPools,
+    // One small concrete detail per room, drawn by the generator from its own
+    // seeded stream. The theme's `atmosphere` is a single sentence, so without
+    // this every middle room in a crypt ended with the same line and the rooms
+    // were interchangeable. Entrance and vault get the generic pool: they skip
+    // the theme atmosphere by design, and a bare doorway is still a place.
+    dressingFor: (theme, type) => {
+      const generic = tRaw('world.dressingGeneric') ?? [];
+      if (type === 'entrance' || type === 'vault') return generic;
+      const byTheme = tRaw('world.dressing') ?? {};
+      return byTheme[theme] ?? generic;
+    },
     treasures:       tRaw('world.treasures'),
     keys:            tRaw('world.keys'),
     loot:            tRaw('world.loot') ?? [],
