@@ -8,14 +8,23 @@
 
 ---
 
-> **Follow-up pass, same day.** Sections 2–5 below are the audit as found. A remediation
-> pass has since landed the fixes in §7 items 1–5: the four orphans are wired and the
-> wiring test no longer counts imports as consumers; E1.S5 shipped as engine **2.2.1**;
-> the per-turn cost items and DC clamping / response validation are in; the docs are
-> re-stamped. **Not** fixed, and still open: the thirteen unstarted stories in §3 beyond
-> E1.S5, and the partials in §4.3. One plan bullet was deliberately rejected — see the note
-> at the end of §4.1. Findings are left as written so the evidence stays checkable — which
-> means file:line references point at the audited commits above, not at `HEAD`.
+> **Superseded in large part — read §2 and §3.1 first, then this note.**
+> Sections 2–5 are the audit as found, at the commits in the header. Two things happened
+> after: this branch fixed §7 items 1–5, and — independently, within hours — a third
+> implementation pass on `main` closed most of §3.2 and §4 as well (casters, the `flow.js`
+> split, Playwright, Dutch parity, PKCE, save slots, the Web Lock, clickable `pickFrom`,
+> response validation, chip pre-classification, image rationing, `NARRATOR_SCHEMA` on the
+> stream, and concurrent canon/beat passes).
+>
+> **What remained true after both, and is what this branch actually contributes:** the four
+> orphans in §2. `main` added the payoff ledger's *consumer* and never a producer, so
+> `plantClue` still had zero callers and `duePayoffs()` was still permanently empty;
+> `staleDigests`, `titleChapter` and faction clocks were untouched. Plus **E1.S5** (§3.1),
+> which no other pass addressed, and the wiring-test hole that let all four hide.
+>
+> One plan bullet is rejected rather than implemented — see the end of §4.1. Findings are
+> left as written so the evidence stays checkable, which means file:line references point
+> at the audited commits, not at `HEAD`.
 
 ## 1. Verdict
 
