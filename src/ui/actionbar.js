@@ -11,8 +11,12 @@ const _tip = document.createElement('div');
 _tip.id = 'ab-tooltip';
 document.body.appendChild(_tip);
 
-document.addEventListener('mouseover', (e) => {
-  const el = e.target.closest('[data-tip]');
+// Shown on hover AND on focus. Hover-only meant a keyboard user never saw a
+// compass button's lock hint. The word-cloud items are spans and not focusable
+// on purpose — putting twenty read-only labels in the tab order to reach their
+// descriptions would be worse than the problem — so they carry the same text as
+// a `title`, which assistive tech reads without a tab stop.
+function showTip(el) {
   if (!el) return;
   _tip.textContent = el.dataset.tip;
   const r = el.getBoundingClientRect();
@@ -20,12 +24,16 @@ document.addEventListener('mouseover', (e) => {
   _tip.style.top       = `${r.top - 8}px`;
   _tip.style.transform = 'translate(-50%, -100%)';
   _tip.classList.add('visible');
-});
+}
 
-document.addEventListener('mouseout', (e) => {
-  if (!e.target.closest('[data-tip]')) return;
-  _tip.classList.remove('visible');
-});
+function hideTip() { _tip.classList.remove('visible'); }
+
+document.addEventListener('mouseover', (e) => showTip(e.target.closest('[data-tip]')));
+document.addEventListener('mouseout',  (e) => { if (e.target.closest('[data-tip]')) hideTip(); });
+document.addEventListener('focusin',   (e) => showTip(e.target.closest('[data-tip]')));
+document.addEventListener('focusout',  (e) => { if (e.target.closest('[data-tip]')) hideTip(); });
+// Escape dismisses it, the way every tooltip should.
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') hideTip(); });
 
 // ─── Action bar renderer ──────────────────────────────────────────────────────
 //

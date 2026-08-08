@@ -4,7 +4,7 @@
 import { appState, setValue, bindDOM, initState, restoreState, loadFromStorage, saveToStorage, run, tick,
          onSaveHealthChange, storagePressure, hasCorruptSaveBackup } from './core/state.js';
 import { registerReactiveSidebar }                                                           from './ui/reactive.js';
-import { createJournal, exportScreenshot, exportAllSketches, exportSave, importSave, handleImportFile, exportWorldBible } from './ui/exports.js';
+import { createJournal, exportScreenshot, exportAllSketches, exportSave, importSave, handleImportFile, exportWorldBible, manageSlots } from './ui/exports.js';
 import { startNewGame, resumeGame, ensureKey, applySketchView, sketchThisScene, upgradeToDeluxe, requireDeluxe } from './game/flow.js';
 import { reconcilePc }                                                                        from './game/character.js';
 import { initSpeakHover }                                                                   from './ui/transcript.js';
@@ -15,8 +15,17 @@ import { verifyCombatLog }                                                      
 import { getSpend, onSpendChange, budgetWarningDue, setBudget, getBudget, TIERS }           from './ai/spend.js';
 import * as UI from './ui/console.js';
 import { locale, setLocale, t } from './i18n/i18n.js';
+import { claimTab, isPrimaryTab, onPrimaryChange } from './core/tabs.js';
 
 async function boot() {
+  // One campaign, one writer. Claimed before anything can autosave; a second
+  // tab becomes a read-only spectator rather than overwriting the first.
+  claimTab();
+  onPrimaryChange((primary) => {
+    if (!primary) UI.appendEntry('error', t('storage.secondTab'));
+  });
+  if (!isPrimaryTab()) UI.appendEntry('error', t('storage.secondTab'));
+
   // Expose game state for console debugging: game.world, game.party, etc.
   window.game = appState;
   // Audit the current epoch's seeded combat rolls from the console:
@@ -157,6 +166,7 @@ async function boot() {
   document.getElementById('export-sketches')?.addEventListener('click', exportAllSketches);
   document.getElementById('export-save')?.addEventListener('click', exportSave);
   document.getElementById('export-import')?.addEventListener('click', importSave);
+  document.getElementById('export-slots')?.addEventListener('click', manageSlots);
   document.getElementById('export-world-bible')?.addEventListener('click', () => {
     exportWorldBible().catch(e => {
       console.error('World Bible error:', e);
@@ -187,30 +197,43 @@ async function boot() {
   if (appState.settings?.roleplayMode) document.body.classList.add('roleplay-mode');
   if (appState.settings?.autoplay) document.getElementById('autoplay-btn')?.classList.add('active');
 
-  // Handle OAuth callback (?code=) or direct key (?key=) from URL.
-  const params = new URLSearchParams(location.search);
-  const urlKey  = params.get('key');
+  // Handle the OAuth callback (?code=).
+  //
+  // `?key=` used to be accepted here as a way to hand the game an API key
+  // directly. A key in a URL is a key in browser history, in the referrer of
+  // every outbound link, and in whatever chat window the link was pasted into —
+  // and it survives there long after the tab is closed. It is gone; the
+  // Settings field is the only way in.
+  const params  = new URLSearchParams(location.search);
   const urlCode = params.get('code');
 
   if (urlCode) {
+    const urlState = params.get('state');
+    // Clear the address bar before anything else: even a code we refuse should
+    // not sit in history.
     history.replaceState(null, '', location.pathname);
-    try {
-      const { exchangeCodeForKey } = await import('./ai/auth.js');
-      const key = await exchangeCodeForKey(urlCode);
-      setValue('ai.key', key);
-      saveToStorage();
+    const { exchangeCodeForKey, stateMatches } = await import('./ai/auth.js');
+    if (!stateMatches(urlState)) {
+      // Either this tab never started a sign-in, or someone planted the code.
+      // Neither is a reason to redeem it.
       import('./ui/transcript.js').then(({ appendEntry }) =>
-        appendEntry('system', t('setup.oauthSuccess'))
+        appendEntry('error', t('setup.oauthStateFail'))
       );
-    } catch (e) {
-      console.error('OAuth key exchange failed:', e);
-      import('./ui/transcript.js').then(({ appendEntry }) =>
-        appendEntry('error', t('setup.oauthFail'))
-      );
+    } else {
+      try {
+        const key = await exchangeCodeForKey(urlCode);
+        setValue('ai.key', key);
+        saveToStorage();
+        import('./ui/transcript.js').then(({ appendEntry }) =>
+          appendEntry('system', t('setup.oauthSuccess'))
+        );
+      } catch (e) {
+        console.error('OAuth key exchange failed:', e);
+        import('./ui/transcript.js').then(({ appendEntry }) =>
+          appendEntry('error', t('setup.oauthFail'))
+        );
+      }
     }
-  } else if (urlKey) {
-    setValue('ai.key', urlKey.trim());
-    history.replaceState(null, '', location.pathname);
   }
 
   tick();

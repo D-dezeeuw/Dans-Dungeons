@@ -295,6 +295,7 @@ html.styles-loaded #brand-bar {
             <button class="export-tile" id="export-save"       title="Download your game as a save file">Save</button>
             <button class="export-tile" id="export-import"     title="Import a saved game file">Import</button>
             <button class="export-tile" id="export-world-bible" title="Generate a world and export as EPUB lore book">World Bible</button>
+            <button class="export-tile" id="export-slots" title="Save to, or load from, a named slot">Slots</button>
           </div>
           <input type="file" id="import-file-input" accept=".dnd.json,.json" style="display:none" aria-label="Import save file">
         </div>
@@ -315,13 +316,13 @@ html.styles-loaded #brand-bar {
         <div class="ab-divider"></div>
         <div class="ab-zone ab-abilities-zone" role="group" aria-labelledby="ab-label-class">
           <div class="ab-zone-label" id="ab-label-class">Class</div>
-          <div id="ab-abilities-list" data-each="ui.classWords" data-as="word"><span :class="word.cls" :data-tip="word.tip">{{word.label}}</span></div>
+          <div id="ab-abilities-list" data-each="ui.classWords" data-as="word"><span :class="word.cls" :data-tip="word.tip" :title="word.tip">{{word.label}}</span></div>
           <div id="ab-slot-line" data-cloak data-if="ui.slotLineVisible">{{ui.slotLine}}</div>
         </div>
         <div class="ab-divider"></div>
         <div class="ab-zone ab-skills-zone" role="group" aria-labelledby="ab-label-skills">
           <div class="ab-zone-label" id="ab-label-skills">Skills</div>
-          <div id="ab-skills-list" data-each="ui.skillWords" data-as="word"><span :class="word.cls" :data-tip="word.tip">{{word.label}}</span></div>
+          <div id="ab-skills-list" data-each="ui.skillWords" data-as="word"><span :class="word.cls" :data-tip="word.tip" :title="word.tip">{{word.label}}</span></div>
         </div>
       </div>
       <!-- Contextual actions for the current moment (exits, loot, attack, retry,
@@ -345,7 +346,7 @@ html.styles-loaded #brand-bar {
         <button id="undo-btn" class="input-icon-btn" style="display:none" aria-label="Undo last turn" title="Undo the last turn"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg></button>
         <button id="redo-btn" class="input-icon-btn" style="display:none" aria-label="Redo last undone turn" title="Redo the last undone turn"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m15 14 5-5-5-5"/><path d="M20 9H9.5A5.5 5.5 0 0 0 9.5 20H13"/></svg></button>
         <button id="timeline-btn" class="input-icon-btn" style="display:none" aria-label="Timeline" title="Timeline — jump to any turn or branch"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><line x1="6" x2="6" y1="3" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg><span id="timeline-count" class="branch-count">0</span></button>
-        <div id="timeline-panel" role="menu" aria-label="Run timeline"></div>
+        <div id="timeline-panel" role="group" aria-label="Run timeline"></div>
         <button id="autoplay-btn" class="input-icon-btn" data-cloak aria-label="Toggle autoplay" title="Let AI play automatically" data-if="ai.key"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg></button>
         <button id="mic-btn" class="input-icon-btn" data-cloak aria-label="Record voice input" title="Speak your action (Spacebar)" data-if="ai.key"><svg width="20" height="20" viewBox="0 0 13 13" fill="currentColor" aria-hidden="true" focusable="false"><circle cx="6.5" cy="6.5" r="4.5" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="6.5" cy="6.5" r="2.5"/></svg></button>
       </div>

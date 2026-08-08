@@ -9,6 +9,9 @@ import { wrapEnvelope, saveEnvelope, loadEnvelope, makeCommit, restoreBackup, LO
          openCold, appendSegment, readSegments, splitSave } from 'bag-of-holding-client';
 
 import { createSpektrum } from 'spektrum';
+import { isPrimaryTab } from './tabs.js';
+import { saveSlot as libSaveSlot, readSlot, listSlots, deleteSlot, MAX_SLOTS } from './slots.js';
+export { MAX_SLOTS };
 
 // One configured engine for the whole app — state.js is the sole 'spektrum'
 // importer (everything else goes through this module). `snapshotEvery` captures a
@@ -253,6 +256,11 @@ function setSaveHealth(ok) {
 // plus the live world. Everything older is handed to the cold archive, so what
 // this synchronous, quota-limited write costs stops growing with the campaign.
 export function saveToStorage() {
+  // A second tab is a spectator. Both tabs share one save key, so letting both
+  // autosave means the last write wins and the other tab's turns are gone —
+  // silently, and only visible on the next reload.
+  if (!isPrimaryTab()) return false;
+
   const { hot, cold } = splitSave(buildSaveSnapshot(), HOT_LIMITS);
   const ok = saveEnvelope(localStorage, SAVE_KEY, hot, SAVE_VERSION, {
     backups:  SAVE_BACKUPS,
@@ -371,6 +379,34 @@ export function parseSave(raw) {
 export function clearSave() {
   localStorage.removeItem(SAVE_KEY);
 }
+
+// ─── Named slots ─────────────────────────────────────────────────────────────
+//
+// One autosave meant a new campaign overwrote the last one and there was no way
+// back. Slots use the same envelope, the same version, and the same migration
+// path as the autosave, so a slot is not a second kind of save with its own
+// bugs — it is the same save under another key.
+
+export function saveToSlot(name) {
+  // Exactly the bytes serializeSave() produces — same envelope, same version,
+  // same credential stripping — so a slot, a save file and the autosave are
+  // three places holding one format.
+  return libSaveSlot(localStorage, name, serializeSave(), {
+    turn:  appState.session?.turnCount ?? 0,
+    pc:    appState.party?.pc?.record?.name ?? null,
+    world: appState.world?.name ?? null,
+  });
+}
+
+export function loadFromSlot(id) {
+  const raw = readSlot(localStorage, id);
+  if (raw == null) return null;
+  // parseSave is the reload path: envelope, migrations, credential sanitising.
+  return parseSave(raw);
+}
+
+export function slots()          { return listSlots(localStorage); }
+export function removeSlot(id)   { return deleteSlot(localStorage, id); }
 
 // tick (flush the Spektrum delta) + saveToStorage in one call — use after any
 // state mutation that must survive a reload. Replaces the repeated, easy-to-

@@ -57,7 +57,8 @@
     "micTitle": "Spreek je actie in (spatiebalk)",
     "cmdLabel": "Opdracht invoer",
     "autoplayLabel": "Automatisch spelen aan/uit",
-    "autoplayTitle": "Laat AI automatisch spelen"
+    "autoplayTitle": "Laat AI automatisch spelen",
+    "pickGroupLabel": "Keuzes"
   },
   "timeline": {
     "label": "Tijdlijn",
@@ -108,7 +109,8 @@
     "oauthSuccess": "Verbonden! Je persoonlijke API-sleutel is opgeslagen.",
     "oauthFail": "Verbinding mislukt. Je kunt handmatig een sleutel plakken met /settings.",
     "demoNotice": "Demomodus: deze sleutel wordt door alle spelers gedeeld, dus er geldt een limiet en je tekst loopt via het account van de host. Verbind je eigen sleutel voor een volledige campagne.",
-    "modelHealed": "Het '{{tier}}'-model ({{from}}) is niet meer beschikbaar — overgeschakeld naar {{to}}."
+    "modelHealed": "Het '{{tier}}'-model ({{from}}) is niet meer beschikbaar — overgeschakeld naar {{to}}.",
+    "oauthStateFail": "Die aanmelding is niet hier begonnen en is daarom niet voltooid. Open Instellingen en verbind opnieuw."
   },
   "tier": {
     "upgradeQuestion": "Wil je upgraden naar de Deluxe versie?",
@@ -148,7 +150,8 @@
     "autosaveFailed": "Automatisch opslaan werkt niet meer — de browseropslag is vol. Alles vanaf nu bestaat alleen in dit tabblad. Exporteer je spel (Instellingen → Opslaan) nu.",
     "autosaveRecovered": "Automatisch opslaan werkt weer — je voortgang wordt weer weggeschreven.",
     "nearlyFull": "De browseropslag is {{pct}}% vol. Overweeg je spel te exporteren als back-up.",
-    "corruptSave": "Een eerdere opgeslagen game kon niet gelezen worden en is apart gezet. Importeer een savebestand om die run voort te zetten."
+    "corruptSave": "Een eerdere opgeslagen game kon niet gelezen worden en is apart gezet. Importeer een savebestand om die run voort te zetten.",
+    "secondTab": "Deze campagne staat al open in een ander tabblad. Dit tabblad slaat niets op — sluit het andere en herlaad om hier te spelen."
   },
   "meta": {
     "saved": "Spel opgeslagen in localStorage.",
@@ -1158,5 +1161,25 @@
   "worldbible": {
     "documenting": "De wereldbijbel voor je lopende campagne wordt geschreven…",
     "generating": "Geen lopende campagne — er wordt een nieuwe wereld gegenereerd om te beschrijven…"
+  },
+  "slots": {
+    "prompt": "Opslagplekken ({{n}} van {{max}} in gebruik). Kies er een, of sla op in een nieuwe.",
+    "entry": "{{name}} — {{pc}}, beurt {{turn}} ({{when}})",
+    "saveNew": "Opslaan in een nieuwe plek…",
+    "namePrompt": "Geef deze plek een naam:",
+    "whatNow": "Wat moet er met \"{{name}}\" gebeuren?",
+    "load": "Deze plek laden",
+    "overwrite": "Overschrijven met het huidige spel",
+    "delete": "Verwijderen",
+    "cancel": "Annuleren",
+    "saved": "Opgeslagen in \"{{name}}\".",
+    "loaded": "Plek geladen — de pagina wordt herladen…",
+    "deleted": "Plek verwijderd.",
+    "loadFail": "Die plek kon niet worden gelezen. Mogelijk is hij door een nieuwere versie van het spel geschreven.",
+    "fail": {
+      "empty-name": "Een plek heeft een naam nodig.",
+      "full": "Alle plekken zijn in gebruik. Overschrijf of verwijder er eerst een.",
+      "quota": "Er was geen ruimte om de plek te schrijven. Maak ruimte vrij en probeer opnieuw."
+    }
   }
 }

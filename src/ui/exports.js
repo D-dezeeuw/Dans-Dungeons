@@ -1,8 +1,10 @@
 // src/ui/exports.js — journal, screenshot, sketch gallery, and save file I/O.
 // All functions are triggered by user action; none interact with the game loop.
 
-import { appState, setValue, restoreState, commit, serializeSave, parseSave, fullTranscript } from '../core/state.js';
+import { appState, setValue, restoreState, commit, serializeSave, parseSave, fullTranscript,
+         saveToSlot, loadFromSlot, slots, removeSlot, MAX_SLOTS, tick } from '../core/state.js';
 import { appendEntry, setThinking } from './transcript.js';
+import { pickFrom, prompt } from './input.js';
 import { getJournalLog } from '../game/flow.js';
 import { importTimeTravel } from '../game/undo.js';
 import { reconcilePc } from '../game/character.js';
@@ -319,4 +321,70 @@ export async function exportWorldBible() {
     console.error('World Bible export failed:', e);
     appendEntry('error', t('exports.worldBibleFail', { msg: e.message }));
   }
+}
+
+// ─── Named slots ──────────────────────────────────────────────────────────────
+
+// One panel for both directions: pick an existing slot to load or overwrite,
+// or type a name for a new one. Uses the transcript's own pickFrom, so it is
+// keyboard- and click-operable for free and looks like the rest of the game.
+export async function manageSlots() {
+  const existing = slots();
+  const OPTIONS = [
+    ...existing.map(sl => ({
+      kind: 'slot', id: sl.id,
+      label: t('slots.entry', {
+        name: sl.name,
+        pc:   sl.pc ?? '—',
+        turn: sl.turn ?? 0,
+        when: new Date(sl.savedAt ?? 0).toLocaleString(),
+      }),
+    })),
+    { kind: 'new',    label: t('slots.saveNew') },
+    { kind: 'cancel', label: t('slots.cancel') },
+  ];
+
+  const choice = await pickFrom(t('slots.prompt', { n: existing.length, max: MAX_SLOTS }),
+    OPTIONS, (o) => o.label, OPTIONS.length - 1);
+
+  if (!choice || choice.kind === 'cancel') return;
+
+  if (choice.kind === 'new') {
+    const name = (await prompt(t('slots.namePrompt'))).trim();
+    if (!name) return;
+    const res = saveToSlot(name);
+    appendEntry(res.ok ? 'system' : 'error', t(res.ok ? 'slots.saved' : `slots.fail.${res.reason}`, { name }));
+    return;
+  }
+
+  // An existing slot: load it, overwrite it, or delete it.
+  const ACTIONS = [
+    { kind: 'load',      label: t('slots.load') },
+    { kind: 'overwrite', label: t('slots.overwrite') },
+    { kind: 'delete',    label: t('slots.delete') },
+    { kind: 'cancel',    label: t('slots.cancel') },
+  ];
+  const action = await pickFrom(t('slots.whatNow', { name: choice.label }), ACTIONS, (o) => o.label, 3);
+  if (!action || action.kind === 'cancel') return;
+
+  if (action.kind === 'delete') {
+    removeSlot(choice.id);
+    appendEntry('system', t('slots.deleted'));
+    return;
+  }
+  if (action.kind === 'overwrite') {
+    const res = saveToSlot(existing.find(sl => sl.id === choice.id)?.name ?? choice.id);
+    appendEntry(res.ok ? 'system' : 'error', t(res.ok ? 'slots.saved' : `slots.fail.${res.reason}`, { name: choice.id }));
+    return;
+  }
+
+  const snap = loadFromSlot(choice.id);
+  if (!snap) { appendEntry('error', t('slots.loadFail')); return; }
+  restoreState(snap);
+  if (appState.party?.pc) setValue('party.pc', reconcilePc(appState.party.pc));
+  tick();
+  appendEntry('system', t('slots.loaded'));
+  // Same as an imported save: the world on screen no longer matches the state,
+  // so the page reloads into it rather than half-swapping underneath the player.
+  setTimeout(() => location.reload(), 600);
 }

@@ -205,7 +205,10 @@ async function setupKey() {
   if (choice === 'oauth') {
     // Redirect to OpenRouter — page navigates away, returns with ?code=.
     UI.appendEntry('system', t('setup.connectingOAuth'));
-    redirectToOpenRouter();
+    // Awaited: the PKCE challenge is derived with SubtleCrypto, so the redirect
+    // is now asynchronous. Firing and forgetting would navigate before the
+    // verifier was stashed and every sign-in would fail its state check.
+    await redirectToOpenRouter();
     // Flow resumes on reload (main.js handles ?code=).
     return;
   }

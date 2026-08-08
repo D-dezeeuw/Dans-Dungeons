@@ -57,7 +57,8 @@
     "micTitle": "Speak your action (Spacebar)",
     "cmdLabel": "Command input",
     "autoplayLabel": "Toggle autoplay",
-    "autoplayTitle": "Let AI play automatically"
+    "autoplayTitle": "Let AI play automatically",
+    "pickGroupLabel": "Choices"
   },
   "timeline": {
     "label": "Timeline",
@@ -108,7 +109,8 @@
     "oauthSuccess": "Connected! Your personal API key has been saved.",
     "oauthFail": "Connection failed. You can paste a key manually with /settings.",
     "demoNotice": "Demo mode: this key is shared by everyone playing, so it is rate-limited and your text passes through the host's account. Connect your own key for a full campaign.",
-    "modelHealed": "The '{{tier}}' model ({{from}}) is no longer available — switched to {{to}}."
+    "modelHealed": "The '{{tier}}' model ({{from}}) is no longer available — switched to {{to}}.",
+    "oauthStateFail": "That sign-in did not start here, so it was not completed. Open Settings and connect again."
   },
   "tier": {
     "upgradeQuestion": "Do you want to upgrade to the Deluxe tier?",
@@ -148,7 +150,8 @@
     "autosaveFailed": "Autosave has stopped working — browser storage is full. Everything from here on exists only in this tab. Export your game (Settings → Save) now.",
     "autosaveRecovered": "Autosave is working again — your progress is being written to disk.",
     "nearlyFull": "Browser storage is {{pct}}% full. Consider exporting your game as a backup.",
-    "corruptSave": "A previous save could not be read and was set aside. Import a save file to continue that run."
+    "corruptSave": "A previous save could not be read and was set aside. Import a save file to continue that run.",
+    "secondTab": "This campaign is already open in another tab. This tab will not save — close the other one and reload to play here."
   },
   "meta": {
     "saved": "Game saved to localStorage.",
@@ -1158,5 +1161,25 @@
   "worldbible": {
     "documenting": "Writing the world bible for your campaign in progress…",
     "generating": "No campaign in progress — generating a fresh world to document…"
+  },
+  "slots": {
+    "prompt": "Save slots ({{n}} of {{max}} used). Pick one, or save a new slot.",
+    "entry": "{{name}} — {{pc}}, turn {{turn}} ({{when}})",
+    "saveNew": "Save to a new slot…",
+    "namePrompt": "Name this slot:",
+    "whatNow": "What should happen to \"{{name}}\"?",
+    "load": "Load this slot",
+    "overwrite": "Overwrite it with the current game",
+    "delete": "Delete it",
+    "cancel": "Cancel",
+    "saved": "Saved to slot \"{{name}}\".",
+    "loaded": "Slot loaded — reloading into it…",
+    "deleted": "Slot deleted.",
+    "loadFail": "That slot could not be read. It may have been written by a newer version of the game.",
+    "fail": {
+      "empty-name": "A slot needs a name.",
+      "full": "All slots are in use. Overwrite or delete one first.",
+      "quota": "There was no room to write the slot. Free some space and try again."
+    }
   }
 }
