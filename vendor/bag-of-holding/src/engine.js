@@ -410,6 +410,23 @@ export function createEngine(opts = {}) {
     return entry;
   };
 
+
+  // Some namespaces (Travel, Equipment, Movement, MagicItems, surprised
+  // initiative) roll through the shared rng without recording anything. Every
+  // such draw shifted the stream underneath verifyLog, so a log containing one
+  // of them could never be verified — the audit trail silently desynced.
+  //
+  // Rather than teach the verifier to replay each of those functions, record how
+  // many draws were consumed. Replay just advances the stream by that count,
+  // which keeps every later entry aligned and works for any future surface.
+  const counted = (fn, label) => (...args) => {
+    let draws = 0;
+    const countingRng = () => { draws++; return rng(); };
+    const result = fn(countingRng, ...args);
+    if (draws > 0) record('rngDraws', { count: draws, source: label });
+    return result;
+  };
+
   // === Per-engine namespaces ===
   // Dice — logged wrappers + the seedable RNG helper. Pure math
   // (`parse`) passes through unchanged because it does no rolling.
@@ -962,16 +979,16 @@ export function createEngine(opts = {}) {
       carriedWeight: (itemIds) => EquipmentBase.carriedWeight(itemIds, items),
       donTime: (armorId) => EquipmentBase.donTime(armorId, items),
       doffTime: (armorId) => EquipmentBase.doffTime(armorId, items),
-      toolCheck: (args) => EquipmentBase.toolCheck(args, rng)
+      toolCheck: counted((r, args) => EquipmentBase.toolCheck(args, r), 'Equipment.toolCheck')
     }),
     // Travel & exploration (since 1.20.0; closes 1.18.0 milestone).
     Travel: Object.freeze({
       TRAVEL_PACES: TravelBase.TRAVEL_PACES,
       milesTravelled: TravelBase.milesTravelled,
       forcedMarchCheck: (actor, opts) => TravelBase.forcedMarchCheck(actor, opts, rng, hazardSaver),
-      checkRestInterruption: (opts) => TravelBase.checkRestInterruption(opts, rng),
-      forageCheck: (args) => TravelBase.forageCheck(args, rng),
-      navigateCheck: (args) => TravelBase.navigateCheck(args, rng)
+      checkRestInterruption: counted((r, opts) => TravelBase.checkRestInterruption(opts, r), 'Travel.checkRestInterruption'),
+      forageCheck: counted((r, args) => TravelBase.forageCheck(args, r), 'Travel.forageCheck'),
+      navigateCheck: counted((r, args) => TravelBase.navigateCheck(args, r), 'Travel.navigateCheck')
     }),
     // Mounted Combat (since 1.30.0; SRD 5.2 § Combat — Mount).
     // Pure helpers, no logging needed.
@@ -1007,7 +1024,7 @@ export function createEngine(opts = {}) {
       LIGHT_LEVELS: MovementBase.LIGHT_LEVELS,
       speedFor: MovementBase.speedFor,
       movementCost: MovementBase.movementCost,
-      fall: (distanceFt) => MovementBase.fall(distanceFt, rng),
+      fall: counted((r, distanceFt) => MovementBase.fall(distanceFt, r), 'Movement.fall'),
       longJump: MovementBase.longJump,
       highJump: MovementBase.highJump,
       effectiveLight: MovementBase.effectiveLight,
@@ -1038,10 +1055,10 @@ export function createEngine(opts = {}) {
       attune: MagicItemsBase.attune,
       unattune: MagicItemsBase.unattune,
       spendCharge: MagicItemsBase.spendCharge,
-      rechargeItem: (actor, item) => MagicItemsBase.rechargeItem(actor, item, rng),
+      rechargeItem: counted((r, actor, item) => MagicItemsBase.rechargeItem(actor, item, r), 'MagicItems.rechargeItem'),
       identifyItem: MagicItemsBase.identifyItem,
       isIdentified: MagicItemsBase.isIdentified,
-      itemSavingThrow: (item, dc) => MagicItemsBase.itemSavingThrow(item, dc, rng)
+      itemSavingThrow: counted((r, item, dc) => MagicItemsBase.itemSavingThrow(item, dc, r), 'MagicItems.itemSavingThrow')
     }),
     // Class mechanics (since 1.3.0). Foundation for resource-bearing
     // class features (Second Wind, Action Surge, Sneak Attack, etc.)

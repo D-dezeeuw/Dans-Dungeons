@@ -6,6 +6,7 @@
 import { computed } from '../core/state.js';
 import { escHtml } from '../core/utils.js';
 import { getSkills, classAbilities } from './chips.js';
+import { castableSpells, slotSummary } from '../game/spells.js';
 import { t } from '../i18n/i18n.js';
 
 export function registerReactiveSidebar() {
@@ -59,7 +60,7 @@ export function registerReactiveSidebar() {
   // current without an imperative redraw call. Labels/tooltips are locale-
   // derived; an in-game locale switch reloads the page, so priming on boot is
   // sufficient (no locale dep needed here).
-  computed('ui.classWords', ['party.pc'], (s) => {
+  computed('ui.classWords', ['party.pc', 'party.magic'], (s) => {
     const pc = s.party?.pc;
     if (!pc?.record || !pc?.sheet) return [];
     const attacks = (pc.sheet.attacks ?? []).map(atk => ({
@@ -67,13 +68,38 @@ export function registerReactiveSidebar() {
       tip:   `${t('actionbar.attackTip')}\n+${atk.attackBonus} to hit · ${atk.damageDice} damage`,
       cls:   'ab-word ab-available',
     }));
+    // A caster's prepared list, beside their weapons. A spell with no slot left
+    // is shown spent rather than hidden — "you are out of 2nd-level slots" is
+    // information; a spell that silently vanishes is a bug report.
+    const spells = castableSpells(pc.record, pc.sheet, s.party?.magic).map(sp => ({
+      label: sp.name + (sp.level === 0 ? '' : ` (${sp.level})`),
+      tip:   spellTip(sp),
+      cls:   sp.castable ? 'ab-word ab-available' : 'ab-word ab-cooldown',
+    }));
     const abilities = classAbilities(pc.record, pc.sheet).map(a => ({
       label: a.label,
       tip:   a.note,
       cls:   'ab-word ab-available',
     }));
-    return [...attacks, ...abilities];
+    return [...attacks, ...spells, ...abilities];
   });
+
+  // A second tab is a spectator, and it has to KEEP saying so. This was a
+  // transcript line, which character creation's UI.clear() wiped a moment
+  // later — leaving a tab that silently never saves and no longer says why.
+  computed('ui.spectator',     ['session.spectator'], (s) => s.session?.spectator === true);
+  computed('ui.spectatorText', ['session.spectator'], () => t('storage.secondTab'));
+
+  // Slots left, as one line under the class words — the only number a caster
+  // checks every turn.
+  computed('ui.slotLine', ['party.magic'], (s) => {
+    const left = slotSummary(s.party?.magic?.slots);
+    if (!left.length) return '';
+    return t('spells.slotsLeft', {
+      slots: left.map(x => t('spells.slotPair', { level: x.level, left: x.left, max: x.max })).join(' · '),
+    });
+  });
+  computed('ui.slotLineVisible', ['party.magic'], (s) => slotSummary(s.party?.magic?.slots).length > 0);
 
   computed('ui.skillWords', ['party.pc', 'session.skillCooldowns'], (s) => {
     const cooldowns = s.session?.skillCooldowns ?? {};
@@ -128,4 +154,15 @@ export function registerReactiveSidebar() {
 
   // Roleplay mode — drives aria-pressed on the roleplay button.
   computed('ui.roleplayActive', ['settings.roleplayMode'], s => !!(s.settings?.roleplayMode));
+}
+
+// One tooltip line for a spell chip: what it does and what it costs.
+function spellTip(sp) {
+  const parts = [];
+  parts.push(sp.level === 0 ? t('spells.cantrip') : t('spells.levelN', { level: sp.level }));
+  if (sp.damage)  parts.push(t('spells.dealsDamage', { dice: sp.damage }));
+  if (sp.healing) parts.push(t('spells.heals'));
+  if (sp.save)    parts.push(t('spells.saveVs', { ability: sp.save.toUpperCase() }));
+  if (!sp.castable) parts.push(t('spells.noSlot'));
+  return parts.join(' · ');
 }

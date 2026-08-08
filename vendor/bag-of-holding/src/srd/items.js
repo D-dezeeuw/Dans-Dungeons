@@ -37,7 +37,7 @@ export default {
   'mace':           { id: 'mace',           name: 'Mace',            type: 'weapon', damage: '1d6', damageType: 'bludgeoning', properties: [],                         mastery: 'sap' },
   'quarterstaff':   { id: 'quarterstaff',   name: 'Quarterstaff',    type: 'weapon', damage: '1d6', damageType: 'bludgeoning', properties: ['versatile'],              mastery: 'topple' },
   'sickle':         { id: 'sickle',         name: 'Sickle',          type: 'weapon', damage: '1d4', damageType: 'slashing',    properties: ['finesse', 'light'],       mastery: 'nick' },
-  'spear':          { id: 'spear',          name: 'Spear',           type: 'weapon', damage: '1d6', damageType: 'piercing',    properties: ['thrown', 'versatile'],    mastery: 'push' },
+  'spear':          { id: 'spear',          name: 'Spear',           type: 'weapon', damage: '1d6', damageType: 'piercing',    properties: ['thrown', 'versatile'],    mastery: 'sap' },
 
   // Simple ranged
   'shortbow':       { id: 'shortbow',       name: 'Shortbow',        type: 'weapon', damage: '1d6', damageType: 'piercing',    properties: ['ranged', 'two-handed'],   mastery: 'vex' },
@@ -46,7 +46,7 @@ export default {
   // Martial melee
   'battleaxe':      { id: 'battleaxe',      name: 'Battleaxe',       type: 'weapon', damage: '1d8',  damageType: 'slashing',    properties: ['versatile'],             mastery: 'topple' },
   'flail':          { id: 'flail',          name: 'Flail',           type: 'weapon', damage: '1d8',  damageType: 'bludgeoning', properties: [],                        mastery: 'sap' },
-  'glaive':         { id: 'glaive',         name: 'Glaive',          type: 'weapon', damage: '1d10', damageType: 'slashing',    properties: ['heavy', 'reach', 'two-handed'], mastery: 'graze' },
+  'glaive':         { id: 'glaive',         name: 'Glaive',          type: 'weapon', damage: '1d10', damageType: 'slashing',    properties: ['heavy', 'reach', 'two-handed'], mastery: 'cleave' },
   'greataxe':       { id: 'greataxe',       name: 'Greataxe',        type: 'weapon', damage: '1d12', damageType: 'slashing',    properties: ['heavy', 'two-handed'],   mastery: 'cleave' },
   'greatsword':     { id: 'greatsword',     name: 'Greatsword',      type: 'weapon', damage: '2d6',  damageType: 'slashing',    properties: ['heavy', 'two-handed'],   mastery: 'graze' },
   'halberd':        { id: 'halberd',        name: 'Halberd',         type: 'weapon', damage: '1d10', damageType: 'slashing',    properties: ['heavy', 'reach', 'two-handed'], mastery: 'cleave' },
@@ -55,7 +55,7 @@ export default {
   'morningstar':    { id: 'morningstar',    name: 'Morningstar',     type: 'weapon', damage: '1d8',  damageType: 'piercing',    properties: [],                        mastery: 'sap' },
   'pike':           { id: 'pike',           name: 'Pike',            type: 'weapon', damage: '1d10', damageType: 'piercing',    properties: ['heavy', 'reach', 'two-handed'], mastery: 'push' },
   'rapier':         { id: 'rapier',         name: 'Rapier',          type: 'weapon', damage: '1d8',  damageType: 'piercing',    properties: ['finesse'],               mastery: 'vex' },
-  'scimitar':       { id: 'scimitar',       name: 'Scimitar',        type: 'weapon', damage: '1d6',  damageType: 'slashing',    properties: ['finesse', 'light'],      mastery: 'sap' },
+  'scimitar':       { id: 'scimitar',       name: 'Scimitar',        type: 'weapon', damage: '1d6',  damageType: 'slashing',    properties: ['finesse', 'light'],      mastery: 'nick' },
   'shortsword':     { id: 'shortsword',     name: 'Shortsword',      type: 'weapon', damage: '1d6',  damageType: 'piercing',    properties: ['finesse', 'light'],      mastery: 'vex' },
   'trident':        { id: 'trident',        name: 'Trident',         type: 'weapon', damage: '1d8',  damageType: 'piercing',    properties: ['thrown', 'versatile'],   mastery: 'topple' },
   'warhammer':      { id: 'warhammer',      name: 'Warhammer',       type: 'weapon', damage: '1d8',  damageType: 'bludgeoning', properties: ['versatile'],             mastery: 'push' },

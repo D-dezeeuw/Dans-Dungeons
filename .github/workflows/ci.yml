@@ -42,3 +42,35 @@ jobs:
             git diff --stat -- vendor/app.bundle.js
             exit 1
           fi
+
+  # The browser layer. Separate job so a Playwright install can never slow down
+  # or destabilise the zero-dependency unit gate — and so a red e2e run points
+  # at the browser, not at the logic.
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dev dependencies
+        run: npm ci || npm install
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      # Serves the committed bundle exactly as GitHub Pages does — which is the
+      # point: the defect this layer exists for (a chip layer that rendered
+      # nothing) was invisible to every test that did not open a browser.
+      - name: Smoke tests
+        run: npm run test:e2e
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7

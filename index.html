@@ -208,6 +208,7 @@ html.styles-loaded #brand-bar {
       <div id="chrome-row3" data-cloak data-if="ui.enemyStatsVisible">
         <span id="enemy-header-stats" :innerHTML="ui.enemyStats"></span>
       </div>
+      <div id="spectator-banner" data-cloak data-if="ui.spectator" role="status">{{ui.spectatorText}}</div>
     </header>
 
     <div id="sidebar-backdrop" aria-hidden="true"></div>
@@ -246,11 +247,17 @@ html.styles-loaded #brand-bar {
           <span class="ab-toggle-label">Scene sketch</span>
           <button id="sketch-toggle" :ariaPressed="ui.sceneImageActive" aria-pressed="false" aria-label="Toggle scene sketch" title="Generate an AI scene sketch after each turn">{{ui.sceneImageLabel}}</button>
         </div>
+        <div id="budget-row">
+          <label class="ab-toggle-label" for="budget-cap">Session budget (USD)</label>
+          <input id="budget-cap" type="number" min="0" step="0.50" placeholder="no cap" inputmode="decimal" aria-describedby="budget-hint">
+          <span id="budget-hint" class="hint">A soft warning at 80% and 100% — play is never interrupted.</span>
+        </div>
         <div id="sketch-controls" data-cloak data-if="settings.sceneImage" role="group" aria-labelledby="sketch-controls-label">
           <span id="sketch-controls-label">Sketch</span>
           <button id="sketch-btn-min" :ariaPressed="ui.sketchMinPressed" aria-pressed="false" title="Minimize sketch" aria-label="Minimize sketch"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 14h6v6"/><path d="M20 10h-6V4"/></svg></button>
           <button id="sketch-btn-win" :ariaPressed="ui.sketchWinPressed" aria-pressed="true"  title="Windowed sketch" aria-label="Windowed sketch"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/></svg></button>
           <button id="sketch-btn-max" :ariaPressed="ui.sketchMaxPressed" aria-pressed="false" title="Maximize sketch" aria-label="Maximize sketch"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h6v6"/><path d="M9 21H3v-6"/></svg></button>
+          <button id="sketch-btn-now" title="Sketch this scene now" aria-label="Sketch this scene now"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19a7 7 0 1 0 0-14 7 7 0 0 0 0 14z"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="M2 12h2"/><path d="M20 12h2"/></svg></button>
         </div>
         <div id="ab-toggle-row">
           <span class="ab-toggle-label">Action bar</span>
@@ -289,6 +296,7 @@ html.styles-loaded #brand-bar {
             <button class="export-tile" id="export-save"       title="Download your game as a save file">Save</button>
             <button class="export-tile" id="export-import"     title="Import a saved game file">Import</button>
             <button class="export-tile" id="export-world-bible" title="Generate a world and export as EPUB lore book">World Bible</button>
+            <button class="export-tile" id="export-slots" title="Save to, or load from, a named slot">Slots</button>
           </div>
           <input type="file" id="import-file-input" accept=".dnd.json,.json" style="display:none" aria-label="Import save file">
         </div>
@@ -309,12 +317,13 @@ html.styles-loaded #brand-bar {
         <div class="ab-divider"></div>
         <div class="ab-zone ab-abilities-zone" role="group" aria-labelledby="ab-label-class">
           <div class="ab-zone-label" id="ab-label-class">Class</div>
-          <div id="ab-abilities-list" data-each="ui.classWords" data-as="word"><span :class="word.cls" :data-tip="word.tip">{{word.label}}</span></div>
+          <div id="ab-abilities-list" data-each="ui.classWords" data-as="word"><span :class="word.cls" :data-tip="word.tip" :title="word.tip">{{word.label}}</span></div>
+          <div id="ab-slot-line" data-cloak data-if="ui.slotLineVisible">{{ui.slotLine}}</div>
         </div>
         <div class="ab-divider"></div>
         <div class="ab-zone ab-skills-zone" role="group" aria-labelledby="ab-label-skills">
           <div class="ab-zone-label" id="ab-label-skills">Skills</div>
-          <div id="ab-skills-list" data-each="ui.skillWords" data-as="word"><span :class="word.cls" :data-tip="word.tip">{{word.label}}</span></div>
+          <div id="ab-skills-list" data-each="ui.skillWords" data-as="word"><span :class="word.cls" :data-tip="word.tip" :title="word.tip">{{word.label}}</span></div>
         </div>
       </div>
       <!-- Contextual actions for the current moment (exits, loot, attack, retry,
@@ -338,7 +347,7 @@ html.styles-loaded #brand-bar {
         <button id="undo-btn" class="input-icon-btn" style="display:none" aria-label="Undo last turn" title="Undo the last turn"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg></button>
         <button id="redo-btn" class="input-icon-btn" style="display:none" aria-label="Redo last undone turn" title="Redo the last undone turn"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m15 14 5-5-5-5"/><path d="M20 9H9.5A5.5 5.5 0 0 0 9.5 20H13"/></svg></button>
         <button id="timeline-btn" class="input-icon-btn" style="display:none" aria-label="Timeline" title="Timeline — jump to any turn or branch"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><line x1="6" x2="6" y1="3" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg><span id="timeline-count" class="branch-count">0</span></button>
-        <div id="timeline-panel" role="menu" aria-label="Run timeline"></div>
+        <div id="timeline-panel" role="group" aria-label="Run timeline"></div>
         <button id="autoplay-btn" class="input-icon-btn" data-cloak aria-label="Toggle autoplay" title="Let AI play automatically" data-if="ai.key"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg></button>
         <button id="mic-btn" class="input-icon-btn" data-cloak aria-label="Record voice input" title="Speak your action (Spacebar)" data-if="ai.key"><svg width="20" height="20" viewBox="0 0 13 13" fill="currentColor" aria-hidden="true" focusable="false"><circle cx="6.5" cy="6.5" r="4.5" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="6.5" cy="6.5" r="2.5"/></svg></button>
       </div>
@@ -372,9 +381,15 @@ html.styles-loaded #brand-bar {
   <script src="vendor/app.bundle.js" defer></script>
   <script>
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/Dans-Dungeons/sw.js');
+      // Relative to wherever the page is actually served from. These were
+      // absolute /Dans-Dungeons/… paths, so the service worker never registered
+      // and the version check 404'd (or was refused) anywhere but that exact
+      // GitHub Pages subpath — a local server, a fork under another repo name,
+      // a custom domain.
+      var base = location.pathname.replace(/[^/]*$/, '');
+      navigator.serviceWorker.register(base + 'sw.js');
       // Eagerly check for a new version on every page load.
-      fetch('/Dans-Dungeons/vendor/app.version', { cache: 'no-store' })
+      fetch(base + 'vendor/app.version', { cache: 'no-store' })
         .then(r => r.ok ? r.text() : null)
         .then(remote => {
           if (!remote) return;

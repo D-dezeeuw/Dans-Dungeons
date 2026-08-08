@@ -84,9 +84,16 @@ function strMod(actor) {
  * start; halved without the running start. Returns the distance in
  * feet (always ≥ 0).
  */
+function strScore(actor) {
+  return actor?.abilityScores?.str ?? actor?.strength ?? actor?.abilityScores?.final?.str ?? 10;
+}
+
 export function longJump(actor, { runningStart = true } = {}) {
-  const mod = Math.max(0, strMod(actor));
-  return runningStart ? mod : Math.floor(mod / 2);
+  // SRD: a long jump covers a number of feet equal to the STRENGTH SCORE with a
+  // 10-foot run-up, halved without. This used the strength MODIFIER, which made
+  // every jump roughly a sixth of its real distance.
+  const score = Math.max(0, strScore(actor));
+  return runningStart ? score : Math.floor(score / 2);
 }
 
 /**

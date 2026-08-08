@@ -8,7 +8,17 @@ import { generateDungeon, createDungeonEntry, buildEnemy } from './world.js';
 import { buildWorldBlueprint } from './worldseed.js';
 import { OVERWORLD_ENEMY_IDS } from './creatures.js';
 import { createCharacter } from './character.js';
-import { processTurn, checkApiKey, generateTurnImage, buildScene } from './loop.js';
+import { processTurn, generateTurnImage, buildScene } from './loop.js';
+// Key acquisition, tier application and model healing live in their own module:
+// they all run before the first turn or between campaigns, touch only
+// appState.ai / settings, and share nothing with the play loop.
+import { ensureKey, upgradeToDeluxe, requireDeluxe, applyTier, useDemoKey, setupKey }
+  from './session-setup.js';
+import { describeAiError } from '../ai/errors.js';
+// The read-only screens (/story, the map, quests, inventory) live in views.js:
+// they read state and print, and share nothing with the loop that mutates it.
+import { renderStoryView, renderRegionMap, showQuests, showInventory,
+         resolveDungeonQuests } from './views.js';
 import { clearTurnMarks, setScrubHandler } from './undo.js';
 import { enterEncounterState, exitEncounterState } from './encounter-state.js';
 import { cutChapter, shouldCutChapter, recap, chapterIndex } from './chapters.js';
@@ -24,15 +34,10 @@ import {
   adjustPrice, isHostile, standing,
   beginTravel, stepTravel, isTravelDone, pickEncounter,
 } from 'bag-of-holding-client';
-import { healModels, fetchModelIds } from 'bag-of-holding-client';
-import { aiConfig } from '../ai/client.js';
 import { setStoryFlag, awardReputation, reputationStanding, progress as storyProgressNow } from './story.js';
 import * as UI from '../ui/console.js';
 import { t, tRaw } from '../i18n/i18n.js';
 import { getSkills } from '../ui/chips.js';
-import { modelsForTier } from '../ai/tiers.js';
-import { demoKey, demoBaseUrl, hasDemoTier } from '../ai/demo-key.js';
-import { redirectToOpenRouter } from '../ai/auth.js';
 
 // TTS helpers — imported lazily so the audio module is a no-op when TTS is off.
 function _speak(text) {
@@ -105,8 +110,41 @@ function buildImagePrompt(narration) {
   return npcs.length ? `${base} ${npcs.join(', ')} present.` : base;
 }
 
-function requestSceneImage(narration, journalEntry = null) {
-  if ((appState.settings?.sketchView ?? 'windowed') === 'minimized') return Promise.resolve(null);
+// ─── Image rationing ─────────────────────────────────────────────────────────
+//
+// A sketch used to be generated EVERY turn, at roughly 47x the cost of the text
+// it illustrated — three turns of swinging at the same goblin in the same room
+// bought three near-identical drawings of that room. A sketch now costs
+// something only when the picture would actually change: a new room, a new
+// chapter, or the player asking for one. Nothing about the display changes;
+// the last image simply stays up until there is a reason for a new one.
+
+let _lastSketchRoom = null;
+
+// Should this turn pay for a sketch? `force` is the "sketch this" chip.
+function sketchIsDue({ force = false } = {}) {
+  if (!appState.settings?.sceneImage) return false;
+  if ((appState.settings?.sketchView ?? 'windowed') === 'minimized') return false;
+  if (force) return true;
+  const here = `${appState.world?.location?.regionId ?? ''}/${appState.world?.currentRoom ?? ''}`;
+  return here !== _lastSketchRoom;
+}
+
+// Called on every accepted sketch so the next turn in the same room is free.
+function markSketched() {
+  _lastSketchRoom = `${appState.world?.location?.regionId ?? ''}/${appState.world?.currentRoom ?? ''}`;
+}
+
+// The "sketch this" action: draw the current scene on demand, regardless of
+// whether the room changed.
+export function sketchThisScene() {
+  const last = journalLog[journalLog.length - 1] ?? null;
+  return requestSceneImage(last?.narration ?? null, last, { force: true });
+}
+
+function requestSceneImage(narration, journalEntry = null, { force = false } = {}) {
+  if (!sketchIsDue({ force })) return Promise.resolve(null);
+  markSketched();
   UI.showSceneImageLoading();
   return generateTurnImage(buildImagePrompt(narration))
     .then(src => {
@@ -118,187 +156,6 @@ function requestSceneImage(narration, journalEntry = null) {
       return src;
     })
     .catch(() => { UI.hideSceneImage(); return null; });
-}
-
-// ─── Key / tier setup ────────────────────────────────────────────────────────
-const DEFAULT_BASE_URL = 'https://openrouter.ai/api/v1';
-
-// Adopt the shared demo credential, if this build has one. Returns false when
-// the build is BYOK-only (the default) so callers can prompt instead of silently
-// leaving the player with no working key.
-function useDemoKey() {
-  const key = demoKey();
-  if (!key) return false;
-  setValue('ai.key', key);
-  const base = demoBaseUrl();
-  if (base) setValue('ai.baseUrl', base);
-  return true;
-}
-
-function applyTier(tier) {
-  setValue('ai.tier', tier);
-  setValue('ai.models', modelsForTier(tier));
-  if (tier === 'free') {
-    setValue('settings.sceneImage', false);
-    setValue('settings.tts', false);
-    setValue('settings.stt', false);
-  } else if (tier === 'deluxe') {
-    setValue('settings.sceneImage', true);
-    setValue('settings.tts', true);
-    setValue('settings.stt', true);
-  }
-  commit();
-}
-
-async function setupKey() {
-  UI.clear();
-  UI.appendEntry('gm',     t('setup.gameName'));
-  UI.appendEntry('system', '');
-
-  // Connect flow. The no-key "try it" option only appears when this build was
-  // given a demo credential (DD_DEMO_KEY at build time) — a stock build is
-  // BYOK-only, so we never offer a path that cannot work.
-  const options = hasDemoTier() ? ['oauth', 'paste', 'try'] : ['oauth', 'paste'];
-  const choice = await UI.pickFrom(
-    t('setup.connectQuestion'),
-    options,
-    x => x === 'oauth' ? t('setup.connectOAuth')
-       : x === 'paste' ? t('setup.connectPaste')
-       : t('setup.connectTry'),
-    0,
-  );
-
-  if (choice === 'oauth') {
-    // Redirect to OpenRouter — page navigates away, returns with ?code=.
-    UI.appendEntry('system', t('setup.connectingOAuth'));
-    redirectToOpenRouter();
-    // Flow resumes on reload (main.js handles ?code=).
-    return;
-  }
-
-  if (choice === 'paste') {
-    // Manual key paste (existing flow).
-    UI.appendEntry('system', '');
-    UI.appendEntry('system', t('setup.needKey'));
-    UI.appendEntry('system', t('setup.signUp'));
-    UI.appendEntry('system', '');
-    const key = await UI.prompt(t('setup.pasteKey'));
-    setValue('ai.key', key.trim());
-
-    UI.appendEntry('system', '');
-    UI.appendEntry('system', t('setup.defaultUrl', { url: DEFAULT_BASE_URL }));
-    const customUrl = await UI.prompt(t('setup.customUrl'));
-    if (customUrl.trim()) setValue('ai.baseUrl', customUrl.trim());
-    UI.appendEntry('system', '');
-    UI.appendEntry('system', t('setup.keySaved'));
-  }
-
-  if (choice === 'try') {
-    // Shared demo credential — heavily rate-limited (the provider's free-model
-    // caps are per ACCOUNT, so every demo player shares one budget).
-    useDemoKey();
-    UI.appendEntry('system', t('setup.demoNotice'));
-    UI.appendEntry('system', '');
-  }
-
-  // Tier choice (for paste + try paths; OAuth returns later).
-  if (choice !== 'oauth') {
-    const tierChoice = await UI.pickFrom(
-      t('tier.upgradeQuestion'),
-      ['free', 'deluxe'],
-      x => x === 'deluxe' ? t('tier.upgradeYes') : t('tier.upgradeNo'),
-      0,
-    );
-    applyTier(tierChoice);
-    if (tierChoice === 'deluxe') UI.appendEntry('system', t('tier.upgraded'));
-  }
-}
-
-// Upgrade to deluxe from settings — prompts for key.
-export async function upgradeToDeluxe() {
-  const key = await UI.prompt(t('setup.pasteKey'));
-  if (!key.trim()) return;
-
-  // Validate against the candidate key, but keep the working one until it
-  // proves out — a rejected paste must never leave the player keyless.
-  const previous = appState.ai?.key ?? '';
-  setValue('ai.key', key.trim());
-  tick();
-  if (await checkApiKey()) {
-    applyTier('deluxe');
-    UI.appendEntry('system', t('tier.upgraded'));
-    return;
-  }
-  UI.appendEntry('error', t('tier.downgraded'));
-  setValue('ai.key', previous);
-  if (!previous) useDemoKey();
-  applyTier('free');
-}
-
-async function reAuthKey() {
-  // Try to re-auth; on failure fall back to free key.
-  setValue('ai.key', '');
-  tick();
-  UI.appendEntry('system', '');
-  UI.appendEntry('error', t('setup.keyRejected'));
-  const key = await UI.prompt(t('setup.pasteValid'));
-  if (key.trim()) {
-    setValue('ai.key', key.trim());
-    commit();
-    UI.appendEntry('system', t('setup.keyUpdated'));
-  } else if (useDemoKey()) {
-    applyTier('free');
-  } else {
-    // BYOK-only build and no key given: run setup rather than leaving the
-    // player in a state where every turn fails with an auth error.
-    await setupKey();
-    tick();
-  }
-}
-
-export async function ensureKey() {
-  // No key at all — first visit. Run setup.
-  if (!appState.ai?.key) { await setupKey(); tick(); return; }
-
-  // Returning player with deluxe key — validate it.
-  if ((appState.ai?.tier ?? 'free') === 'deluxe') {
-    const valid = await checkApiKey();
-    if (!valid) {
-      UI.appendEntry('error', t('tier.downgraded'));
-      if (useDemoKey()) applyTier('free');
-      else { setValue('ai.key', ''); await setupKey(); tick(); return; }
-    }
-  }
-
-  // Model ids rot: a provider can delist the model a save was written with, and
-  // ai.models is persisted, so a stale map outlives any fix to the defaults.
-  // Heal it against the live catalog before the first turn (never destructive —
-  // an unreachable catalog heals nothing).
-  await healStaleModels();
-}
-
-// Swap any delisted model id back to this tier's default, and tell the player
-// it happened rather than letting them discover it as a failed turn.
-async function healStaleModels() {
-  try {
-    const live = await fetchModelIds(aiConfig());
-    if (!live) return;
-    const { models, healed } = healModels(
-      appState.ai?.models ?? {}, live, modelsForTier(appState.ai?.tier ?? 'free'));
-    if (!healed.length) return;
-    setValue('ai.models', models);
-    commit();
-    for (const h of healed) {
-      UI.appendEntry('system', t('setup.modelHealed', { tier: h.tier, from: h.from, to: h.to ?? '—' }));
-    }
-  } catch { /* healing is best-effort — never block boot on it */ }
-}
-
-// Helper: check if current tier allows a feature, show gate message if not.
-export function requireDeluxe(featureKey) {
-  if ((appState.ai?.tier ?? 'free') === 'deluxe') return true;
-  UI.appendEntry('system', t('tier.featureGated', { feature: t(`tier.${featureKey}`) }));
-  return false;
 }
 
 // ─── Meta commands ────────────────────────────────────────────────────────────
@@ -347,9 +204,13 @@ export async function startNewGame() {
   setValue('session.turnCount', 0);
   setValue('session.phase', 'char-create');
 
-  const result = await createCharacter(UI);
-  if (!result) { UI.appendEntry('error', t('setup.createCancelled')); return; }
-  setValue('party.pc', result);
+  const { magic, ...pc } = (await createCharacter(UI)) ?? {};
+  if (!pc.record) { UI.appendEntry('error', t('setup.createCancelled')); return; }
+  setValue('party.pc', pc);
+  // Slots live beside the sheet, not inside it: the sheet is derived and
+  // re-derived on every level-up, and spent slots are the one thing that must
+  // survive that — a wizard who levels mid-dungeon should not get them back.
+  if (magic) setValue('party.magic', magic);
 
   // Deluxe: ask about paid features. Free: skip.
   if (isDeluxe) {
@@ -602,90 +463,6 @@ async function fastTravelTo(settlementId) {
   return settlementId;
 }
 
-// ─── Story progress view (Phase 4.9) ─────────────────────────────────────────
-
-// A 10-cell reputation bar from -100 (empty) to +100 (full).
-function repBar(rep) {
-  const filled = Math.max(0, Math.min(10, Math.round((rep + 100) / 20)));
-  return '█'.repeat(filled) + '·'.repeat(10 - filled);
-}
-
-function renderStoryView() {
-  UI.appendEntry('system', t('story.header'));
-
-  const p = storyProgressNow(); // { done, total, current }
-  if (p.total) {
-    UI.appendEntry('system', t('story.progress', { done: p.done, total: p.total }));
-    UI.appendEntry('system', p.current ? t('story.nextHint') : t('story.complete'));
-  } else {
-    UI.appendEntry('system', t('story.noThread'));
-  }
-
-  const repMap = appState.world?.factionReputation ?? {};
-  const facEntries = Object.entries(repMap);
-  if (facEntries.length) {
-    UI.appendEntry('system', '');
-    UI.appendEntry('system', t('story.factionsHeader'));
-    for (const [id, rep] of facEntries) {
-      const name = appState.world?.factions?.[id]?.name ?? id;
-      const stand = standing(rep);
-      UI.appendEntry('system', t('story.factionLine', { name, bar: repBar(rep), rep, standing: t(`story.standing.${stand}`) }));
-    }
-  }
-
-  const aq = activeQuests(appState.world?.quests ?? {});
-  if (aq.length) {
-    UI.appendEntry('system', '');
-    UI.appendEntry('system', t('story.questsHeader'));
-    for (const q of aq) {
-      UI.appendEntry('system', t('settlement.questLine', { desc: q.description, status: t('settlement.status.active'), npc: q.npcName }));
-    }
-  }
-
-  const flags = Object.keys(appState.world?.redThread?.flags ?? {}).filter(f => !f.startsWith('beat-done-'));
-  if (flags.length) {
-    UI.appendEntry('system', '');
-    UI.appendEntry('system', t('story.flagsHeader'));
-    UI.appendEntry('system', '  ' + flags.slice(-8).join('  ·  '));
-  }
-  UI.appendEntry('system', '');
-}
-
-// ─── Region map (Phase 3.6) ───────────────────────────────────────────────────
-
-function renderRegionMap() {
-  const regions = Object.values(appState.world?.regions ?? {});
-  if (!regions.length) { UI.appendEntry('system', t('map.empty')); return; }
-  const curRegionId = appState.world?.location?.regionId;
-  const curSettlementId = appState.world?.location?.settlementId;
-  UI.appendEntry('system', t('map.header'));
-  for (const r of regions) {
-    const here = r.id === curRegionId ? t('map.youAreHere') : '';
-    UI.appendEntry('system', t('map.regionLine', { name: r.name, climate: r.climate ?? '?', here }));
-    for (const sid of (r.settlements ?? [])) {
-      const s = appState.world.settlements?.[sid];
-      if (s) UI.appendEntry('system', t('map.settlementLine', { name: s.name, here: sid === curSettlementId ? t('map.youAreHere') : '' }));
-    }
-    if (r.adjacentRegions?.length) {
-      UI.appendEntry('system', t('map.connectsLine', { names: r.adjacentRegions.join(', ') }));
-    }
-  }
-
-  // Places the map knows about but the player has never walked to. These are
-  // real destinations with their own seeds, not scenery — going there hydrates
-  // exactly the place that was always promised.
-  const rumoured = mapView().rumoured;
-  if (rumoured.length) {
-    UI.appendEntry('system', '');
-    UI.appendEntry('system', t('map.rumouredHeader'));
-    for (const n of rumoured) {
-      UI.appendEntry('system', t('map.rumouredLine', { name: n.name, hook: n.hook ?? '' }));
-    }
-  }
-  UI.appendEntry('system', '');
-}
-
-// Compact world snapshot for the settlement classifier.
 function settlementContext(settlement) {
   return {
     settlement: settlement.name,
@@ -974,50 +751,6 @@ async function doRest(settlementId) {
     ? t('settlement.restDone', { gold: res.gold })
     : t('settlement.restFree'));
   _speak(cost > 0 ? t('settlement.restDone', { gold: res.gold }) : t('settlement.restFree'));
-}
-
-// ─── Quest log + inventory (Phase 2) ─────────────────────────────────────────
-
-// Phase 4.3/4.7: clearing a dungeon completes the player's active quests, raises
-// quest-done flags (beat prerequisites), and rewards the quest-givers' factions.
-function resolveDungeonQuests() {
-  const quests = appState.world?.quests ?? {};
-  const active = activeQuests(quests);
-  if (!active.length) return;
-  let map = quests;
-  for (const q of active) map = setQuestStatus(map, q.id, 'completed');
-  setValue('world', { ...appState.world, quests: map });
-  tick();
-  for (const q of active) {
-    setStoryFlag(`quest-${q.id}-done`);
-    if (q.factionId) awardReputation(q.factionId, 15);
-    UI.appendEntry('system', t('settlement.questCompleted', { desc: q.description }));
-    for (const line of announcementFor(awardMilestone('quest-completed', t('progress.questReason')))) {
-      UI.appendEntry('system', line);
-    }
-  }
-  saveToStorage();
-}
-
-function showQuests() {
-  const quests = Object.values(appState.world?.quests ?? {});
-  if (!quests.length) { UI.appendEntry('system', t('settlement.questsEmpty')); return; }
-  UI.appendEntry('system', t('settlement.questsHeader'));
-  for (const q of quests) {
-    UI.appendEntry('system', t('settlement.questLine', { desc: q.description, status: t(`settlement.status.${q.status}`), npc: q.npcName }));
-  }
-}
-
-function showInventory() {
-  const pc = appState.party?.pc;
-  const items = appState.party?.inventory ?? [];
-  UI.appendEntry('system', t('settlement.goldLine', { gold: goldOf(pc?.record) }));
-  if (!items.length) { UI.appendEntry('system', t('settlement.inventoryEmpty')); return; }
-  UI.appendEntry('system', t('settlement.inventoryHeader'));
-  for (const it of items) {
-    const qty = (it.quantity ?? 1) > 1 ? ` ×${it.quantity}` : '';
-    UI.appendEntry('system', t('settlement.invLine', { name: it.name, qty }));
-  }
 }
 
 // ─── Travel from settlement (dungeon now; overworld in Phase 3) ───────────────
@@ -1411,7 +1144,7 @@ async function beginAdventure() {
 
   const openingEntry = { turn: 0, narration: room.description, imageSrc: null };
   journalLog.push(openingEntry);
-  if (appState.settings?.sceneImage) requestSceneImage(room.description, openingEntry);
+  requestSceneImage(room.description, openingEntry, { force: true });   // the opening scene always gets one
   if (appState.settings?.actionBar)  UI.updateActionBar(room.exits ?? []);
   _speak(room.description);
 
@@ -1605,14 +1338,14 @@ async function playLoop() {
       if (appState.settings?.roleplayMode) UI.showRoleplayOverlay(false);
       streamEl?.remove(); streamEl = null;
       UI.appendEntry('system', '');
-      if (/^AI 401:/.test(caughtErr.message)) {
-        UI.appendEntry('error', t('loop.authFail'));
-      } else if (/^AI 4\d\d:/.test(caughtErr.message)) {
-        UI.appendEntry('gm', t('loop.gmUnavailable'));
+      // Name the cause and the player's next move. Every failure used to
+      // collapse into "the Game Master was not available", which is a guess:
+      // waiting fixes a 429 and can never fix a 402.
+      const { key, retryable, status } = describeAiError(caughtErr);
+      UI.appendEntry('error', t(key, { status: status ?? '', detail: caughtErr.message }));
+      if (retryable) {
+        UI.appendEntry('system', t('error.retryHint'));
         pendingRetry = raw;
-      } else {
-        UI.appendEntry('error', t('loop.error', { msg: caughtErr.message }));
-        UI.appendEntry('system', t('loop.turnFail'));
       }
       continue;
     }
@@ -1626,7 +1359,7 @@ async function playLoop() {
 
     const journalEntry = { turn: appState.session?.turnCount ?? 0, narration: result?.narration ?? '', imageSrc: null };
     journalLog.push(journalEntry);
-    if (appState.settings?.sceneImage) requestSceneImage(result?.narration, journalEntry);
+    requestSceneImage(result?.narration, journalEntry);
 
     if (appState.settings?.roleplayMode) {
       UI.showRoleplayOverlay(false);
@@ -1694,7 +1427,14 @@ async function doVictory() {
 
 async function doDefeat() {
   setValue('session.phase', 'game-over');
-  const defeatText = t('defeat.text');
+  // Name the creature that actually killed you, and the room it happened in.
+  // A death should belong to the campaign it happened in, not to a goblin from
+  // a data block nothing has read since the game was a prototype.
+  const killer = appState.session?.slainBy;
+  const place  = appState.world?.rooms?.[appState.world?.currentRoom]?.name;
+  const defeatText = killer
+    ? t(place ? 'defeat.textByIn' : 'defeat.textBy', { killer, place })
+    : t('defeat.text');
   UI.appendEntry('system', '');
   UI.appendEntry('system', t('defeat.banner'));
   UI.appendEntry('gm', defeatText);
@@ -1767,3 +1507,6 @@ export async function resumeGame() {
     await playLoop();
   }
 }
+
+// Re-exported so main.js and the UI keep importing them from flow.js.
+export { ensureKey, upgradeToDeluxe, requireDeluxe };

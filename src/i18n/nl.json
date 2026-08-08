@@ -57,7 +57,8 @@
     "micTitle": "Spreek je actie in (spatiebalk)",
     "cmdLabel": "Opdracht invoer",
     "autoplayLabel": "Automatisch spelen aan/uit",
-    "autoplayTitle": "Laat AI automatisch spelen"
+    "autoplayTitle": "Laat AI automatisch spelen",
+    "pickGroupLabel": "Keuzes"
   },
   "timeline": {
     "label": "Tijdlijn",
@@ -108,7 +109,8 @@
     "oauthSuccess": "Verbonden! Je persoonlijke API-sleutel is opgeslagen.",
     "oauthFail": "Verbinding mislukt. Je kunt handmatig een sleutel plakken met /settings.",
     "demoNotice": "Demomodus: deze sleutel wordt door alle spelers gedeeld, dus er geldt een limiet en je tekst loopt via het account van de host. Verbind je eigen sleutel voor een volledige campagne.",
-    "modelHealed": "Het '{{tier}}'-model ({{from}}) is niet meer beschikbaar — overgeschakeld naar {{to}}."
+    "modelHealed": "Het '{{tier}}'-model ({{from}}) is niet meer beschikbaar — overgeschakeld naar {{to}}.",
+    "oauthStateFail": "Die aanmelding is niet hier begonnen en is daarom niet voltooid. Open Instellingen en verbind opnieuw."
   },
   "tier": {
     "upgradeQuestion": "Wil je upgraden naar de Deluxe versie?",
@@ -148,7 +150,8 @@
     "autosaveFailed": "Automatisch opslaan werkt niet meer — de browseropslag is vol. Alles vanaf nu bestaat alleen in dit tabblad. Exporteer je spel (Instellingen → Opslaan) nu.",
     "autosaveRecovered": "Automatisch opslaan werkt weer — je voortgang wordt weer weggeschreven.",
     "nearlyFull": "De browseropslag is {{pct}}% vol. Overweeg je spel te exporteren als back-up.",
-    "corruptSave": "Een eerdere opgeslagen game kon niet gelezen worden en is apart gezet. Importeer een savebestand om die run voort te zetten."
+    "corruptSave": "Een eerdere opgeslagen game kon niet gelezen worden en is apart gezet. Importeer een savebestand om die run voort te zetten.",
+    "secondTab": "Deze campagne staat al open in een ander tabblad. Dit tabblad slaat niets op — sluit het andere en herlaad om hier te spelen."
   },
   "meta": {
     "saved": "Spel opgeslagen in localStorage.",
@@ -262,7 +265,8 @@
     "gmUnavailable": "De Game Master was niet beschikbaar. Probeer het opnieuw wanneer je klaar bent.",
     "error": "Fout: {{msg}}",
     "turnFail": "De beurt kon niet worden afgehandeld. Probeer opnieuw of typ /restart.",
-    "restart": "Herstarten"
+    "restart": "Herstarten",
+    "narrationMissing": "(De woorden van de Spelleider kwamen niet aan. Er is niets in de wereld veranderd — probeer het opnieuw.)"
   },
   "victory": {
     "banner": "══ OVERWINNING ══════════════════════════════",
@@ -271,8 +275,10 @@
   },
   "defeat": {
     "banner": "══ NEDERLAAG ═════════════════════════════════",
-    "text": "De wereld vervaagt. Grizziks spottende lach echoot door de steen terwijl je ineenzakt op de koude vloer. Je avontuur eindigt hier — voor nu.",
-    "hint": "Typ /restart om het opnieuw te proberen."
+    "text": "De wereld vervaagt en je zakt ineen op de koude vloer. Je avontuur eindigt hier — voor nu.",
+    "hint": "Typ /restart om het opnieuw te proberen.",
+    "textBy": "De wereld vervaagt. {{killer}} staat over je heen terwijl je ineenzakt op de koude vloer. Je avontuur eindigt hier — voor nu.",
+    "textByIn": "De wereld vervaagt. {{killer}} staat over je heen, en {{place}} is het laatste wat je ziet. Je avontuur eindigt hier — voor nu."
   },
   "deathsave": {
     "strike": "{{enemy}} doemt op boven je bewusteloze lichaam en haalt uit voor {{damage}} schade — een slag tegen de stervende.",
@@ -479,38 +485,6 @@
         }
       ]
     },
-    "enemies": [
-      {
-        "name": "Grizzik de Goblin",
-        "monsterId": "goblin",
-        "intro": "Een goblin hurkt in de schaduwen, gele ogen die openspringen als je binnenkomt. Hij grijpt een gebutst kromzwaard en ontbloot zijn tanden: \"Deze plek is van Grizzik! Ga terug of bloed, grootvolk!\""
-      },
-      {
-        "name": "Wachtskelet",
-        "monsterId": "skeleton",
-        "intro": "Botten rammelen terwijl een skelet overeind komt vanuit de hoek. Zijn holle oogkassen richten zich op jou; een verroest lang zwaard rijst in een gevechtshouding met verschrikkelijke doelbewustheid."
-      },
-      {
-        "name": "Verwilderde Cultist",
-        "monsterId": "cultist",
-        "intro": "Een figuur in een gewaad draait zich naar je toe, waanzin helder in zijn ogen. Hij heeft hier gewacht om een reden die je nog niet begrijpt — en richt een lange dolk op je keel."
-      },
-      {
-        "name": "Reusachtige Rat",
-        "monsterId": "giant-rat",
-        "intro": "Een rat zo groot als een terriër barst los onder het puin, nekharen overeind en gele tanden ontbloot. Hij valt aan voordat je adem kunt halen."
-      },
-      {
-        "name": "Slepend Lijk",
-        "monsterId": "zombie",
-        "intro": "Iets rijst op van de vloer — een lijk in verroest harnas, gewrichten krakend terwijl het opstaat. Zijn kaak hangt los en een guttural gekreun ontsnapt aan wat er over is van zijn keel."
-      },
-      {
-        "name": "Grotspin",
-        "monsterId": "cave-spider",
-        "intro": "Zijdedraden vangen het licht een moment voordat je de spin ziet — opgezwollen, met zwarte poten, en snel. Hij laat zich van het plafond vallen met een nat gesis."
-      }
-    ],
     "keys": [
       {
         "name": "koperen sleutel",
@@ -572,39 +546,308 @@
       }
     ],
     "enemyNames": {
-      "skeleton": "Wachtskelet",
-      "zombie": "Strompelend Lijk",
-      "spider": "Kruipende Spin",
-      "giant-rat": "Reuzenrat",
-      "cave-spider": "Grotspin",
-      "cultist": "Wilde Sekteling",
-      "goblin": "Goblin",
-      "kobold": "Kobold",
-      "wolf": "Wolf",
-      "ghoul": "Ghoul",
-      "specter": "Schim",
-      "wight": "Grafgeest",
-      "giant-spider": "Reuzenspin",
-      "shadow": "Schaduw",
+      "acolyte": "Acoliet",
+      "animated-armor": "Bezield Harnas",
+      "ankheg": "Ankheg",
       "bandit": "Bandiet",
-      "ogre": "Oger",
-      "imp": "Imp",
-      "owlbear": "Uilbeer",
+      "bandit-captain": "Bandietenkapitein",
+      "banshee": "Banshee",
+      "black-bear": "Zwarte Beer",
+      "bugbear": "Bugbear",
+      "cave-spider": "Grotspin",
+      "constrictor-snake": "Wurgslang",
+      "crocodile": "Krokodil",
+      "cult-fanatic": "Sektefanaticus",
+      "cultist": "Wilde Sekteling",
       "dire-wolf": "Schrikwolf",
-      "hell-hound": "Helhond"
+      "flying-sword": "Vliegend Zwaard",
+      "fungal-zombie": "Schimmelzombie",
+      "ghoul": "Ghoul",
+      "giant-rat": "Reuzenrat",
+      "giant-spider": "Reuzenspin",
+      "gibbering-mouther": "Brabbelmuil",
+      "goblin": "Goblin",
+      "hell-hound": "Helhond",
+      "hobgoblin": "Hobgoblin",
+      "ice-mephit": "IJsmefiet",
+      "imp": "Imp",
+      "kobold": "Kobold",
+      "lesser-demon": "Mindere Demon",
+      "magma-mephit": "Magmamefiet",
+      "myconid-sovereign": "Myconide Vorst",
+      "ogre": "Oger",
+      "owlbear": "Uilbeer",
+      "scout": "Verkenner",
+      "shadow": "Schaduw",
+      "skeleton": "Wachtskelet",
+      "specter": "Schim",
+      "spider": "Kruipende Spin",
+      "spy": "Spion",
+      "stone-sentinel": "Stenen Wachter",
+      "swarm-of-rats": "Rattenzwerm",
+      "vampire-spawn": "Vampierbroed",
+      "veteran": "Veteraan",
+      "violet-fungus": "Violette Schimmel",
+      "wight": "Grafgeest",
+      "will-o-wisp": "Dwaallicht",
+      "wolf": "Wolf",
+      "worg": "Worg",
+      "young-drake": "Jonge Draak",
+      "zombie": "Strompelend Lijk"
     },
     "enemyIntroGeneric": "{{name}} draait zich naar je toe, vijandig en klaar om te vechten.",
     "enemyIntros": {
-      "giant-rat": "Een rat zo groot als een terriër schiet uit het puin omhoog, nekharen overeind en gele tanden ontbloot.",
+      "acolyte": "Een gewaad-dragende acoliet kijkt op van een halfvoltooid ritueel; zijn blik verhardt terwijl hij naar een knuppel grijpt.",
+      "animated-armor": "Een leeg harnas klettert tot leven en heft een gepantserde vuist in verdediging — met niemand erin.",
+      "ankheg": "De vloer barst open als een ankheg omhoogschiet, kaken wijd, zuur sissend over zijn chitine.",
+      "bandit": "Een bandiet stapt uit de dekking, het zwaard al getrokken. \"Verkeerde plek, vriend.\"",
+      "bandit-captain": "Een gelittekende kapitein staat op van een geplunderde troon, een kling in elke hand. \"Dood ze.\"",
+      "banshee": "Een banshee ontvouwt zich uit de duisternis, haar mond open op een gil die belooft je hart stil te zetten.",
+      "black-bear": "Een zwarte beer richt zich brullend op, klauwen die door de lucht harken.",
+      "bugbear": "Een bugbear ontvouwt zich uit het donker, veel groter dan je dacht, een gepinde morgenster in zijn vuist.",
       "cave-spider": "Zijden draden vangen het licht, een tel voordat je de spin ziet — opgezwollen, zwartpotig en snel.",
+      "constrictor-snake": "Kronkels glijden over kronkels terwijl een reusachtige slang zich uit het donker ontrolt, de tong proevend van de lucht.",
+      "crocodile": "Water stroomt van geschubde huid als een krokodil uit het ondiepe naar voren schiet, kaken wijd open.",
+      "cult-fanatic": "Een fanaticus werpt zijn kap naar achteren, de ogen brandend van vreselijke toewijding, spreuken al op zijn lippen.",
       "cultist": "Een gehulde gestalte draait zich naar je toe, waanzin in de ogen, een lange dolk op je keel gericht.",
-      "skeleton": "Botten ratelen als een skelet overeind komt, holle oogkassen op je gericht terwijl een verroest zwaard rijst.",
-      "zombie": "Een lijk in verroest harnas sleept zich overeind, kaak loshangend, een natte kreun ontsnapt eraan.",
-      "goblin": "Een goblin grist een gedeukt kromzwaard en ontbloot zijn tanden. \"Deze plek is van mij, grootvolk!\"",
-      "wolf": "Een wolf sluipt uit de schaduw, lippen teruggetrokken van zijn hoektanden, een laag gegrom in zijn borst.",
+      "dire-wolf": "Een schrikwolf zo groot als een paard laat zijn kop zakken, de nekharen recht overeind, een grom als malend gesteente.",
+      "flying-sword": "Een zwaard tilt zichzelf van het rek, de punt draait naar je toe, zoemend van koude vastberadenheid.",
+      "fungal-zombie": "Een lijk doorzeefd met bleke paddenstoelen strompelt overeind; sporen stuiven uit zijn opengereten borst.",
       "ghoul": "Een ghoul krabbelt overeind op te lange ledematen, zwartgeblakerde klauwen trillend, stinkend naar het graf.",
-      "specter": "De lucht wordt koud als een schim samenkomt, zijn holle gejammer trekt aan de warmte in je bloed."
-    }
+      "giant-rat": "Een rat zo groot als een terriër schiet uit het puin omhoog, nekharen overeind en gele tanden ontbloot.",
+      "giant-spider": "Een reuzenspin laat zich vallen aan een dikke draad zijde, giftanden glinsterend, veel te snel voor haar formaat.",
+      "gibbering-mouther": "Een deinende massa monden en ogen vloeit over de vloer, brabbelend in een dozijn gestolen stemmen.",
+      "goblin": "Een goblin grist een gedeukt kromzwaard en ontbloot zijn tanden. \"Deze plek is van mij, grootvolk!\"",
+      "hell-hound": "Een hond gehuld in rook komt naderbij; met elke ademtocht vallen er sintels uit zijn muil.",
+      "hobgoblin": "Een hobgoblin brengt een langzwaard in gedisciplineerde houding omhoog, de ogen koud en taxerend.",
+      "ice-mephit": "Een grillig wezentje van vorst en rijp sist; zijn adem beslaat de ijzige lucht.",
+      "imp": "Een imp knippert in beeld met een venijnig gegiechel, de weerhaakstaart zwiepend, ogen als gloeiende kolen.",
+      "kobold": "Een kobold jankt en grijpt een ruwe speer; zijn geschubde huid trilt van angst en venijn.",
+      "lesser-demon": "Iets klauwt zich door de scheur — enkel tanden en gehaakte ledematen, stinkend naar zwavel.",
+      "magma-mephit": "Een klein wezen van sintels en gesmolten steen kakelt en werpt vonken terwijl het op je af schiet.",
+      "myconid-sovereign": "Een torenhoog paddenstoelwezen keert zijn hoed naar je toe en laat een wolk hallucinogene sporen los.",
+      "ogre": "Een oger bukt onder de latei door, zijn knuppel slepend, de doffe ogen lichten op van honger bij het zien van jou.",
+      "owlbear": "Een uilbeer richt zich krijsend op, de snavel klappend, klauwen als vleeshaken.",
+      "scout": "Een verkenner maakt zich los uit de dekking, de korte boog half gespannen. \"Je had niet zo ver moeten komen.\"",
+      "shadow": "Een plek duisternis pelt zich van de muur en glijdt naar je toe, koud en hongerig.",
+      "skeleton": "Botten ratelen als een skelet overeind komt, holle oogkassen op je gericht terwijl een verroest zwaard rijst.",
+      "specter": "De lucht wordt koud als een schim samenkomt, zijn holle gejammer trekt aan de warmte in je bloed.",
+      "spider": "Een spin scharrelt in beeld, kaken klikkend, ogen glinsterend als natte kralen.",
+      "spy": "Een onopvallende gestalte richt zich op, en opeens is er een dolk in de hand. Geen woorden — enkel bedoeling.",
+      "stone-sentinel": "Een standbeeld draait knarsend zijn hoofd om je te volgen en stapt dan van zijn sokkel met een geluid als een lawine.",
+      "swarm-of-rats": "De vloer zelf lijkt te bewegen — een kronkelend tapijt van ratten stroomt piepend op je af.",
+      "vampire-spawn": "Een bleke gestalte glimlacht, hoektanden helder, ogen rood. \"Blijf. Je wordt een prima maaltijd.\"",
+      "veteran": "Een veteraan in gedeukt plaatharnas zet haar voeten schrap en heft een langzwaard. \"Laatste waarschuwing.\"",
+      "violet-fungus": "Een tros violette schimmel huivert en ontvouwt rubberachtige tentakels, druipend van bijtende rot.",
+      "wight": "Een grafgeest in eeuwenoude maliën neemt je op met koude, weloverwogen haat en trekt dan een gekarteld zwaard.",
+      "will-o-wisp": "Een dobberend lichtje drijft dichterbij, bijna vriendelijk — en knettert dan witheet en schiet toe.",
+      "wolf": "Een wolf sluipt uit de schaduw, lippen teruggetrokken van zijn hoektanden, een laag gegrom in zijn borst.",
+      "worg": "Een worg zo groot als een pony sluipt naderbij, intelligente boosaardigheid glinsterend in zijn rode ogen.",
+      "young-drake": "Een jonge draak ontrolt zich boven op de schat, rook krult uit zijn neusgaten, goud kletterend van zijn schubben.",
+      "zombie": "Een lijk in verroest harnas sleept zich overeind, kaak loshangend, een natte kreun ontsnapt eraan."
+    },
+    "dressing": {
+      "abandoned mine": [
+        "Een houweel leunt tegen de muur waar iemand hem neerzette en nooit terugkwam.",
+        "De stutbalken buigen naar binnen, en één heeft het al opgegeven.",
+        "Een kanariekooi hangt open en leeg aan een spijker.",
+        "Krijtstrepen op de rots tellen diensten die midden in de week ophouden.",
+        "Een ertskar staat halfbeladen op rails die in puin eindigen.",
+        "Iemand schreef de naam van een vrouw met lampenroet op de muur."
+      ],
+      "ancient library": [
+        "De planken staan vol boeken die door vocht zijn dichtgezwollen.",
+        "Op een leestafel ligt nog een opengeslagen band, de bladzij op niets gedraaid.",
+        "Iemand catalogiseerde deze kamer in krijt en kwam tot de letter F.",
+        "Losse bladzijden liggen over de vloer als gevallen bladeren.",
+        "Een ladder op een rail is halverwege vastgeroest.",
+        "Een bordje verbiedt open vuur; de lamp ernaast is zwartgeblakerd."
+      ],
+      "arcane ruin": [
+        "Krijtcirkels overlappen op de vloer, elk doorgestreept door de volgende.",
+        "Een lessenaar staat leeg, de boekklemmen er schoon afgebroken.",
+        "De lucht ruikt vaag naar ozon en oud papier.",
+        "Glazen buizen liggen in een keurige rij, alle gebarsten.",
+        "Een zegel op de muur geeft nog een koud, kleurloos licht.",
+        "Iemands aantekeningen hangen geprikt aan een bord, in een hand die naar onderen steeds onvaster wordt."
+      ],
+      "bandit fortress": [
+        "Een ruwe kaart van de handelsweg is aan de muur gespijkerd, met drie kruisjes.",
+        "Gestolen wapenschilden van zes verschillende huizen hangen als trofee.",
+        "Een dobbelspel werd midden in een worp afgebroken; de inzet ligt er nog.",
+        "Iemand houdt een lijst met namen bij, en streept ze door.",
+        "Een vat bier is aangeslagen en leeggelopen achtergelaten.",
+        "Laarzen bij de deur, stuk voor stuk te goed voor de mannen die ze droegen."
+      ],
+      "beast lair": [
+        "Een nest van gescheurde stof en haar vult een hoek.",
+        "Klauwsporen klimmen tot twee manshoogtes langs de muur omhoog.",
+        "Een rib, opengebroken om het merg, ligt waar hij viel.",
+        "De steen is glad gesleten in een wijde kring waar iets slaapt.",
+        "Plukken grove vacht kleven aan een gespleten balk.",
+        "Iets is herhaaldelijk over de vloer gesleept, telkens dezelfde kant op."
+      ],
+      "clockwork vault": [
+        "Een wand van koperen tandwielen draait en drijft helemaal niets aan.",
+        "Een rad zo groot als een karrenwiel ligt waar het van zijn as brak.",
+        "Elk oppervlak is gelinieerd met fijne gegraveerde maatstreepjes.",
+        "Achter het beschot tikt een metronoom, net iets te snel.",
+        "Onder een mechaniek is olie samengelopen en kleverig geworden.",
+        "Een koperen plaatje noemt een maker van wie niemand ooit hoorde."
+      ],
+      "cult sanctum": [
+        "Kaarsstompjes liggen in een spiraal, allemaal tot dezelfde hoogte opgebrand.",
+        "Een gebed is zo vaak op de muur geschreven dat het pleisterwerk is doorgesleten.",
+        "Bij de deur staat een collecteschaal, leeg op drie tanden na.",
+        "Gekapte gewaden hangen aan haken, elk met een naam in de kraag genaaid.",
+        "De vloer is smetteloos geschrobd, op één vlek na die niemand eruit krijgt.",
+        "Een liedbord toont nog de nummers van een dienst waar niemand kwam."
+      ],
+      "demonic hellgate": [
+        "Bindzegels bedekken elk oppervlak, en één ervan is uitgeveegd.",
+        "De steen is warm, en warmer naarmate je dichter bij de boog staat.",
+        "Een kring van zout is van binnenuit doorbroken.",
+        "Iets heeft afdrukken achtergelaten in de vloer — ín de vloer, niet erop.",
+        "Een vuurkorf brandt zonder brandstof en geeft geen warmte.",
+        "Overal staan namen gekerfd, in een schrift dat pijn doet om te volgen."
+      ],
+      "dragon hoard": [
+        "Munten zijn de steen in gedrukt door iets enorms dat erop lag.",
+        "Een harnas ligt platgeslagen, het metaal gevouwen als doek.",
+        "Goud is gesmolten en opnieuw gestold in de kieren van de vloer.",
+        "Eén schub, groter dan een schild, staat tegen de muur.",
+        "De hitte hier is droog en komt van beneden.",
+        "Een kroon ligt vergeten onderin een berg munten."
+      ],
+      "dream prison": [
+        "Een deur in de muur komt uit op precies de kamer waar je in staat.",
+        "Alle meubels hebben net het verkeerde formaat voor een mens.",
+        "Een raam toont een hemel die niemand in deze wereld ooit zag.",
+        "Je eigen handschrift staat op de muur, en je weet niet dat je het schreef.",
+        "De kamer is herinnerd in plaats van gebouwd; de hoeken sluiten niet helemaal.",
+        "Een bed is opgemaakt, en de afdruk erin is nog warm."
+      ],
+      "elemental nexus": [
+        "Vorst en schroeiplekken delen dezelfde muur, centimeters uit elkaar.",
+        "Een steen hangt op hoofdhoogte in de lucht en draait langzaam rond.",
+        "De vloer is op de ene plek warm onder je voeten en op de volgende ijskoud.",
+        "In een hoek van de kamer stroomt zand omhoog.",
+        "Een kaarsvlam brandt hier gestaag opzij.",
+        "De lucht smaakt naar ijzer en onweer."
+      ],
+      "fey glade gone wrong": [
+        "Hier groeien bloemen, in steen, en ze draaien met je mee.",
+        "Een heksenkring is door iets zwaars opengebroken.",
+        "Het gras heeft het verkeerde groen en voelt warm aan.",
+        "Er klinkt zwak muziek, die stopt zodra je ernaar luistert.",
+        "Een kinderschoen hangt aan een tak, ver buiten bereik.",
+        "Alles hier is net iets te symmetrisch."
+      ],
+      "flooded cavern": [
+        "Een vloedlijn loopt op borsthoogte langs de muur, en die is niet oud.",
+        "Blinde witte vissen draaien traag rondjes in een stille poel.",
+        "Een roeiboot zit klem in een spleet, ver boven het water.",
+        "Elk oppervlak is bepelsd met bleek, nat mos.",
+        "Ergens buiten zicht drupt water met tergende regelmaat.",
+        "Een touwladder hangt het water in en reikt niet tot de bodem."
+      ],
+      "frozen tomb": [
+        "In het ijs van de muur is een gezicht te zien, heel diep erin.",
+        "Elke ademtocht blijft veel langer in de lucht hangen dan zou moeten.",
+        "Grafgiften liggen uitgestald op een plank van massief ijs.",
+        "Een bevroren hand steekt uit de vloer, de palm omhoog.",
+        "Het ijs kreunt af en toe, alsof het gewicht draagt.",
+        "Iemands rugzak ligt open, de inhoud tot één massa bevroren."
+      ],
+      "fungal depths": [
+        "Bleke hoeden gloeien net genoeg om schaduwen de verkeerde kant op te werpen.",
+        "Sporen zweven in de lucht en dalen neer op alles, inclusief jou.",
+        "Een laars staat rechtop, volledig gekoloniseerd, de veters nog gestrikt.",
+        "De wanden geven mee onder je voet, alsof er iets ademt.",
+        "Een kring kleine paddenstoelen omsluit een plek kale steen.",
+        "Er hangt hier een overweldigende geur van nat brood."
+      ],
+      "goblin warren": [
+        "Naast de deuropening staat een ruwe telling van gestolen laarzen gekrast.",
+        "Afgekloven botten zijn op formaat in nette stapeltjes gesorteerd.",
+        "Een gestolen wandkleed hangt ondersteboven, vastgespijkerd als gordijn.",
+        "Iets kleins heeft een zeer onflatteuze tekening van iets groots gemaakt.",
+        "In een kookpot ligt nog een vel koud vet.",
+        "Schoenen in negen verschillende maten hangen aan koorden aan het plafond."
+      ],
+      "haunted manor": [
+        "Schimmel is over de gordijnen uitgebloeid in de vorm van een hand.",
+        "De ogen van een portret zijn zorgvuldig uitgekrast, met iets kleins.",
+        "Een eettafel is nog voor zes gedekt, onder een vingerdikke laag stof.",
+        "De klok op de schoorsteenmantel stopte om zeventien over vier.",
+        "Een houten speelgoedpaard staat midden op de vloer, met de neus naar de deur.",
+        "Het behang is losgelaten en toont ouder behang, en daaronder nog ouder."
+      ],
+      "living dungeon": [
+        "De wanden zijn vochtig en warm en geven mee als je erop drukt.",
+        "Een deuropening is smaller geworden sinds je ernaar keek.",
+        "De vloer is geribbeld, als het gehemelte van een mond.",
+        "Ergens beneden slikt iets.",
+        "Een gang die er zojuist niet was, is er nu — en weet dat.",
+        "De steen kleurt zwak roze waar je hand rustte."
+      ],
+      "petrified giant": [
+        "De wand is geen steen maar bot, en je ziet de nerf ervan.",
+        "Aders van bleek mineraal kloppen zwak onder het oppervlak.",
+        "Een rib welft boven je, zo dik als een scheepsmast.",
+        "De vloer helt zoals een keel dat doet.",
+        "Er zit iets in de wand — een speer, van binnenuit.",
+        "De lucht beweegt in en uit, heel langzaam."
+      ],
+      "planar rift": [
+        "Een naad van onmogelijke kleur loopt van vloer tot plafond en doet pijn aan je ogen.",
+        "Je schaduw valt een kant op die het licht niet verklaart.",
+        "Een deuropening hier komt uit op een gang die er niet achter ligt.",
+        "Geluid komt een halve tel te laat aan.",
+        "Een stuk vloer toont een andere vloer, ergens anders, van bovenaf gezien.",
+        "De temperatuur verandert bij elke stap, in geen enkel patroon."
+      ],
+      "spider nest": [
+        "In zijde gewikkelde bundels hangen op ongelijke hoogtes aan het plafond.",
+        "De vloer is zacht van laag op laag web en wat eronder ligt.",
+        "Een afgeworpen pantser, mensgroot, leunt tegen de muur.",
+        "Elke deuropening is met web dichtgeweven, en door één is heen gescheurd.",
+        "Kleine omhulsels kleven in een keurige verticale lijn aan de muur.",
+        "Het web hier trilt terwijl niets het heeft aangeraakt."
+      ],
+      "sunken temple": [
+        "Zeepokken korsten op een altaar dat nooit onder water bedoeld was.",
+        "Een mozaïek van een zon ligt half verborgen onder grijs slib.",
+        "Offerschalen staan op een rij, elk gevuld met brak water.",
+        "Visgraten knerpen onder je voeten op een plek die droog hoort te zijn.",
+        "Een kloktouw hangt gezwollen en groen omlaag, van een klok die er niet meer is.",
+        "De pilaren leunen, allemaal, precies evenveel graden."
+      ],
+      "undead crypt": [
+        "Een grafkrans is tot bruin papier verdroogd op een nisplank.",
+        "Kaarsvet is in bevroren stroompjes langs de muur gelopen en daar gestold.",
+        "Iemand kraste eenenveertig streepjes in de steen en stopte toen.",
+        "Een gebarsten urn ligt op zijn zij, de as al lang verstrooid.",
+        "De vloertegels spellen een naam die half is weggebeiteld.",
+        "Grafmos groeit alleen op de noordzijde van elke pilaar."
+      ],
+      "vampire castle": [
+        "Alle spiegels zijn weggehaald; de bleke rechthoeken zijn gebleven.",
+        "Zware luiken zijn van binnenuit vergrendeld, tegen het daglicht.",
+        "Een karaf met iets donkers staat naast twee schone glazen.",
+        "Het stof op de vloer is verstoord, maar er staan geen voetsporen in.",
+        "Verse bloemen staan in een vaas, in een kamer waar niemand een eeuw is geweest.",
+        "Een gastenboek ligt open, en de laatste naam is honderd jaar geleden gezet."
+      ]
+    },
+    "dressingGeneric": [
+      "Een tocht van ergens laat het stof over de vloer bewegen.",
+      "Iemand heeft een pijl in de steen gekrast, terug de kant op waar je vandaan komt.",
+      "Een verroeste ijzeren ring zit op heuphoogte in de muur.",
+      "De vloer hier is geveegd, recent, en slecht.",
+      "Een gevallen lantaarn ligt op zijn zij, het glas ongebroken.",
+      "De specie tussen de stenen is op één plek uitgekrabd, als met vingernagels."
+    ]
   },
   "chips": {
     "goDir": "Ik ga naar het {{dir}}",
@@ -643,7 +886,7 @@
     },
     "arcana": {
       "label": "Arcana",
-      "desc": "Kennis over spreuken, magische voorwerpen en de vlakten herinneren."
+      "desc": "Kennis over spreuken, magische voorwerpen en de bestaansvlakken herinneren."
     },
     "history": {
       "label": "Geschiedenis",
@@ -841,8 +1084,8 @@
     "travelUserMsg": "Narrate this travel beat.",
     "settlementClassifierPrompt": "Je bent een classifier voor een tekst-RPG in een nederzetting. Vertaal de vrije tekst van de speler (Engels of Nederlands) naar één gestructureerde actie.\n\nIntenties:\n- talk: een NPC aanspreken of benaderen. Zet target op de naam of rol van de NPC.\n- buy: koopwaar bekijken of kopen bij een handelaar.\n- travel: vertrekken via een uitgang (een kerker, weg of wildernis). Zet target op de bestemmingsnaam of richting.\n- rest: slapen / herstellen in een herberg.\n- quest: aangenomen opdrachten / het opdrachtenlogboek bekijken.\n- inventory: meegedragen spullen en goud bekijken.\n- look: rondkijken, of alles wat niet bij het bovenstaande past.\n\nContext van de huidige locatie (de geldige NPC- en uitgangnamen):\n{{context}}\n\nGeef één JSON-object terug. Zet target op de relevante NPC-/uitgang-/itemnaam, anders null.",
     "npcDialoguePrompt": "Je speelt één NPC in een fantasystadje. Blijf volledig in je rol. Antwoord met ÉÉN korte gesproken zin (1-3 zinnen) — geen verteltekst, geen aanhalingstekens eromheen.\n\nNPC: {{name}}, een {{role}} ({{attitude}}).\nPersoonlijkheid: {{personality}}\nFactie: {{faction}} (aanzien van de speler: {{reputation}})\nBekende opdrachthaak: {{questHook}}\nBewaard geheim: {{secret}}\nMag het geheim deze beurt onthullen: {{mayReveal}}\n\nRegels:\n- Als 'Mag het geheim onthullen' NO is, onthul of hint nooit sterk naar het geheim; ontwijk als erop wordt aangedrongen.\n- Als YES en de speler vraagt door of heeft vertrouwen verdiend, MAG je het geheim laten ontvallen — zet revealsSecret alleen op true als je antwoord het daadwerkelijk prijsgeeft.\n- Laat je houding en het factie-aanzien van de speler doorklinken in je toon.\n- Antwoord in {{language}}.\n\nRecent gesprek:\n{{transcript}}",
-    "classifierPrompt": "You are a D&D action classifier. Classify the player's intent from their free-text input.\n\nIMPORTANT: The player writes in Dutch (Nederlands). Interpret Dutch input correctly.\nExamples: \"ga naar het noorden\" → move north, \"pak de sleutel\" → take, \"val aan\" → attack, \"sluip langs\" → skill stealth.\nCardinal directions in Dutch: noorden=north, zuiden=south, oosten=east, westen=west.\n\nCurrent scene (use this to identify valid targets):\n{{scene}}\n\nOutput a single JSON object. Be generous in interpretation.\n- movement → move (set direction to north/south/east/west in ENGLISH)\n- pick up items → take (set target_id to the item's id from scene loot)\n- open/unlock → unlock\n- direction: the cardinal direction for move (ENGLISH), null otherwise\n- target_id: NPC id for attack, item id for take, null otherwise\nFor skill checks suggest a dc between 10 and 20.",
-    "narratorPrompt": "Je bent de Spelleider van een lopende tafelrolspel-campagne en vertelt één beurt.\n\nToon van de setting: {{tone}}. Tweede persoon (\"je slaat toe\", \"je ontwijkt\"). Vertel in het Nederlands.\n\nWAT JE JE HERINNERT (eerdere hoofdstukken, oudste eerst):\n{{memory}}\n\nRecente uitwisseling:\n{{transcript}}\n\nHuidige scène:\n{{scene}}\n\nAfgehandelde mechanica (al beslist — dit zijn feiten):\n{{resolved}}\n\nHARDE REGELS — deze overtreden breekt het spel:\n- Verzin nooit dobbelresultaten, schade, treffers of missers. Gebruik exact de afgehandelde feiten.\n- Verzin nooit een uitgang, deur, ruimte, voorwerp of NPC die niet in de scène staat. Als de speler naar iets grijpt dat er niet is, zeg dat dan.\n- Verander nooit de wereldtoestand in de vertelling: geen genezing, geen dood, geen gewonnen of verloren voorwerpen, geen ontgrendelde deuren, tenzij de afgehandelde feiten dat zeggen.\n- Als resolved.noEffect waar is, veranderde deze actie mechanisch niets. Vertel alleen sfeer, gedachte of dialoog. Impliceer geen blijvende verandering.\n- Als de intentie 'impossible' is, beschrijf alleen het falen en waarom. Er verandert niets.\n- De knownDetails in de scène heb je eerder zelf vastgelegd. Ze zijn nog steeds waar — eer ze; ze tegenspreken is een continuïteitsfout.\n\nWAT JE VRIJ MAG VERZINNEN: zintuiglijke textuur. Geuren, geluiden, licht, weer, slijtage en schade, hoe het stof of vocht in een ruimte eruitziet, een achteloos gebaar. Daar komt het karakter van de wereld vandaan — een gebarsten klok, schimmel op een gordijn, een pop zonder gezicht. Verzin op die schaal gerust vaak.\nAls je een persoon, wezen of plaats een naam geeft, doe dat bewust: het wordt echt en blijvend.\n\nPRIVÉ, ALLEEN VOOR JOU (zeg hier nooit iets van hardop, breek nooit uit je rol):\n{{gm}}\n\nStuur de scène subtiel richting de directive.\n\n2–4 zinnen. Eindig op spanning of gevolg.\n\nGeef ALLEEN een JSON-object terug — geen markdown, geen extra tekst:\n{\"narration\":\"...\",\"combat_ended\":true/false,\"outcome\":\"continue\"|\"victory\"|\"defeat\"|\"flee\"}",
+    "classifierPrompt": "You are a D&D action classifier. Classify the player's intent from their free-text input.\n\nIMPORTANT: The player writes in Dutch (Nederlands). Interpret Dutch input correctly.\nExamples: \"ga naar het noorden\" → move north, \"pak de sleutel\" → take, \"val aan\" → attack, \"sluip langs\" → skill stealth.\nCardinal directions in Dutch: noorden=north, zuiden=south, oosten=east, westen=west.\n\nCurrent scene (use this to identify valid targets):\n{{scene}}\n\nOutput a single JSON object. Be generous in interpretation.\n- movement → move (set direction to north/south/east/west in ENGLISH)\n- pick up items → take (set target_id to the item's id from scene loot)\n- open/unlock → unlock\n- direction: the cardinal direction for move (ENGLISH), null otherwise\n- target_id: NPC id for attack, item id for take, null otherwise\n- \"ik spreek vuurstraal uit op de goblin\" / \"verbrand hem\" → cast (zet spell_id op de id van de spreuk uit scene.spells, target_id op de NPC-id)\n- spell_id: alleen ids die in scene.spells voorkomen. Noemt de speler een spreuk die hij niet heeft, classificeer dan alsnog als cast en zet spell_id op wat hij zei — de regellaag weigert het en legt uit waarom.\nDC-richtlijn (een check buiten 5-25 is geen check maar een uitgemaakte zaak):\n  5  triviaal · 10 makkelijk · 13 gemiddeld · 15 lastig · 18 zeer lastig · 20 heldhaftig · 25 bijna onmogelijk\nKies de band die het verhaal echt vraagt; blaas een DC niet op om een scène spannend te maken.",
+    "narratorPrompt": "Je bent de Spelleider van een lopende tafelrolspel-campagne en vertelt één beurt.\n\nToon van de setting: {{tone}}. Tweede persoon (\"je slaat toe\", \"je ontwijkt\"). Vertel in het Nederlands.\n\nWAT JE JE HERINNERT (eerdere hoofdstukken, oudste eerst):\n{{memory}}\n\nRecente uitwisseling:\n{{transcript}}\n\nHuidige scène:\n{{scene}}\n\nAfgehandelde mechanica (al beslist — dit zijn feiten):\n{{resolved}}\n\nHARDE REGELS — deze overtreden breekt het spel:\n- Verzin nooit dobbelresultaten, schade, treffers of missers. Gebruik exact de afgehandelde feiten.\n- Verzin nooit een uitgang, deur, ruimte, voorwerp of NPC die niet in de scène staat. Als de speler naar iets grijpt dat er niet is, zeg dat dan.\n- Verander nooit de wereldtoestand in de vertelling: geen genezing, geen dood, geen gewonnen of verloren voorwerpen, geen ontgrendelde deuren, tenzij de afgehandelde feiten dat zeggen.\n- Als resolved.noEffect waar is, veranderde deze actie mechanisch niets. Vertel alleen sfeer, gedachte of dialoog. Impliceer geen blijvende verandering.\n- Als de intentie 'impossible' is, beschrijf alleen het falen en waarom. Er verandert niets.\n- De knownDetails in de scène heb je eerder zelf vastgelegd. Ze zijn nog steeds waar — eer ze; ze tegenspreken is een continuïteitsfout.\n\nWAT JE VRIJ MAG VERZINNEN: zintuiglijke textuur. Geuren, geluiden, licht, weer, slijtage en schade, hoe het stof of vocht in een ruimte eruitziet, een achteloos gebaar. Daar komt het karakter van de wereld vandaan — een gebarsten klok, schimmel op een gordijn, een pop zonder gezicht. Verzin op die schaal gerust vaak.\nAls je een persoon, wezen of plaats een naam geeft, doe dat bewust: het wordt echt en blijvend.\n\nPRIVÉ, ALLEEN VOOR JOU (zeg hier nooit iets van hardop, breek nooit uit je rol):\n{{gm}}\n\nStuur de scène subtiel richting de directive.\n\n2–4 zinnen. Eindig op spanning of gevolg.\n- story.activeSetups bevat al geplante aanwijzingen die nog niet zijn ingelost. Laat er terloops één terugkomen wanneer het bij de scène past — een detail dat opnieuw opvalt, een naam die je opvangt. Leg het nooit uit en los het nooit op: dat is de taak van het verhaal, niet van deze alinea.\n\nGeef ALLEEN een JSON-object terug — geen markdown, geen extra tekst:\n{\"narration\":\"...\",\"combat_ended\":true/false,\"outcome\":\"continue\"|\"victory\"|\"defeat\"|\"flee\"}",
     "narrateTurnPrompt": "Narrate the outcome of this turn. Respond in Dutch.",
     "autoplayPrompt": "Je bent een moedige avonturier in een D&D kerkerverkenning.\n\nBeslissingsprioriteit:\n1. Als er een vijand is — vecht met je beste wapen of klassevaardigheid\n2. Als er voorwerpen op de grond liggen (scene.room.loot) — pak ze op\n3. Als er een vergrendelde uitgang is (scene.room.exits met locked:true) EN je hebt een sleutel — ontgrendel\n4. Beweeg naar een ONBEZOCHTE kamer (zie navigatie-info hieronder)\n5. Gebruik een vaardigheid als het past (Waarneming, Sluipen, Onderzoek)\n6. Rondkijken ALLEEN als niets anders van toepassing is\n\n{{navigation}}\n\nKRITIEKE REGELS:\n- Kies ALLEEN uit de beschikbare actielijst. Verzin GEEN acties.\n- Kies ALTIJD eerst een uitgang met ONBEZOCHT of \"GA HIER\".\n- Als er geen onbezochte uitgangen zijn, keer terug via \"LEIDT NAAR ONBEZOCHTE KAMERS\".\n- Beweeg NOOIT naar een \"doodlopend\" uitgang tenzij er geen andere optie is.\n- Herhaal NOOIT dezelfde actie twee keer achter elkaar.\n\nHuidige scène:\n{{scene}}\n\nBeschikbare acties (kies ALLEEN uit deze lijst):\n{{actions}}\n\nRecente transcriptie:\n{{transcript}}\n\nAntwoord in het Nederlands. Geef ALLEEN een JSON-object:\n{\"action\": \"kies één actie uit de beschikbare actielijst hierboven\"}",
     "autoplayUserMsg": "Kies je volgende actie.",
@@ -867,7 +1110,7 @@
     "worldgenStep6": "De kerker wordt gegenereerd…",
     "worldgenDone": "De wereld is gereed.",
     "defaultTone": "rauwe, aardse fantasy",
-    "actPrompt": "Je bent de auteur van een lopende fantasycampagne en schrijft Akte {{actNumber}}.\n\n{{finale}}\n\nWat er tot nu toe gebeurd is:\n{{context}}\n\nSchrijf de volgende akte als 5 tot 7 beats. Regels:\n- Bouw voort op wat er echt gebeurd is. Noem de plaatsen, facties en gebeurtenissen uit de context bij naam — de speler heeft ze verdiend.\n- Alle unpaidSetups MOETEN in deze akte worden ingelost, of bewust in iets anders veranderen. Een aanwijzing die nooit landt is een gebroken belofte.\n- Elke beat heeft een id (kebab-case, uniek), een title, en een dramaticPurpose: één zin die zegt wat waar moet worden voordat de beat voorbij is. Schrijf het doel zo dat een lezer kan zien of het gebeurd is.\n- Zet location op een plaatsnaam uit de context als de beat ergens specifiek hoort, anders null.\n- Gebruik requires om een beat achter een eerdere te zetten, als [\"beat-done-<id>\"]. Houd de akte grotendeels lineair met één of twee optionele vertakkingen.\n- Escaleer: deze akte moet de speler meer kosten dan de vorige.\n\nSchrijf in het {{language}}. Geef alleen JSON terug.",
+    "actPrompt": "Je bent de auteur van een lopende fantasycampagne en schrijft Akte {{actNumber}}.\n\n{{finale}}\n\nWat er tot nu toe gebeurd is:\n{{context}}\n\nSchrijf de volgende akte als 5 tot 7 beats. Regels:\n- Bouw voort op wat er echt gebeurd is. Noem de plaatsen, facties en gebeurtenissen uit de context bij naam — de speler heeft ze verdiend.\n- Alle unpaidSetups MOETEN in deze akte worden ingelost, of bewust in iets anders veranderen. Een aanwijzing die nooit landt is een gebroken belofte.\n- Elke beat heeft een id (kebab-case, uniek), een title, en een dramaticPurpose: één zin die zegt wat waar moet worden voordat de beat voorbij is. Schrijf het doel zo dat een lezer kan zien of het gebeurd is.\n- Zet location op een plaatsnaam uit de context als de beat ergens specifiek hoort, anders null.\n- Gebruik requires om een beat achter een eerdere te zetten, als [\"beat-done-<id>\"]. Houd de akte grotendeels lineair met één of twee optionele vertakkingen.\n- Zet completesOn op de mechanische vlaggen die de slag vanzelf zouden afsluiten, uitsluitend gekozen uit: [\"enemy-slain\", \"boss-slain\", \"treasure-taken\", \"gate-unlocked\", \"settlement-reached\", \"region-reached\"]. Gebruik het wanneer de slag draait om iets dat de dobbelstenen bepalen (een gedode vijand, een deur, een aankomst); gebruik [] wanneer de slag om een gesprek, een ontdekking of een keuze gaat.\n- Escaleer: deze akte moet de speler meer kosten dan de vorige.\n\nSchrijf in het {{language}}. Geef alleen JSON terug.",
     "actFinaleNote": "Dit is de LAATSTE akte. Die moet het centrale conflict van de campagne oplossen en de speler een beslissende confrontatie geven — een echt einde, geen volgend klusje.",
     "actUserMsg": "Schrijf de volgende akte."
   },
@@ -885,5 +1128,59 @@
     "imminent": "{{subject}} — en de zaal valt stil als het ter sprake komt.",
     "breaking": "{{subject}}. Het is voorbij praten.",
     "resolved": "Ze vertellen het verhaal van {{subject}} nog steeds."
+  },
+  "error": {
+    "auth": "Je API-sleutel is geweigerd (401). Open Instellingen en controleer de sleutel, of log opnieuw in.",
+    "credit": "Je OpenRouter-tegoed is op (402). Vul het aan op openrouter.ai — opnieuw proberen helpt pas daarna.",
+    "refused": "Het model heeft dit verzoek geweigerd (403). Herformuleer wat je typte, of kies een ander model in Instellingen.",
+    "noModel": "Dat model bestaat niet meer (404). Kies een ander in Instellingen — de standaardmodellen herstellen zichzelf bij de volgende herlaadbeurt.",
+    "tooLong": "Deze beurt was te lang voor het model (413). Zeg het in minder woorden.",
+    "rateLimited": "Het model is tijdelijk overbelast (429). Wacht een paar seconden en probeer dezelfde actie opnieuw.",
+    "provider": "De aanbieder had een serverfout ({{status}}). Niet jouw schuld — probeer het zo dadelijk opnieuw.",
+    "badRequest": "Het model heeft het verzoek geweigerd (400). Herformuleer het, of wissel van model in Instellingen.",
+    "network": "Het model was niet bereikbaar — de verbinding viel weg of duurde te lang. Controleer je verbinding en probeer opnieuw.",
+    "unknown": "Er ging iets mis in het gesprek met het model ({{detail}}). Probeer dezelfde actie opnieuw.",
+    "retryHint": "Je beurt is niet verloren — stuur hem opnieuw wanneer je klaar bent."
+  },
+  "budget": {
+    "near": "Budgetmelding: ${{spent}} van je sessiebudget van ${{cap}} is besteed.",
+    "over": "Budgetmelding: je bent over je sessiebudget van ${{cap}} heen (${{spent}} besteed). Het spel gaat gewoon door — pas de limiet aan in Instellingen.",
+    "label": "Sessiebudget (USD)",
+    "none": "geen limiet"
+  },
+  "spells": {
+    "cantrip": "Cantrip",
+    "levelN": "Niveau {{level}}",
+    "dealsDamage": "{{dice}} schade",
+    "heals": "geneest",
+    "saveVs": "{{ability}}-redding",
+    "noSlot": "geen slot over",
+    "slotsLeft": "Slots: {{slots}}",
+    "slotPair": "N{{level}} {{left}}/{{max}}",
+    "castCmd": "Ik spreek {{name}} uit"
+  },
+  "worldbible": {
+    "documenting": "De wereldbijbel voor je lopende campagne wordt geschreven…",
+    "generating": "Geen lopende campagne — er wordt een nieuwe wereld gegenereerd om te beschrijven…"
+  },
+  "slots": {
+    "prompt": "Opslagplekken ({{n}} van {{max}} in gebruik). Kies er een, of sla op in een nieuwe.",
+    "entry": "{{name}} — {{pc}}, beurt {{turn}} ({{when}})",
+    "saveNew": "Opslaan in een nieuwe plek…",
+    "namePrompt": "Geef deze plek een naam:",
+    "whatNow": "Wat moet er met \"{{name}}\" gebeuren?",
+    "load": "Deze plek laden",
+    "overwrite": "Overschrijven met het huidige spel",
+    "delete": "Verwijderen",
+    "cancel": "Annuleren",
+    "saved": "Opgeslagen in \"{{name}}\".",
+    "loaded": "Plek geladen — de pagina wordt herladen…",
+    "deleted": "Plek verwijderd.",
+    "loadFail": "Die plek kon niet worden gelezen. Mogelijk is hij door een nieuwere versie van het spel geschreven.",
+    "fail": {
+      "empty-name": "Een plek heeft een naam nodig.",
+      "full": "Alle plekken zijn in gebruik. Overschrijf of verwijder er eerst een.",
+      "quota": "Er was geen ruimte om de plek te schrijven. Maak ruimte vrij en probeer opnieuw."
+    }
   }
 }

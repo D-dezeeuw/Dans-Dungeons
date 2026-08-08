@@ -41,12 +41,43 @@ export function clampDC(dc) {
  * cascades through `rollDie` so a seeded engine produces reproducible
  * check sequences end-to-end.
  */
-export function abilityCheck({ abilityScore, proficient = false, proficiencyBonus = 2, dc }, rng = Math.random) {
-  const d20 = rollDie(20, rng);
-  const mod = modFromScore(abilityScore) + (proficient ? proficiencyBonus : 0);
+
+/**
+ * Roll the d20 for a check or save, honouring advantage and disadvantage.
+ *
+ * Neither ability checks nor saving throws could express these before, so the
+ * condition flags conditions.js itself declares (ownCheckDisadvantage,
+ * saveDexDisadvantage, attackAgainstAdvantage) were unenforceable — a poisoned
+ * or restrained character rolled exactly like a healthy one, and Magic
+ * Resistance was hacked in as a -5 to the DC.
+ *
+ * Per the SRD, advantage and disadvantage do not stack and cancel each other
+ * out exactly: any number of each on the same roll resolves to one straight d20.
+ */
+function d20With({ advantage = false, disadvantage = false }, rng) {
+  if (advantage && disadvantage) return { d20: rollDie(20, rng), stance: 'normal' };
+  if (advantage) {
+    const a = rollDie(20, rng), b = rollDie(20, rng);
+    return { d20: Math.max(a, b), stance: 'advantage', rolls: [a, b] };
+  }
+  if (disadvantage) {
+    const a = rollDie(20, rng), b = rollDie(20, rng);
+    return { d20: Math.min(a, b), stance: 'disadvantage', rolls: [a, b] };
+  }
+  return { d20: rollDie(20, rng), stance: 'normal' };
+}
+
+export function abilityCheck(
+  { abilityScore, proficient = false, proficiencyBonus = 2, dc, advantage = false, disadvantage = false, bonus = 0 },
+  rng = Math.random,
+) {
+  const { d20, stance, rolls } = d20With({ advantage, disadvantage }, rng);
+  const mod = modFromScore(abilityScore) + (proficient ? proficiencyBonus : 0) + (bonus || 0);
   const total = d20 + mod;
   const target = clampDC(dc);
-  return { d20, mod, total, dc: target, success: total >= target };
+  const out = { d20, mod, total, dc: target, success: total >= target, stance };
+  if (rolls) out.rolls = rolls;
+  return out;
 }
 
 /**

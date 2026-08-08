@@ -5,10 +5,13 @@
 // always predictable regardless of restore order.
 
 import { DEFAULT_MODELS } from '../ai/tiers.js';
-import { wrapEnvelope, saveEnvelope, loadEnvelope, makeCommit,
+import { wrapEnvelope, saveEnvelope, loadEnvelope, makeCommit, restoreBackup, LOAD_ERRORS,
          openCold, appendSegment, readSegments, splitSave } from 'bag-of-holding-client';
 
 import { createSpektrum } from 'spektrum';
+import { isPrimaryTab } from './tabs.js';
+import { saveSlot as libSaveSlot, readSlot, listSlots, deleteSlot, MAX_SLOTS } from './slots.js';
+export { MAX_SLOTS };
 
 // One configured engine for the whole app — state.js is the sole 'spektrum'
 // importer (everything else goes through this module). `snapshotEvery` captures a
@@ -171,9 +174,23 @@ const PERSIST_KEYS = ['session', 'ai', 'party', 'world', 'flags', 'transcript', 
 // Ordered v→v+1 migrations for saved-state shape changes. v1→v2 added the
 // optional `_timeTravel` blob; v1 saves simply lack it (load as no history), so
 // the migration is an identity pass — it just records that the bump is benign.
+// v0 is the legacy pre-versioning bare snapshot; it passes straight through.
+// Declaring it explicitly is not ceremony — the library refuses an undeclared
+// step now, because a silently skipped migration corrupts a save in a way that
+// only surfaces turns later.
 const SAVE_MIGRATIONS = {
+  0: (data) => data,
   1: (data) => data,
 };
+
+// Previous saves kept alongside the live one. Two is enough to step back past a
+// bad autosave without meaningfully competing for the localStorage quota.
+const SAVE_BACKUPS = 2;
+
+// Why the last load was refused, if it was — surfaced to the player rather than
+// silently starting a new game on top of a campaign that is still there.
+let _lastLoadError = null;
+export function lastLoadError() { return _lastLoadError; }
 
 // The persisted slice of appState (the single source of the save shape, shared
 // by the localStorage save and the downloadable save file). Optionally carries
@@ -187,6 +204,11 @@ export function pickPersisted() {
 // imported baseUrl would silently redirect every future call (and that key) to
 // whatever host the file named. Strip both — the importer keeps their own.
 const CREDENTIAL_FIELDS = ['key', 'baseUrl'];
+
+// Transient session facts that must never travel in a save: whether THIS tab
+// is a spectator says nothing about the campaign and would follow an exported
+// file into someone else's browser.
+const TRANSIENT_SESSION = ['spectator'];
 
 function withoutCredentials(snapshot) {
   if (!snapshot?.ai) return snapshot;
@@ -203,6 +225,10 @@ export function sanitizeImported(data) {
 
 function buildSaveSnapshot() {
   const snap = pickPersisted();
+  if (snap.session) {
+    snap.session = { ...snap.session };
+    for (const k of TRANSIENT_SESSION) delete snap.session[k];
+  }
   const tt = _timeTravelProvider?.();
   if (tt) snap._timeTravel = tt;
   return snap;
@@ -239,8 +265,16 @@ function setSaveHealth(ok) {
 // plus the live world. Everything older is handed to the cold archive, so what
 // this synchronous, quota-limited write costs stops growing with the campaign.
 export function saveToStorage() {
+  // A second tab is a spectator. Both tabs share one save key, so letting both
+  // autosave means the last write wins and the other tab's turns are gone —
+  // silently, and only visible on the next reload.
+  if (!isPrimaryTab()) return false;
+
   const { hot, cold } = splitSave(buildSaveSnapshot(), HOT_LIMITS);
-  const ok = saveEnvelope(localStorage, SAVE_KEY, hot, SAVE_VERSION);
+  const ok = saveEnvelope(localStorage, SAVE_KEY, hot, SAVE_VERSION, {
+    backups:  SAVE_BACKUPS,
+    checksum: true,
+  });
   if (!ok) console.warn('[state] localStorage save failed (quota?)');
   setSaveHealth(ok);
   archiveCold(cold);          // fire-and-forget; never blocks a turn
@@ -293,18 +327,38 @@ export async function storagePressure() {
 
 export function loadFromStorage() {
   const raw = localStorage.getItem(SAVE_KEY);
+  _lastLoadError = null;
   const data = loadEnvelope(raw, {
     migrations:     SAVE_MIGRATIONS,
     currentVersion: SAVE_VERSION,
+    onError: (code, detail) => {
+      // A checksum warning is not a refusal — the save still loaded.
+      if (code !== LOAD_ERRORS.CHECKSUM) _lastLoadError = { code, detail };
+      console.warn(`[state] save ${code}: ${detail}`);
+    },
   });
-  // A save that exists but will not parse is a bug or a corrupted write, not a
-  // new game. Keep the bytes so the player (or a support request) can recover
-  // them instead of silently overwriting on the next autosave.
-  if (raw && !data) {
+  if (data) return data;
+
+  // A save that exists but will not load is a bug, a corrupted write, or a file
+  // from a newer build — not a new game. Keep the bytes so the player (or a
+  // support request) can recover them instead of silently overwriting on the
+  // next autosave, then try the rotated backups newest-first.
+  if (raw) {
     try { localStorage.setItem(`${SAVE_KEY}-corrupt`, raw); } catch { /* nothing to do */ }
-    console.error('[state] save could not be parsed — kept a copy at dans-dungeons-corrupt');
+    console.error(`[state] save could not be loaded (${_lastLoadError?.code ?? 'unknown'}) — kept a copy at ${SAVE_KEY}-corrupt`);
+
+    const recovered = restoreBackup(localStorage, SAVE_KEY, {
+      keep:           SAVE_BACKUPS,
+      migrations:     SAVE_MIGRATIONS,
+      currentVersion: SAVE_VERSION,
+    });
+    if (recovered) {
+      console.warn(`[state] recovered the save from backup slot ${recovered.slot}`);
+      _lastLoadError = { code: 'recovered-from-backup', detail: `slot ${recovered.slot}` };
+      return recovered.data;
+    }
   }
-  return data;
+  return null;
 }
 
 // Was a corrupt save quarantined on the last load?
@@ -323,13 +377,45 @@ export function serializeSave() {
 // envelopes and legacy bare snapshots (which load as version 0 and migrate
 // forward). Returns the unwrapped, migrated data, or null if unparseable.
 export function parseSave(raw) {
-  const data = loadEnvelope(raw, { migrations: SAVE_MIGRATIONS, currentVersion: SAVE_VERSION });
+  const data = loadEnvelope(raw, {
+    migrations:     SAVE_MIGRATIONS,
+    currentVersion: SAVE_VERSION,
+    onError: (code, detail) => console.warn(`[state] imported save ${code}: ${detail}`),
+  });
   return data ? sanitizeImported(data) : data;
 }
 
 export function clearSave() {
   localStorage.removeItem(SAVE_KEY);
 }
+
+// ─── Named slots ─────────────────────────────────────────────────────────────
+//
+// One autosave meant a new campaign overwrote the last one and there was no way
+// back. Slots use the same envelope, the same version, and the same migration
+// path as the autosave, so a slot is not a second kind of save with its own
+// bugs — it is the same save under another key.
+
+export function saveToSlot(name) {
+  // Exactly the bytes serializeSave() produces — same envelope, same version,
+  // same credential stripping — so a slot, a save file and the autosave are
+  // three places holding one format.
+  return libSaveSlot(localStorage, name, serializeSave(), {
+    turn:  appState.session?.turnCount ?? 0,
+    pc:    appState.party?.pc?.record?.name ?? null,
+    world: appState.world?.name ?? null,
+  });
+}
+
+export function loadFromSlot(id) {
+  const raw = readSlot(localStorage, id);
+  if (raw == null) return null;
+  // parseSave is the reload path: envelope, migrations, credential sanitising.
+  return parseSave(raw);
+}
+
+export function slots()          { return listSlots(localStorage); }
+export function removeSlot(id)   { return deleteSlot(localStorage, id); }
 
 // tick (flush the Spektrum delta) + saveToStorage in one call — use after any
 // state mutation that must survive a reload. Replaces the repeated, easy-to-

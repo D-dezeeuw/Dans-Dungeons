@@ -26,7 +26,7 @@ const enPrompts   = JSON.parse(fs.readFileSync(path.join(ROOT, 'src/i18n/en.json
 const INTENTS = CLASSIFIER_SCHEMA.properties.intent.enum;
 
 // Intents the resolver handles with real mechanics (dice, state, validation).
-const MECHANIZED = ['attack', 'skill', 'move', 'take', 'unlock', 'rest', 'flee', 'use', 'look'];
+const MECHANIZED = ['attack', 'cast', 'skill', 'move', 'take', 'unlock', 'rest', 'flee', 'use', 'look'];
 
 describe('intent coverage', () => {
   it('the classifier can express fleeing and using an item', () => {
@@ -39,6 +39,13 @@ describe('intent coverage', () => {
       assert.match(resolverSrc, new RegExp(`intent === '${intent}'`),
         `resolver has no branch for '${intent}' — the narrator would improvise it`);
     }
+  });
+
+  it('casting is an intent of its own, not a skill check in disguise', () => {
+    assert.ok(INTENTS.includes('cast'),
+      'a caster had no way to say what they were doing; "I cast fire bolt" became a skill check');
+    assert.ok(CLASSIFIER_SCHEMA.required.includes('spell_id'),
+      'the classifier must name the spell, or the resolver has nothing to look up');
   });
 
   it('more than half the intents now resolve mechanically', () => {
@@ -109,5 +116,131 @@ describe('escaping actually escapes', () => {
   });
   it('fleeing needs somewhere to run', () => {
     assert.match(resolverSrc, /There is nowhere to run/);
+  });
+});
+
+describe('the chip strings preClassify matches still exist', () => {
+  // tests/turn-plumbing.test.js injects a stub `t` with these templates because
+  // the real bundle imports JSON and reads localStorage. This is what stops the
+  // stub drifting from the strings the game actually fires.
+  const CHIP_KEYS = ['goDir', 'takeCmd', 'unlockCmd', 'attackCmd', 'lookCmd', 'waitCmd'];
+
+  it('every chip command key is present in both locales', () => {
+    const nl = JSON.parse(fs.readFileSync(path.join(ROOT, 'src/i18n/nl.json'), 'utf8'));
+    for (const key of CHIP_KEYS) {
+      assert.ok(enPrompts.chips?.[key], `en.json is missing chips.${key}`);
+      assert.ok(nl.chips?.[key],        `nl.json is missing chips.${key}`);
+    }
+  });
+
+  it('the English templates are the ones the stub mirrors', () => {
+    assert.equal(enPrompts.chips.goDir,     'I go {{dir}}');
+    assert.equal(enPrompts.chips.takeCmd,   'I take the {{name}}');
+    assert.equal(enPrompts.chips.unlockCmd, 'I use the key to unlock the door');
+    assert.equal(enPrompts.chips.attackCmd, 'I attack');
+    assert.equal(enPrompts.chips.lookCmd,   'I look around carefully');
+    assert.equal(enPrompts.chips.waitCmd,   'I wait and watch');
+  });
+
+  it('both locales name the four compass directions', () => {
+    const nl = JSON.parse(fs.readFileSync(path.join(ROOT, 'src/i18n/nl.json'), 'utf8'));
+    for (const dir of ['north', 'south', 'east', 'west']) {
+      assert.ok(enPrompts.directions?.[dir], `en.json is missing directions.${dir}`);
+      assert.ok(nl.directions?.[dir],        `nl.json is missing directions.${dir}`);
+    }
+  });
+});
+
+describe('casting resolves through the engine, not the narrator', () => {
+  it('spends the slot through the engine so a refusal cites the rules', () => {
+    assert.match(resolverSrc, /Spellcasting\.castSpell/);
+    assert.match(resolverSrc, /if \(!cast\.ok\) return \{ intent: 'impossible', reason: cast\.reason \}/);
+  });
+
+  it('writes the spent slots whether or not the spell landed', () => {
+    assert.match(resolverSrc, /party\.magic\.slots/);
+  });
+
+  it('a long rest is the only thing that gives slots back', () => {
+    assert.match(resolverSrc, /Spellcasting\.longRest/);
+  });
+
+  it('a cast can kill, and the kill counts', () => {
+    assert.match(loopSrc, /\['attack', 'cast'\]\.includes\(resolved\.intent\) && resolved\.targetDead/);
+  });
+});
+
+describe('a beat the dice already settled needs no model call', () => {
+  const actsSrc = fs.readFileSync(path.join(ROOT, 'src/game/acts-runtime.js'), 'utf8');
+
+  it('the act schema lets a beat name its mechanical completion flags', async () => {
+    const { ACT_SCHEMA } = await import('../src/ai/schemas.js');
+    const beat = ACT_SCHEMA.properties.beats.items;
+    assert.ok(beat.properties.completesOn, 'beats cannot say what would finish them mechanically');
+    assert.ok(beat.required.includes('completesOn'));
+  });
+
+  it('the act prompt lists only flags the game actually raises', () => {
+    const prompt = enPrompts.ai.actPrompt;
+    const offered = [...prompt.matchAll(/"([a-z][a-z-]+)"/g)].map(m => m[1])
+      .filter(f => f !== 'beat-done-');
+    const raised = ['enemy-slain', 'boss-slain', 'treasure-taken', 'gate-unlocked',
+                    'settlement-reached', 'region-reached'];
+    for (const f of offered) {
+      assert.ok(raised.includes(f), `the prompt offers '${f}', which nothing in the game raises`);
+    }
+    // …and the ones the turn loop raises are on offer.
+    for (const f of ['enemy-slain', 'boss-slain', 'treasure-taken', 'gate-unlocked']) {
+      assert.ok(prompt.includes(f), `the prompt never mentions '${f}', so no beat can use it`);
+    }
+  });
+
+  it('the turn loop raises each of them', () => {
+    for (const flag of ['enemy-slain', 'boss-slain', 'treasure-taken', 'gate-unlocked']) {
+      assert.match(loopSrc, new RegExp(`setStoryFlag\\('${flag}'\\)`),
+        `nothing raises '${flag}', so a beat that waits on it waits forever`);
+    }
+  });
+
+  it('flags are checked before the paid judge call', () => {
+    const flagIdx  = loopSrc.indexOf('beatSatisfiedByFlags()');
+    const judgeIdx = loopSrc.indexOf('checkBeatFulfilled(');
+    assert.ok(flagIdx > 0 && judgeIdx > 0, 'both paths must exist');
+    assert.ok(flagIdx < judgeIdx, 'the judge must be the fallback, not the first resort');
+    assert.match(actsSrc, /export function beatSatisfiedByFlags/);
+  });
+});
+
+describe('the ledger records what the resolver actually returns', () => {
+  it('a pickup reaches the ledger', () => {
+    // This read `resolved.item`, which the take branch has never set — so no
+    // item pickup had ever been recorded, for the repo's whole history.
+    assert.match(resolverSrc, /intent: 'take', itemId: item\.id, itemName: item\.name/);
+    assert.match(loopSrc, /resolved\??\.intent === 'take' && resolved\.itemName/);
+    assert.ok(!/resolved\.item\?\.name/.test(loopSrc), 'the ledger still reads a field the resolver never sets');
+  });
+
+  it('an unlocked gate reaches the ledger', () => {
+    assert.match(resolverSrc, /intent: 'unlock'.*unlocked: true/);
+    assert.match(loopSrc, /resolved\??\.intent === 'unlock' && resolved\.unlocked/);
+  });
+
+  it('a treasure is regional news, a rag is local', () => {
+    assert.match(loopSrc, /resolved\.itemType === 'treasure' \? 'regional' : 'local'/);
+  });
+});
+
+describe('planted clues reach the narrator', () => {
+  it('unpaid setups travel in the story context', () => {
+    const storySrc = fs.readFileSync(path.join(ROOT, 'src/game/story.js'), 'utf8');
+    assert.match(storySrc, /ctx\.activeSetups = setups/);
+    assert.match(storySrc, /unpaidSetups\(\)/);
+  });
+
+  it('the narrator prompt knows what to do with them', () => {
+    for (const [code, bundle] of [['en', enPrompts], ['nl', JSON.parse(fs.readFileSync(path.join(ROOT, 'src/i18n/nl.json'), 'utf8'))]]) {
+      assert.match(bundle.ai.narratorPrompt, /activeSetups/,
+        `${code}: the context carries clues the prompt never mentions`);
+    }
   });
 });

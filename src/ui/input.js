@@ -137,6 +137,46 @@ export async function pickFrom(message, options, labelFn = (x) => x, defaultIdx 
   });
   appendEntry('system', '');
 
+  // The numbered list is the whole of character creation, and it was
+  // keyboard-only: on a phone the player read "1. Fighter" and then had to
+  // find the number row. The same options are now chips, which submit the
+  // number they stand for — so typing still works exactly as it did.
+  renderPickChips(options, labelFn, defaultIdx);
+
+  try {
+    return await pickLoop(options, labelFn, defaultIdx);
+  } finally {
+    // Whatever happened — a pick, or a caller that gave up — the options are
+    // no longer answerable, so they must not stay on screen as if they were.
+    const el = actionChipsEl();
+    if (el) el.innerHTML = '';
+  }
+}
+
+// Rendered here rather than through chips.js: that module imports this one, and
+// a cycle between them is not worth a shared helper this small.
+function renderPickChips(options, labelFn, defaultIdx) {
+  const el = actionChipsEl();
+  if (!el) return;
+  el.innerHTML = '';
+  const group = document.createElement('div');
+  group.setAttribute('role', 'group');
+  group.setAttribute('aria-label', t('input.pickGroupLabel'));
+  options.forEach((opt, i) => {
+    const btn = document.createElement('button');
+    btn.type        = 'button';
+    btn.className   = 'chip' + (i === defaultIdx ? ' chip-default' : '');
+    btn.textContent = `${i + 1}. ${labelFn(opt)}`;
+    btn.setAttribute('aria-label',
+      `${labelFn(opt)}${i === defaultIdx ? `, ${t('charCreate.default')}` : ''}`);
+    // Submits the number, so a click and a typed "2" travel the identical path.
+    btn.addEventListener('click', () => fireChip(String(i + 1)));
+    group.appendChild(btn);
+  });
+  el.appendChild(group);
+}
+
+async function pickLoop(options, labelFn, defaultIdx) {
   while (true) {
     const input = await prompt(defaultIdx >= 0 ? t('input.pickDefault') : t('input.pickNoDefault'));
     if (input.trim() === '' && defaultIdx >= 0) return options[defaultIdx];
@@ -188,10 +228,23 @@ export function initMicButton() {
     }
   });
 
-  // Spacebar toggles recording when not typing in the input field.
+  // Spacebar toggles recording — but only when the player is not interacting
+  // with something else. It used to fire whenever focus was anywhere but the
+  // input, which meant tabbing to any chip or button and pressing space (the
+  // standard way to activate a control) started a recording instead, and
+  // swallowed the activation. Anything focusable owns its own spacebar.
+  const TYPING = new Set(['INPUT', 'TEXTAREA', 'SELECT']);
   document.addEventListener('keydown', (e) => {
     if (e.key !== ' ') return;
-    if (document.activeElement === cmdEl()) return;
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    const el = document.activeElement;
+    if (el && el !== document.body) {
+      if (TYPING.has(el.tagName)) return;
+      if (el.isContentEditable) return;
+      // A focused button, link, or anything with a tabindex is being operated
+      // by the player; space belongs to it.
+      if (el.closest('button, a, [role="button"], [tabindex]')) return;
+    }
     if (!appState.ai?.key) return;
     e.preventDefault();
     btn.click();

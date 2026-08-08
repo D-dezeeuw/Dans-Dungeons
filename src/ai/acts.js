@@ -8,11 +8,15 @@
 
 import { chatCompletion } from './client.js';
 import { ACT_SCHEMA } from './schemas.js';
+import { validateAct } from './validate.js';
 import { t, locale } from '../i18n/i18n.js';
 
 export async function generateAct(context) {
   try {
-    return await chatCompletion({
+    // Validated on receipt: an act with no beats, or beats sharing an id, is
+    // worse than no act — it leaves the campaign with a title, a premise, and
+    // nothing to do, and `requires` stops resolving to one beat.
+    return validateAct(await chatCompletion({
       tier: 'medium',
       maxTokens: 1600,
       messages: [
@@ -25,7 +29,7 @@ export async function generateAct(context) {
         { role: 'user', content: t('ai.actUserMsg') },
       ],
       schema: ACT_SCHEMA,
-    });
+    }));
   } catch {
     return null;
   }

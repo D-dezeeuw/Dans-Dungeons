@@ -74,8 +74,12 @@ const FULL_CASTER_TABLE = [
 ];
 
 /**
- * Half-caster slot table (Paladin, Ranger). Per SRD 5.2 they cast
- * starting at level 2; below that, returns 0.
+ * Half-caster slot table (Paladin, Ranger).
+ *
+ * SRD 5.2 (2024) gives them two 1st-level slots at CLASS LEVEL 1. The table
+ * previously started at level 2 — the 2014 rule — under a "per SRD 5.2"
+ * comment, so a level-1 paladin in this engine could not cast at all while an
+ * LLM narrator trained on 2024 rules insisted they could.
  */
 export function halfCasterSlots(casterLevel, spellLevel) {
   if (!Number.isInteger(casterLevel) || casterLevel < 1 || casterLevel > 20) {
@@ -84,12 +88,12 @@ export function halfCasterSlots(casterLevel, spellLevel) {
   if (!Number.isInteger(spellLevel) || spellLevel < 1 || spellLevel > 5) {
     throw new Error(`spellLevel out of range for half-caster: ${spellLevel}`);
   }
-  if (casterLevel < 2) return 0;
-  return HALF_CASTER_TABLE[casterLevel - 2][spellLevel];
+  return HALF_CASTER_TABLE[casterLevel - 1][spellLevel];
 }
 
 // Rows are caster levels 2..20 (level 1 has no slots).
 const HALF_CASTER_TABLE = [
+  /* L1  */ [0, 2, 0, 0, 0, 0],
   /* L2  */ [0, 2, 0, 0, 0, 0],
   /* L3  */ [0, 3, 0, 0, 0, 0],
   /* L4  */ [0, 3, 0, 0, 0, 0],

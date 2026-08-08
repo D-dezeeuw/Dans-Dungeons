@@ -6,6 +6,7 @@
 import { SRD, createEngine } from './rules.js';
 import { t } from '../i18n/i18n.js';
 import { DEFAULT_START_GOLD } from 'bag-of-holding-client';
+import { defaultLoadout } from './spells.js';
 
 // One shared engine for all sheet derivation (the vendor default-singleton
 // shape; registries are bound inside `deriveSheet`).
@@ -116,5 +117,9 @@ export async function createCharacter(ui) {
   // Initialise current HP to max
   record.hpCurrent = sheet.hp.max;
 
-  return { record, sheet };
+  // A caster starts with a real loadout: cantrips known, spells prepared, and
+  // slots. Without it a wizard was a fighter with a worse weapon.
+  const magic = defaultLoadout(record, sheet);
+
+  return magic ? { record, sheet, magic } : { record, sheet };
 }

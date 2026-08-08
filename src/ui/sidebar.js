@@ -10,10 +10,18 @@ const MOBILE_BREAKPOINT = 768;
 // Manages collapse class, aria-expanded, and localStorage persistence.
 // extraUpdate(open) is called on every toggle for element-specific side effects.
 
-function makePanel(panel, storageKey, extraUpdate) {
+function makePanel(panel, storageKey, extraUpdate, control = null) {
   function set(open) {
     panel.classList.toggle('collapsed', !open);
-    panel.setAttribute('aria-expanded', String(open));
+    // aria-expanded belongs on the control, not on the thing it expands: a
+    // screen reader announces the state when the user reaches the BUTTON, and
+    // on the panel it was announced only after they had already got inside.
+    control?.setAttribute('aria-expanded', String(open));
+    // A collapsed panel is width:0, which still leaves every control inside it
+    // in the tab order — so tabbing from the sidebar button walked invisibly
+    // through a dozen settings. `inert` takes them out entirely.
+    panel.inert = !open;
+    panel.setAttribute('aria-hidden', String(!open));
     localStorage.setItem(storageKey, open ? 'open' : 'closed');
     extraUpdate?.(open);
   }
@@ -41,7 +49,8 @@ export function initCollapsibles() {
     const { set } = makePanel(sidebar, 'dg-sidebar', (open) => {
       // Backdrop: only active on mobile (CSS hides it on desktop)
       if (backdrop) backdrop.classList.toggle('active', open);
-    });
+    }, sidebarBtn);
+    sidebarBtn.setAttribute('aria-controls', sidebar.id);
     // Hand off from CSS pre-init (data attribute) to JS class-based control.
     document.documentElement.removeAttribute('data-sidebar-init');
     const stored = localStorage.getItem('dg-sidebar');

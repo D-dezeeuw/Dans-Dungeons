@@ -5,9 +5,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Commands
 
 ```bash
-npm run serve   # serves the repo root; open: http://localhost:3000
-node build.js   # esbuild bundle → vendor/app.bundle.js + version stamp
-npm test        # node --test — zero-dep test runner (Node 20+)
+npm run serve    # serves the repo root; open: http://localhost:3000
+node build.js    # esbuild bundle → vendor/app.bundle.js + version stamp
+npm test         # node --test — zero-dep test runner (Node 20+)
+npm run test:e2e # Playwright smoke tests in a real browser (needs a browser)
 ```
 
 Run a single test file: `node --test tests/seeded-rolls.test.js`
@@ -35,7 +36,9 @@ Every feature request follows this loop (no PRs — direct merge to `main`):
 
 ### Key constraints
 
-- **Zero deps installed.** `node_modules` holds only esbuild (dev). Runtime libraries (Spektrum, bag-of-holding, bag-of-holding-client) are **vendored** under `vendor/` — nothing loads from a CDN. Sync them with `node scripts/vendor-sync.js`, which stamps a `VENDOR.json` manifest; `--check` fails CI when vendored files drift from it. Never hand-patch `vendor/` — patch the sibling repo and re-sync.
+- **Zero RUNTIME deps.** `node_modules` holds esbuild (bundling) and
+  `@playwright/test` (the e2e layer only — `npm test` never touches it and
+  stays runnable with an empty `node_modules`). Runtime libraries (Spektrum, bag-of-holding, bag-of-holding-client) are **vendored** under `vendor/` — nothing loads from a CDN. Sync them with `node scripts/vendor-sync.js`, which stamps a `VENDOR.json` manifest; `--check` fails CI when vendored files drift from it. Never hand-patch `vendor/` — patch the sibling repo and re-sync.
 - **esbuild bundles for prod.** `node build.js` produces `vendor/app.bundle.js`, stamps the git hash into `vendor/app.version` and `sw.js`. GitHub Pages serves the bundle.
 - **BYOK, and no secrets in the bundle.** The player provides their own OpenRouter key, stored in `localStorage`, sent only to the configured base URL. A shared demo key can be injected at build time via `DD_DEMO_KEY` (see `src/ai/demo-key.js`) but defaults to `null`; a browser bundle cannot keep a secret, so any such key must be treated as public.
 - **Model ids rot.** Defaults live in the client library and are healed against the provider catalog at boot; `node scripts/check-models.js` (weekly in CI) fails when a configured id is delisted.
@@ -49,7 +52,9 @@ src/
 │   ├── state.js          Spektrum wrapper (setValue, tick, computed, etc.)
 │   └── utils.js          escHtml and other small helpers
 ├── game/
-│   ├── flow.js           Game lifecycle FSM: setup, play loop, towns, travel, end states
+│   ├── flow.js           Game lifecycle FSM: play loop, towns, travel, end states
+│   ├── session-setup.js  Key acquisition (OAuth/paste/demo), tier, model healing
+│   ├── views.js          Read-only screens: /story, region map, quests, inventory
 │   ├── loop.js           Turn engine: classify → resolve → narrate → commit
 │   ├── resolver.js       Pure D&D rules: attack, skill, move, take, unlock
 │   ├── character.js      Character creation wizard
@@ -206,11 +211,29 @@ Saves in `localStorage` (key: `dans-dungeons`). Full state exported as `.dnd.jso
 
 ### Tests
 
-Tests in `tests/` using `node --test` (zero deps), 301 passing. Test deterministic
-logic: dice, checks, combat, XP, schema validation, encounter state, save-growth
-shape. `tests/dom-contract.test.js` asserts every `getElementById` target in
-`src/` exists in `index.html` — a null-guarded renderer must never silently
-no-op again (the chip layer did, for the repo's entire history).
+Two layers.
 
-CI (`.github/workflows/ci.yml`) runs the suite, the vendor-manifest check, the
-build, and a stale-bundle guard on every push and PR.
+**Unit** — `tests/`, run with `node --test`, zero dependencies, 544 passing.
+Deterministic logic: dice, checks, combat, XP, spells and slots, schema
+validation, encounter state, save growth, the ledger, save slots. Modules bound
+to Spektrum or i18n are either injectable (`preClassify` takes `{ t, locale }`)
+or mirror-tested against the vendored library.
+
+Three contract tests carry more weight than their size suggests:
+`dom-contract.test.js` asserts every `getElementById` target exists in
+`index.html` AND that every `ui.*` binding has a computed producing it — both
+directions of the same silence. `i18n-parity.test.js` compares the keyed
+content tables entry for entry, because a key-set check passed for the repo's
+whole history while 39 creature intros were English-only. `validate.test.js`
+covers what happens when a provider ignores the schema it was sent.
+
+**End-to-end** — `tests/e2e/`, Playwright, `npm run test:e2e`. The LLM is mocked
+at the network boundary; everything else is the real turn loop in a real
+browser. This is the layer that would have caught the chip renderers looking up
+element ids that were not in the markup — every renderer null-guarded, so the
+whole click-to-play surface no-opped in silence for the repo's entire history,
+and no unit test could see it.
+
+CI (`.github/workflows/ci.yml`) runs the unit suite, the vendor-manifest check,
+the build, and a stale-bundle guard on every push and PR; the e2e suite runs as
+a separate job so a browser install can never destabilise the logic gate.

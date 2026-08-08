@@ -1051,3 +1051,15 @@ body.roleplay-mode #brand-bar   { display: none !important; }
   * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
   html { scroll-behavior: auto; }
 }
+
+/* A second tab on the same campaign never saves; the notice has to stay put
+   rather than scroll away with the transcript. */
+#spectator-banner {
+  grid-column: 1 / -1;
+  padding: 0.35rem 0.6rem;
+  font-size: 0.8rem;
+  line-height: 1.3;
+  color: #f0d8a0;
+  background: #5a2a1a;
+  border-top: 1px solid #8c4a2a;
+}
