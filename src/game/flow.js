@@ -755,6 +755,11 @@ async function converseWithNpc(settlementId, npcId) {
     } catch {
       resp = { reply: t('settlement.npcSilent', { name: npc.name }), revealsSecret: false };
     }
+    // A null RETURN (validation failure after a rate-limit fallback walk) is
+    // not a throw — it slipped past the catch and read `.reply` off null,
+    // crashing the conversation with a raw Fatal. Found by the live red-line
+    // run; the mock always answers, only real model chaos exposes this seam.
+    resp ??= { reply: t('settlement.npcSilent', { name: npc.name }), revealsSecret: false };
     UI.setThinking(false);
 
     UI.appendEntry('gm', `${npc.name}: "${resp.reply}"`);
