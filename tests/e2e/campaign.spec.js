@@ -215,12 +215,16 @@ async function bootDeluxe(page) {
   await expect(page.locator('#transcript')).toBeVisible();
 }
 
-// Answer the wizard: name, then "1" to every numbered question (class,
-// species, background, mode — campaign is option 1) until worldgen starts.
+// Answer the wizard. Deluxe asks the MODE first ("1" = campaign), THEN the
+// character wizard (name, then numbered picks). The first driver typed the
+// name into the mode prompt and the hero ended up christened "1".
 async function driveWizardIntoCampaign(page) {
   const cmd = page.locator('#cmd');
   await expect(cmd).toBeEnabled({ timeout: 30_000 });
-  await cmd.fill('Tester');
+  await cmd.fill('1');            // campaign mode
+  await cmd.press('Enter');
+  await expect(cmd).toBeEnabled({ timeout: 30_000 });
+  await cmd.fill('Tessa');        // the character's name
   await cmd.press('Enter');
   for (let i = 0; i < 10; i++) {
     await expect(cmd).toBeEnabled({ timeout: 30_000 });
@@ -288,6 +292,14 @@ test('a campaign crosses the sea: city, factions, far continent, dungeon', async
   }).toPass({ timeout: 60_000 });
   console.log('crossing lines observed before the town cleared them:', [...crossingSeen].join(' | ') || '(cleared too fast to poll)');
   await expect(transcript).toContainText('Brinemarket');   // the home port stays known
+  // The arrival note SURVIVES the town's screen clear now.
+  await expect(transcript).toContainText('days at sea');
+
+  // /map shows the layers: both continents, their homelands, the port marks.
+  await type('/map');
+  await expect(transcript).toContainText('Meridia — homeland of the Bellwardens');
+  await expect(transcript).toContainText('Karkos — homeland of the Saltborn Compact');
+  await expect(transcript).toContainText('the Ashen Strand');
 
   // The far city is a real settlement: its dungeon is one travel away.
   await type('travel to the Echoing Deep');

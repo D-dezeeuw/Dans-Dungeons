@@ -391,6 +391,13 @@ async function renderSettlement(settlement, settlementId) {
   UI.appendEntry('system', '');
   const settlementIntro = settlement.description ?? t('settlement.youAreIn', { name: settlement.name });
   UI.appendEntry('gm', settlementIntro);
+  // A journey's arrival note survives the scene change: towns own the screen
+  // (UI.clear above), which wiped the crossing prose the moment the player
+  // landed — the test run watched the sea vanish. The note re-anchors it.
+  if (_arrivalNote) {
+    UI.appendEntry('gm', _arrivalNote);
+    _arrivalNote = null;
+  }
   recordOpening(settlementIntro);   // persist the opening narration (survives undo/redo + reload)
   UI.appendEntry('system', '');
 
@@ -1221,6 +1228,10 @@ async function generateNeighbourRegion(exit) {
 
 // ─── The sea crossing (doc 17: continent travel) ─────────────────────────────
 
+// One line that outlives the arrival's screen clear — set by the crossing,
+// printed by renderSettlement right after the town intro.
+let _arrivalNote = null;
+
 // Sail from the current (port) province to the far side of its sea lane.
 // Three lazy loads happen exactly when the crossing needs them: the far
 // province outlines (detail 0 → 1) as the ship approaches, the landfall
@@ -1244,6 +1255,7 @@ async function sailAcross(fromSettlementId) {
       setValue('world', { ...appState.world,
         location: { ...appState.world.location, regionId: landed.id } });
       commit();
+      _arrivalNote = t('sail.arrivalNote', { name: landed.name, days: lane.days });
       UI.appendEntry('gm', t('sail.arriveKnown', { name: landed.name }));
       return sid;
     }
@@ -1305,6 +1317,7 @@ async function sailAcross(fromSettlementId) {
       location: { ...appState.world.location, regionId: region.id } });
     commit();
 
+    _arrivalNote = t('sail.arrivalNote', { name: region.name, days: lane.days });
     UI.appendEntry('gm', t('sail.arrive', { name: region.name, settlement: settlement.name }));
     return settlement.id;
   } catch (e) {

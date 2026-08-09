@@ -1056,7 +1056,12 @@
     "settlementLine": "    • {{name}}{{here}}",
     "connectsLine": "    → leidt naar: {{names}}",
     "rumouredHeader": "Voorbij de kaart die je gelopen hebt:",
-    "rumouredLine": "  {{name}} — {{hook}}"
+    "rumouredLine": "  {{name}} — {{hook}}",
+    "continentLine": "{{name}} {{held}}",
+    "continentDigest": "   {{digest}}",
+    "provinceLine": "  ◦ {{name}} ({{climate}}) {{marks}}",
+    "heldBy": "— thuisland van {{names}}",
+    "portMark": "⚓"
   },
   "story": {
     "header": "── Verhaal ──",
@@ -1210,6 +1215,7 @@
     "sight": "Land doemt op aan de horizon: {{name}}. {{digest}}",
     "arriveKnown": "De oversteek is inmiddels vertrouwd. Je gaat aan land in {{name}}.",
     "arrive": "Het schip meert aan bij {{settlement}}, aan de kust van {{name}}.",
-    "noPassage": "Geen schip waagt vandaag de oversteek. De haven wacht."
+    "noPassage": "Geen schip waagt vandaag de oversteek. De haven wacht.",
+    "arrivalNote": "Hier kwam je aan land na {{days}} dagen op zee — het zout van de oversteek zit nog in je jas."
   }
 }

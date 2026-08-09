@@ -1056,7 +1056,12 @@
     "settlementLine": "    • {{name}}{{here}}",
     "connectsLine": "    → leads toward: {{names}}",
     "rumouredHeader": "Beyond the map you have walked:",
-    "rumouredLine": "  {{name}} — {{hook}}"
+    "rumouredLine": "  {{name}} — {{hook}}",
+    "continentLine": "{{name}} {{held}}",
+    "continentDigest": "   {{digest}}",
+    "provinceLine": "  ◦ {{name}} ({{climate}}) {{marks}}",
+    "heldBy": "— homeland of {{names}}",
+    "portMark": "⚓"
   },
   "story": {
     "header": "── Story ──",
@@ -1210,6 +1215,7 @@
     "sight": "Land rises on the horizon: {{name}}. {{digest}}",
     "arriveKnown": "The crossing is familiar now. You come ashore in {{name}}.",
     "arrive": "The ship puts in at {{settlement}}, on the shore of {{name}}.",
-    "noPassage": "No ship will make the crossing today. The harbour waits."
+    "noPassage": "No ship will make the crossing today. The harbour waits.",
+    "arrivalNote": "You came ashore here after {{days}} days at sea — the salt of the crossing still on your coat."
   }
 }
