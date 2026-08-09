@@ -22,9 +22,10 @@ import { renderStoryView, renderRegionMap, showQuests, showInventory,
 import { clearTurnMarks, setScrubHandler } from './undo.js';
 import { enterEncounterState, exitEncounterState } from './encounter-state.js';
 import { cutChapter, shouldCutChapter, recap, chapterIndex } from './chapters.js';
-import { awardMilestone, announcementFor, xpProgress } from './progression.js';
+import { awardMilestone, announcementFor, xpProgress, awardXp, xpForKill } from './progression.js';
 import { storyStalled, gmDirective, raiseFlag, progress as storyProgress, actNumber } from './acts-runtime.js';
-import { armThreatClocks, rumours } from './world-clocks.js';
+import { armThreatClocks, rumours, activeThreatsAt, resolveThreat } from './world-clocks.js';
+import { statBlockFor } from './bestiary.js';
 import { initAtlas, initialAtlas, stubToward, hydrateRegion, mapView } from './atlas.js';
 import { seedCombat }     from './rng.js';
 import {
@@ -64,7 +65,11 @@ export function getJournalLog() { return journalLog; }
 function recordOpening(text) {
   if (!text) return;
   const turn = appState.session?.turnCount ?? 0;
-  setValue('transcript', [...(appState.transcript ?? []), { role: 'gm', text, turn }]);
+  // Narrow per-index append — the whole-array rewrite this replaced recorded a
+  // full transcript copy into Spektrum history at every scene opening, the
+  // exact growth pattern the S4 fix removed from the turn path.
+  const i = (appState.transcript ?? []).length;
+  setValue(`transcript.${i}`, { role: 'gm', text, turn });
   commit();
 }
 
@@ -345,6 +350,19 @@ async function renderSettlement(settlement, settlementId) {
   tick();
   // Phase 4.3: arriving in a region raises a visited flag (a beat prerequisite).
   if (settlement.regionId) setStoryFlag(`visited-${settlement.regionId}`);
+  // The act generator's completesOn vocabulary includes these two arrival
+  // flags — and nothing ever raised them, so an arrival beat could never
+  // flag-complete and always fell back to the paid LLM judge (or stalled).
+  setStoryFlag('settlement-reached');
+  if (settlement.regionId) setStoryFlag('region-reached');
+  // Crossing into a different region ends the chapter — one of the designed
+  // boundary triggers that previously had no call site.
+  const lastRegion = appState.session?.lastRegionId ?? null;
+  if (settlement.regionId && settlement.regionId !== lastRegion) {
+    setValue('session.lastRegionId', settlement.regionId);
+    tick();
+    if (lastRegion !== null) await markChapterBoundary('region-changed');
+  }
 
   UI.clear();
   UI.appendEntry('system', t('settlement.banner', { name: settlement.name }));
@@ -406,6 +424,11 @@ function settlementChips(settlement) {
   }
   if ((settlement.npcs ?? []).some(n => n.inventory?.length)) {
     chips.push({ label: t('settlement.shop'), value: t('settlement.shopCmd') });
+  }
+  // Minted threats haunting this place are confrontable, not just rumours —
+  // the back half of "the GM's inventions become real" (E9.S3).
+  for (const threat of activeThreatsAt()) {
+    chips.push({ label: t('settlement.confrontChip', { name: threat.name }), value: t('settlement.confrontCmd', { name: threat.name }) });
   }
   chips.push({ label: t('settlement.rest'),          value: t('settlement.restCmd') });
   chips.push({ label: t('settlement.questsChip'),    value: t('settlement.questsCmd') });
@@ -544,6 +567,14 @@ function normalizeSettlementAction(r, settlement) {
 // new verbs so the town stays playable without an LLM.
 function fallbackSettlementAction(raw, settlement) {
   const lower = raw.toLowerCase();
+  // Confronting a minted threat by name or by verb. Checked before NPC talk so
+  // "fight the privy ghoul" doesn't route to a conversation with the innkeeper.
+  const threats = activeThreatsAt();
+  const named = threats.find(th => lower.includes(th.name.toLowerCase()));
+  if (named) return { type: 'confront', threat: named };
+  if (/(confront|hunt|slay|fight|bestrijd|jaag|versla)/.test(lower) && threats.length) {
+    return { type: 'confront', threat: threats[0] };
+  }
   if (/(inventor|pack|carry|bezit|rugzak)/.test(lower)) return { type: 'inventory' };
   if (/(quest|task|opdracht|missie)/.test(lower))       return { type: 'quest' };
   if (/(rest|sleep|inn|rust|slaap|herberg)/.test(lower)) return { type: 'rest' };
@@ -573,6 +604,7 @@ async function handleSettlementAction(action, settlementId) {
     case 'rest':      await doRest(settlementId); return;
     case 'quest':     showQuests(); return;
     case 'inventory': showInventory(); return;
+    case 'confront':  await confrontThreat(action.threat, settlementId); return;
     case 'travel':
       if (!action.exit) { UI.appendEntry('system', t('settlement.noPath')); return; }
       return await doTravel(action.exit, settlementId);
@@ -837,6 +869,29 @@ async function narrateTravelBeat(kind, ctx) {
   _speak(text);
 }
 
+// ─── Confronting a minted threat — the FarStay ghoul's fight (E9.S3) ─────────
+//
+// The extraction pipeline minted the threat with a real stat block; this is
+// where it finally becomes fightable. Reuses the road-encounter machinery, so
+// a mid-fight reload resumes exactly like any other encounter. Victory writes
+// the resolution the plan promised: the kill as ground truth, XP through the
+// engine, and a citable because-line for the journal and epilogue.
+async function confrontThreat(threat, settlementId) {
+  if (!threat?.creatureId) { UI.appendEntry('system', t('settlement.noThreatHere')); return; }
+  UI.appendEntry('gm', t('settlement.confrontIntro', { name: threat.name }));
+  const outcome = await runEncounter(threat.creatureId);
+  if (outcome === 'defeat') { await doDefeat(); return; }
+  if (outcome === 'win') {
+    resolveThreat(threat.id, { name: threat.name });
+    let block = null;
+    try { block = statBlockFor(threat.creatureId); } catch { block = { cr: 0 }; }
+    const gained = awardXp(xpForKill(threat.creatureId, block), t('progress.killReason', { name: threat.name }));
+    UI.appendEntry('system', t('settlement.threatResolved', { name: threat.name }));
+    for (const line of announcementFor(gained)) UI.appendEntry('system', line);
+  }
+  commit();
+}
+
 // ─── Travel combat encounter — reuses the dungeon turn loop ───────────────────
 
 async function runEncounter(enemyId) {
@@ -928,7 +983,16 @@ async function runEncounterLoop() {
     UI.setThinking(false);
     if (!streamEl && result?.narration) UI.appendEntry('gm', result.narration);
     for (const line of (result?.progression ?? [])) UI.appendEntry('system', line);
+    // The campaign's ending, when the finale act just closed — rendered from
+    // the ledger, shown once, persisted so a reload doesn't replay it.
+    for (const line of (result?.epilogueLines ?? [])) UI.appendEntry('system', line);
     UI.appendEntry('system', '');
+    // Chapter boundaries used to gate exclusively on dungeon-clear victories:
+    // a wandering campaign never cut a chapter, so clocks never ticked and the
+    // ledger never compacted. An act transition cuts one, and the 40-turn
+    // backstop is finally EVALUATED every turn instead of never.
+    if (result?.actClosed) await markChapterBoundary('act-completed');
+    else await markChapterBoundary('backstop');
     _speak(result?.narration);
     UI.updateDebugPanel(result?._debug);
   }
@@ -949,7 +1013,11 @@ async function applyDiscovery(discovery, climate) {
     case 'loot': {
       const pool = tRaw('world.loot') ?? [];
       const item = pool.length ? pool[Math.floor(Math.random() * pool.length)] : { name: 'trinket', desc: '' };
-      const entry = { id: slug(item.name), name: item.name, description: item.desc ?? '', quantity: 1 };
+      // The WHOLE item passes through: dropping to {id,name,description} here
+      // stripped heals/gold/value/consumable, so a travel-found healing potion
+      // could never actually heal.
+      const { desc, ...fields } = item;
+      const entry = { ...fields, id: slug(item.name), name: item.name, description: desc ?? item.description ?? '', quantity: 1 };
       setValue('party', { ...appState.party, inventory: addToInventory(appState.party?.inventory, entry) });
       commit();
       UI.appendEntry('gm', t('travel.discoveryLoot', { name: item.name }));
@@ -965,7 +1033,10 @@ async function applyDiscovery(discovery, climate) {
       break;
     }
     case 'clue': {
-      const n = Object.keys(appState.world?.redThread?.flags ?? {}).filter(f => f.startsWith('clue-')).length + 1;
+      // Live flags land on the acts thread; the pre-acts redThread shape kept
+      // this counter stuck at clue-1 forever.
+      const flags = appState.world?.thread?.flags ?? appState.world?.redThread?.flags ?? {};
+      const n = Object.keys(flags).filter(f => f.startsWith('clue-')).length + 1;
       setStoryFlag(`clue-${n}`);
       UI.appendEntry('gm', t('travel.discoveryClue'));
       break;
@@ -1012,6 +1083,20 @@ async function generateNeighbourRegion(exit) {
   // graph rather than a star: the place beyond this road was always going to be
   // this place, and walking back returns to somewhere that still exists.
   const stub = stubToward(appState.world?.location?.regionId, exit.targetName);
+  // A stub that was already hydrated IS a place — re-travelling this road must
+  // return to it, not run AI generation over it again (which overwrote the
+  // region and minted a duplicate settlement: everything persists, except it
+  // didn't, on exactly this path).
+  if (stub?.id && appState.world?.regions?.[stub.id]) {
+    const existing = appState.world.regions[stub.id];
+    const settlementId = existing.settlements?.[0] ?? null;
+    if (settlementId && appState.world?.settlements?.[settlementId]) {
+      setValue('world', { ...appState.world,
+        location: { ...appState.world.location, regionId: stub.id } });
+      commit();
+      return { regionId: stub.id, settlementId };
+    }
+  }
   const seed = stub?.seed ?? Math.floor(Math.random() * 2147483647);
   const fresh = buildWorldBlueprint(seed);
   // Keep world identity; vary climate/settlement/dungeon/buildings/landmarks.
@@ -1068,8 +1153,10 @@ async function enterDungeon(exit, settlementId) {
       regionId:  appState.world?.location?.regionId ?? null,
       blueprint: appState.world?.blueprint ?? null,
       // The vault boss is raised for the party's level, so a late-campaign
-      // dungeon is not guarded by something a level-8 party walks over.
+      // dungeon is not guarded by something a level-8 party walks over — and
+      // the dungeon itself grows with the act, so the finale is a real descent.
       partyLevel: appState.party?.pc?.record?.level ?? 1,
+      act:        actNumber(),
     });
     const dungeons = { ...(appState.world?.dungeons ?? {}), [dungeonId]: dungeon };
     setValue('world', { ...appState.world, dungeons });
@@ -1295,11 +1382,16 @@ async function playLoop() {
     UI.appendEntry('player', `> ${raw}`);
     UI.clearChips();
     UI.setThinking(true);
+    // The staged indicator the encounter loop got in the E10 pass — this loop
+    // received only the cleanup line, and `stageTimer` here was an unbound
+    // identifier: every successful dungeon turn ended in a ReferenceError and
+    // the session died. The timer must exist in THIS scope.
+    const stageTimer = setTimeout(() => UI.setThinkingStage('rolling'), 900);
     if (appState.settings?.roleplayMode) UI.showRoleplayOverlay(true);
 
     let streamEl = null;
     function onChunk(text) {
-      if (!streamEl) { UI.setThinking(false); streamEl = UI.beginStreamEntry('gm'); }
+      if (!streamEl) { clearTimeout(stageTimer); UI.setThinking(false); streamEl = UI.beginStreamEntry('gm'); }
       UI.appendStreamChunk(streamEl, text);
     }
 
@@ -1329,11 +1421,16 @@ async function playLoop() {
           if (appState.settings?.roleplayMode) UI.showRoleplayOverlay(true);
           attempt--; caughtErr = null; continue;
         }
-        if (!/^AI 4\d\d:/.test(e.message) || attempt === RETRY_DELAYS.length) break;
+        // Retry what waiting can fix, and only that. The old `AI 4xx` match
+        // had the polarity half-inverted: it burned ~7s of backoff on 402/403/
+        // 404/413 (which waiting can never fix) and never auto-retried 5xx or
+        // network drops (which errors.js itself marks retryable).
+        if (!describeAiError(e).retryable || attempt === RETRY_DELAYS.length) break;
       }
     }
 
     if (caughtErr) {
+      clearTimeout(stageTimer);
       UI.setThinking(false);
       if (appState.settings?.roleplayMode) UI.showRoleplayOverlay(false);
       streamEl?.remove(); streamEl = null;
@@ -1355,7 +1452,16 @@ async function playLoop() {
     UI.setThinking(false);
     if (!streamEl && result?.narration) UI.appendEntry('gm', result.narration);
     for (const line of (result?.progression ?? [])) UI.appendEntry('system', line);
+    // The campaign's ending, when the finale act just closed — rendered from
+    // the ledger, shown once, persisted so a reload doesn't replay it.
+    for (const line of (result?.epilogueLines ?? [])) UI.appendEntry('system', line);
     UI.appendEntry('system', '');
+    // Chapter boundaries used to gate exclusively on dungeon-clear victories:
+    // a wandering campaign never cut a chapter, so clocks never ticked and the
+    // ledger never compacted. An act transition cuts one, and the 40-turn
+    // backstop is finally EVALUATED every turn instead of never.
+    if (result?.actClosed) await markChapterBoundary('act-completed');
+    else await markChapterBoundary('backstop');
 
     const journalEntry = { turn: appState.session?.turnCount ?? 0, narration: result?.narration ?? '', imageSrc: null };
     journalLog.push(journalEntry);
@@ -1484,6 +1590,16 @@ export async function resumeGame() {
     turn: appState.session?.turnCount,
   }));
   UI.appendEntry('system', '');
+
+  // A campaign saved before the atlas existed has no geography graph: give it
+  // one now, seeded from the current region, so its road exits resolve to
+  // pre-minted stubs instead of falling back to fresh random worlds (the star
+  // topology creeping back for exactly the saves the graph was built to fix).
+  const regionId = appState.world?.location?.regionId;
+  if (regionId && !appState.world?.geography?.nodes?.[regionId]) {
+    const region = appState.world?.regions?.[regionId];
+    initAtlas(regionId, region?.name ?? regionId, appState.world?.seed ?? 1);
+  }
 
   // Resume into the right context.
   const locType = appState.world?.location?.type;

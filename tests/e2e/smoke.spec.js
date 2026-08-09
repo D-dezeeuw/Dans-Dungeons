@@ -13,7 +13,22 @@
 // Run with `npm run test:e2e`. Kept out of `npm test` on purpose: the unit
 // suite is zero-dependency and must stay runnable with nothing installed.
 
-import { test, expect } from '@playwright/test';
+import { test as base, expect } from '@playwright/test';
+
+// Every test fails if its page threw an uncaught exception or an unhandled
+// rejection — not only the boot test. The fatal that motivated this (a
+// ReferenceError in the play loop's timer path) fired on the SECOND turn of a
+// campaign: the transcript assertions all passed while the game was already
+// dead under them. Pages created manually (extra tabs) are not covered; the
+// main `page` of every test is.
+const test = base.extend({
+  page: async ({ page }, use) => {
+    const fatals = [];
+    page.on('pageerror', e => fatals.push(e.message));
+    await use(page);
+    expect(fatals, `uncaught page errors:\n${fatals.join('\n')}`).toEqual([]);
+  },
+});
 
 // ─── The fake Game Master ────────────────────────────────────────────────────
 //
@@ -167,11 +182,38 @@ test('choices are clickable, not just typeable', async ({ page }) => {
   await expect(page.locator('#transcript')).toContainText(/Choose your species/i, { timeout: 20_000 });
 });
 
-test('a turn runs end to end and lands in the transcript', async ({ page }) => {
+test('two turns run end to end and land in the transcript', async ({ page }) => {
   await startCampaign(page);
   await page.fill('#cmd', 'look around');
   await page.press('#cmd', 'Enter');
   await expect(page.locator('#transcript')).toContainText(NARRATION, { timeout: 20_000 });
+
+  // The second turn is the one that crosses the commit → next-turn seam:
+  // thinking-stage timers, undo marks, digest bookkeeping. A fatal there
+  // leaves the first turn's transcript intact, so one turn proves too little.
+  await expect(page.locator('#cmd')).toBeEnabled({ timeout: 20_000 });
+  await page.fill('#cmd', 'look closer');
+  await page.press('#cmd', 'Enter');
+  await expect(async () => {
+    const text = await page.locator('#transcript').innerText();
+    expect(text.split(NARRATION).length - 1).toBeGreaterThanOrEqual(2);
+  }).toPass({ timeout: 20_000 });
+});
+
+test('the story and status views render mid-campaign', async ({ page }) => {
+  // The read-only screens share views.js, whose imports broke silently once —
+  // a fatal here is exactly what the pageerror fixture exists to catch.
+  // (`inventory` is deliberately not used: in a dungeon it is a narrated
+  // no-effect turn, not the settlement inventory screen.)
+  await startCampaign(page);
+  await page.fill('#cmd', '/story');
+  await page.press('#cmd', 'Enter');
+  await expect(page.locator('#transcript')).toContainText('── Story ──', { timeout: 10_000 });
+
+  await expect(page.locator('#cmd')).toBeEnabled({ timeout: 10_000 });
+  await page.fill('#cmd', '/status');
+  await page.press('#cmd', 'Enter');
+  await expect(page.locator('#transcript')).toContainText(/Tester — HP \d+\/\d+, AC \d+/, { timeout: 10_000 });
 });
 
 test('the campaign survives a reload', async ({ page }) => {

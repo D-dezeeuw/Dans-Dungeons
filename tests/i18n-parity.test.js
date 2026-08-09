@@ -63,6 +63,7 @@ const SHARED_VERBATIM = new Set([
   'spells.cantrip',          // "Cantrip" is used untranslated by Dutch players
   'spells.slotsLeft',        // "Slots: {{…}}" — the loanword Dutch tables use
   'progress.xpGained',       // pure format string
+  'story.epilogueDeed',      // pure format string ("  · {{deed}}")
   'meta.status',
   'meta.helpList',
   'settlement.banner',

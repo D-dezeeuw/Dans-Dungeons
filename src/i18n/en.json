@@ -234,7 +234,12 @@
     "questCompleted": "Quest complete: {{desc}}",
     "shopRefused": "They want nothing to do with you. No trade today.",
     "storyChip": "Story",
-    "rumourHeader": "What people are talking about:"
+    "rumourHeader": "What people are talking about:",
+    "confrontChip": "Confront {{name}}",
+    "confrontCmd": "confront {{name}}",
+    "confrontIntro": "You go looking for trouble — and find it. {{name}} turns to face you.",
+    "threatResolved": "{{name}} is dealt with. The place breathes easier.",
+    "noThreatHere": "There is nothing here to confront."
   },
   "adventure": {
     "banner": "── THE ADVENTURE BEGINS ──────────────────────",
@@ -1054,6 +1059,12 @@
   },
   "story": {
     "header": "── Story ──",
+    "actLine": "Act {{act}} — {{title}}",
+    "epilogueHeader": "═══ Epilogue ═══",
+    "epilogueOpening": "The tale of {{name}} and the world of {{world}} draws to its close.",
+    "epilogueDeed": "  · {{deed}}",
+    "epilogueClosing": "The roads remain open, and the world remembers. Play on as long as you like — or export your journal and let this chronicle stand.",
+    "epilogueUnknownHero": "a nameless wanderer",
     "progress": "Milestones reached: {{done}} / {{total}}.",
     "nextHint": "The thread pulls you onward — there is more to do.",
     "complete": "Every thread of this tale has been woven. The story is complete.",
@@ -1091,7 +1102,7 @@
     "autoplayUserMsg": "Choose your next action.",
     "journalPrompt": "You are a fantasy author retelling a D&D adventure as a coherent, immersive tale.\n\nCharacter: {{name}}, a {{class}}.\n\nWrite in second person past tense (\"You drew your blade…\"). Weave the turn-by-turn narrations below into flowing literary prose — not a transcript, but a proper story with atmosphere, tension, and rhythm.\n\nRules:\n- Create chapter breaks at natural narrative beats (entering a new room, a combat encounter, a discovery)\n- Each chapter needs a short evocative heading (e.g. \"The Hall of Broken Tables\", \"Steel Against Bone\")\n- Add sensory details, transitions between scenes, and emotional beats\n- Preserve all key events and outcomes from the narrations — do not invent new plot points\n- Open with atmosphere, close with weight or reflection\n- Keep the gritty low-fantasy tone\n\nNarrations to weave into the tale:\n{{narrations}}{{context}}\n\nOutput ONLY a JSON object:\n{\"title\": \"an evocative story title\", \"chapters\": [{\"heading\": \"chapter heading\", \"text\": \"the prose\"}, ...]}",
     "journalUserMsg": "Write the tale.",
-    "worldSeedPrompt": "You are a fantasy world architect. Create a unique D&D world with a central dramatic conflict.\n\nGenerate:\n- A world name (evocative, 1-2 words)\n- A tone: grimdark, heroic, or mysterious\n- A creation myth (2 sentences max)\n- 2-3 gods with name and domain\n- A red thread: a central dramatic premise (the overarching conflict) and a starting hook (what the player first encounters)\n- A digest: a compressed ~30-word summary of the above for injecting into child generators\n\nBe original. Avoid generic fantasy tropes. The world should feel lived-in and specific.\n\nRespond entirely in English.\n\nOutput ONLY a JSON object matching the schema.",
+    "worldSeedPrompt": "You are a fantasy world architect. Create a unique D&D world with a central dramatic conflict.\n\nGenerate:\n- A world name (evocative, 1-2 words)\n- A tone: grimdark, heroic, mysterious, tragic, or whimsical\n- A creation myth (2 sentences max)\n- 2-3 gods with name and domain\n- A red thread: a central dramatic premise (the overarching conflict) and a starting hook (what the player first encounters)\n- A digest: a compressed ~30-word summary of the above for injecting into child generators\n\nBe original. Avoid generic fantasy tropes. The world should feel lived-in and specific.\n\nRespond entirely in English.\n\nOutput ONLY a JSON object matching the schema.",
     "worldSeedUserMsg": "Create the world.",
     "beatsPrompt": "You are a campaign planner for a D&D adventure. Given the world digest below, create 3-5 story beats that form the red thread of the campaign.\n\nWorld digest:\n{{parentDigest}}\n\nEach beat is an abstract story node — not a concrete scene, but a dramatic purpose. For example: \"confront the authority figure\", \"discover the betrayal\", \"seal the breach\".\n\nFor each beat generate:\n- id (slug: beat.01.short-name)\n- dramaticPurpose: what this beat accomplishes narratively (1 sentence)\n- targetPlaytimeMinutes: estimated playtime (30-90)\n- prerequisites: array of flag ids that must be true before this beat is available (empty for beat 1)\n- setRequiredFlags: array of flag ids this beat sets when complete (these become prerequisites for later beats)\n- preferredLocation: null (will be assigned to regions later)\n- requiredArchetypes: array of {role, notes} — what NPCs this beat needs (roles: authority, antagonist, informant, mentor, fixer, muscle, herald)\n- successors: empty array (v1 is linear)\n\nBeats should escalate in drama. Beat 1 is the hook, final beat is the climax. Use a flag chain: beat 1 sets a flag that beat 2 requires, etc.\n\nRespond entirely in English.\n\nOutput ONLY a JSON object: {\"beats\": [...]}",
     "beatsUserMsg": "Create the story beats.",
@@ -1110,7 +1121,7 @@
     "worldgenStep6": "Generating the dungeon…",
     "worldgenDone": "The world is ready.",
     "defaultTone": "gritty low fantasy",
-    "actPrompt": "You are the author of an ongoing fantasy campaign, writing Act {{actNumber}}.\n\n{{finale}}\n\nWhat has happened so far:\n{{context}}\n\nWrite the next act as 5 to 7 beats. Rules:\n- Build on what actually happened. Reference the places, factions and events in the context by name — the player earned them.\n- Any unpaidSetups MUST be paid off in this act, or deliberately turned into something else. A clue that never lands is a broken promise.\n- Each beat needs an id (kebab-case, unique), a title, and a dramaticPurpose: one sentence stating what must become true for the beat to be over. Write the purpose so a reader can tell whether it has happened.\n- Set location to a place name from the context when the beat belongs somewhere specific, otherwise null.\n- Use requires to gate a beat behind an earlier one, as [\"beat-done-<id>\"]. Keep the act mostly linear with one or two optional branches.\n- Set completesOn to the mechanical flags that would end the beat by themselves, chosen ONLY from: [\"enemy-slain\", \"boss-slain\", \"treasure-taken\", \"gate-unlocked\", \"settlement-reached\", \"region-reached\"]. Use it whenever the beat turns on something the dice decide (a kill, a door, an arrival); use [] when the beat is about a conversation, a discovery, or a choice.\n- Escalate: this act should cost the player more than the last one.\n\nWrite in {{language}}. Return only JSON.",
+    "actPrompt": "You are the author of an ongoing fantasy campaign, writing Act {{actNumber}}.\n\n{{finale}}\n\nWhat has happened so far:\n{{context}}\n\nWrite the next act as 5 to 7 beats. Rules:\n- Build on what actually happened. Reference the places, factions and events in the context by name — the player earned them.\n- Any unpaidSetups MUST be paid off in this act, or deliberately turned into something else. A clue that never lands is a broken promise.\n- Each beat needs an id (kebab-case, unique), a title, and a dramaticPurpose: one sentence stating what must become true for the beat to be over. Write the purpose so a reader can tell whether it has happened.\n- Set location to a place name from the context when the beat belongs somewhere specific, otherwise null.\n- Use requires to gate a beat behind an earlier one, as [\"beat-done-<id>\"]. Keep the act mostly linear with one or two optional branches.\n- Set completesOn to the mechanical flags that would end the beat by themselves, chosen ONLY from: [\"enemy-slain\", \"boss-slain\", \"treasure-taken\", \"gate-unlocked\", \"settlement-reached\", \"region-reached\"]. Use it whenever the beat turns on something the dice decide (a kill, a door, an arrival); use [] when the beat is about a conversation, a discovery, or a choice.\n- Escalate: this act should cost the player more than the last one.\n- setups: 1 or 2 clues this act plants for LATER payoff — a detail the narrator can drop in passing that becomes meaningful when its beat arrives. Each has a clue (one evocative sentence) and paysInto (the id of the beat in THIS act that pays it off, or null if a future act should). Use [] only when nothing is worth foreshadowing.\n\nWrite in {{language}}. Return only JSON.",
     "actFinaleNote": "This is the FINAL act. It must resolve the campaign's central conflict and give the player a decisive confrontation — a real ending, not another errand.",
     "actUserMsg": "Write the next act."
   },
@@ -1127,7 +1138,11 @@
     "building": "Talk keeps circling back to {{subject}}. Nobody is joking now.",
     "imminent": "{{subject}} — and the room goes quiet when it comes up.",
     "breaking": "{{subject}}. It has gone past talk.",
-    "resolved": "They still tell the story of {{subject}}."
+    "resolved": "They still tell the story of {{subject}}.",
+    "escalatedBecause": "{{subject}} — it has grown worse while nobody acted",
+    "placeTroubled": "word spreads that {{subject}}",
+    "threatResolved": "the day {{name}} was finally dealt with",
+    "digestLately": "Lately: {{news}}."
   },
   "error": {
     "auth": "Your API key was rejected (401). Open Settings and check the key, or sign in again.",

@@ -12,12 +12,8 @@ import { spendResource } from '../mechanics.js';
  * SRD 5.2 § Barbarian Features table — Rages column. Number of
  * Rages the Barbarian can enter per Long Rest at each class level.
  *
- * L20 sits at "Unlimited" in the PHB; we model that as 999 because
- * the resource counter is integer-only, and a player isn't going to
- * spend 999 rages in a single session — keeps the math layer
- * compatible without introducing a sentinel value across every
- * resource consumer. Future enhancement: a `max: 'unlimited'`
- * sentinel handled uniformly by `spendResource`.
+ * SRD 5.2 caps L20 at six rages (the 2014 "Unlimited" is gone —
+ * the table below IS the 2024 column, including the 6 at L17+).
  */
 export const RAGES_BY_LEVEL = Object.freeze({
   1: 2,  2: 2,  3: 3,  4: 3,  5: 3,

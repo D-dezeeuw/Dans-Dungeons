@@ -18,8 +18,8 @@
 // a region left, a long rest taken in safety, or simply enough turns.
 
 import { appState, setValue, tick } from '../core/state.js';
-import { summarizeChapter } from '../ai/summarize.js';
-import { recentEvents, compactLedger } from './ledger.js';
+import { summarizeChapter, titleChapter } from '../ai/summarize.js';
+import { recentEvents, compactLedger, refreshStaleDigests } from './ledger.js';
 import { tickWorldClocks } from './world-clocks.js';
 import { t } from '../i18n/i18n.js';
 
@@ -100,9 +100,13 @@ export async function cutChapter(reason, { title = null } = {}) {
     events:     recentEvents({ limit: 10 }).map(e => e.because),
   });
 
+  // Name the chapter after what actually happened in it. Best-effort: a failed
+  // or empty title falls back to the numbered one, never blocks the boundary.
+  const named = title ?? (digest ? await titleChapter(digest) : null);
+
   const closed = {
     id:        `ch-${chapterIndex()}`,
-    title:     title ?? t('chapter.untitled', { n: chapterIndex() }),
+    title:     named ?? t('chapter.untitled', { n: chapterIndex() }),
     digest:    digest ?? '',
     startTurn: start,
     endTurn:   turn,
@@ -124,6 +128,11 @@ export async function cutChapter(reason, { title = null } = {}) {
   // ...and the moment the world moves on its own. Threats the player walked
   // away from get worse; a filled clock becomes regional news.
   tickWorldClocks();
+
+  // With the world moved, serve the news: any region the chapter's ledger
+  // activity marked stale gets its digest refreshed from those causes, so the
+  // scope packet's "stable head" stays true rather than frozen at worldgen.
+  refreshStaleDigests(start);
 
   return closed;
 }

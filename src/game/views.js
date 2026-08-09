@@ -10,14 +10,15 @@
 // writes quest status, but it is quest bookkeeping and belongs beside the log
 // that displays it rather than beside the dungeon that triggers it.
 
-import { appState, setValue } from '../core/state.js';
+import { appState, setValue, tick, saveToStorage } from '../core/state.js';
 import * as UI from '../ui/console.js';
 import { t } from '../i18n/i18n.js';
 import { progress as storyProgress, actNumber, gmDirective } from './acts-runtime.js';
-import { reputationStanding, awardReputation } from './story.js';
+import { reputationStanding, awardReputation, setStoryFlag } from './story.js';
 import { mapView } from './atlas.js';
 import { rumours } from './world-clocks.js';
-import { xpProgress } from './progression.js';
+import { xpProgress, awardMilestone, announcementFor } from './progression.js';
+import { goldOf } from 'bag-of-holding-client';
 import { setQuestStatus, activeQuests } from 'bag-of-holding-client';
 
 
@@ -30,10 +31,11 @@ export function repBar(rep) {
 export function renderStoryView() {
   UI.appendEntry('system', t('story.header'));
 
-  const p = storyProgressNow(); // { done, total, current }
-  if (p.total) {
-    UI.appendEntry('system', t('story.progress', { done: p.done, total: p.total }));
-    UI.appendEntry('system', p.current ? t('story.nextHint') : t('story.complete'));
+  const p = storyProgress(); // { act, acts, beatsDone, beats, complete, currentTitle }
+  if (p.beats) {
+    UI.appendEntry('system', t('story.actLine', { act: Math.min(p.act, p.acts), title: p.currentTitle ?? '—' }));
+    UI.appendEntry('system', t('story.progress', { done: p.beatsDone, total: p.beats }));
+    UI.appendEntry('system', p.complete ? t('story.complete') : t('story.nextHint'));
   } else {
     UI.appendEntry('system', t('story.noThread'));
   }
@@ -45,7 +47,7 @@ export function renderStoryView() {
     UI.appendEntry('system', t('story.factionsHeader'));
     for (const [id, rep] of facEntries) {
       const name = appState.world?.factions?.[id]?.name ?? id;
-      const stand = standing(rep);
+      const stand = reputationStanding(rep);
       UI.appendEntry('system', t('story.factionLine', { name, bar: repBar(rep), rep, standing: t(`story.standing.${stand}`) }));
     }
   }
@@ -59,7 +61,10 @@ export function renderStoryView() {
     }
   }
 
-  const flags = Object.keys(appState.world?.redThread?.flags ?? {}).filter(f => !f.startsWith('beat-done-'));
+  // Live flags land on the acts thread; redThread is the pre-acts legacy shape
+  // kept only as a migration source.
+  const flags = Object.keys(appState.world?.thread?.flags ?? appState.world?.redThread?.flags ?? {})
+    .filter(f => !f.startsWith('beat-done-'));
   if (flags.length) {
     UI.appendEntry('system', '');
     UI.appendEntry('system', t('story.flagsHeader'));

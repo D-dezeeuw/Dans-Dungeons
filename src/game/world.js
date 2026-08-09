@@ -55,7 +55,20 @@ function dungeonContent() {
 // ─── Dungeon generator ────────────────────────────────────────────────────────
 // Returns { rooms, npcs, currentRoom, exitRoomId } for embedding in world.dungeons.
 
-export function generateDungeon(seed, blueprint, { partyLevel = 1 } = {}) {
+// Dungeon scale by act: act 1 keeps the classic 4-6 spine / 2-4 branches, and
+// each later act adds rooms, so a finale dungeon is a real descent rather than
+// the same six chambers the campaign opened with. Pure — callers pass the act.
+export function dungeonSizeForAct(act = 1) {
+  const grow = Math.max(0, Math.trunc(act || 1) - 1);
+  return {
+    spineMin:  4 + Math.floor(grow / 2),
+    spineMax:  6 + grow,
+    branchMin: 2 + Math.floor(grow / 2),
+    branchMax: 4 + grow,
+  };
+}
+
+export function generateDungeon(seed, blueprint, { partyLevel = 1, act = 1 } = {}) {
   // The vault boss is raised a tier for the party's level, so it brings
   // multiattack, legendary actions and legendary resistance to the fight rather
   // than just a bigger hit-point pool. The generator asks for the boss block by
@@ -72,6 +85,7 @@ export function generateDungeon(seed, blueprint, { partyLevel = 1 } = {}) {
     overlays:        DUNGEON_OVERLAYS,
     defaultEnemyIds: DEFAULT_ENEMY_IDS,
     content:         dungeonContent(),
+    size:            dungeonSizeForAct(act),
   });
 }
 
@@ -97,9 +111,9 @@ export function buildEnemy(creatureId, { npcId = 'enc-1', roomId = 'encounter', 
 
 const DUNGEON_THEMES = ['undead', 'goblin', 'cult', 'beast', 'arcane', 'ruin'];
 
-export function createDungeonEntry({ id, name, regionId, seed: entrySeed, blueprint = null, partyLevel = 1 }) {
+export function createDungeonEntry({ id, name, regionId, seed: entrySeed, blueprint = null, partyLevel = 1, act = 1 }) {
   const dungeonSeed = entrySeed ?? Math.floor(Math.random() * 2147483647);
-  const dungeon     = generateDungeon(dungeonSeed, blueprint, { partyLevel });
+  const dungeon     = generateDungeon(dungeonSeed, blueprint, { partyLevel, act });
   const roomCount   = Object.keys(dungeon.rooms).length;
   const enemyNames  = Object.values(dungeon.npcs).map(n => n.name);
   const theme       = blueprint?.dungeonTheme ?? DUNGEON_THEMES[Math.floor(Math.random() * DUNGEON_THEMES.length)];

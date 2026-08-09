@@ -12,15 +12,17 @@
 // the class handler.
 //
 //   actor.resources = {
-//     secondWind: { used: 0, max: 1, refreshes: 'short' },
+//     secondWind: { used: 0, max: 3, refreshes: 'long', shortRestRecovery: 1 },
 //     actionSurge: { used: 0, max: 1, refreshes: 'short' },
 //     ...
 //   }
 //
-// Class defs declare their resource specs alongside their handlers:
+// Class defs declare their resource specs alongside their handlers
+// (`max` may be a `(level) => n` function for level-scaled pools):
 //
 //   resources: {
-//     secondWind: { max: 1, refreshes: 'short' }
+//     secondWind: { max: (level) => (level >= 10 ? 4 : level >= 4 ? 3 : 2),
+//                   refreshes: 'long', shortRestRecovery: 1 }
 //   },
 //   mechanics: {
 //     secondWind: (actor, args, ctx) => { ... }

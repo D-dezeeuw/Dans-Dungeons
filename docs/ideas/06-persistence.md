@@ -1,8 +1,14 @@
 # 06 — Persistence
 
-> **IMPLEMENTATION STATUS (PARTIAL)** — audited 2026-08-07.
-> Versioned save envelopes, migrations and export/import shipped. The IndexedDB split this doc calls "essential, not optional" does NOT exist; saves are localStorage-only. The quota-failure UX specified here was implemented in 2026-08 (loud failure, pressure warning, corrupt-save quarantine). Multi-slot saves, compression and encryption remain unbuilt. Epic E3.
-> Full evidence: [`docs/audit/2026-08-comprehensive-audit.md`](../audit/2026-08-comprehensive-audit.md).
+> **IMPLEMENTATION STATUS (IMPLEMENTED, two gaps)** — re-audited 2026-08-09.
+> The hot/cold split this doc calls "essential, not optional" exists: the
+> localStorage envelope keeps a bounded hot slice (recent transcript + ledger)
+> and everything older is archived to IndexedDB in append-only segments, with
+> the watermark advancing only on a CONFIRMED cold write and riding Spektrum
+> history so undo rewinds it. A one-time migration dedupes archives written by
+> the earlier re-archiving bug. Multi-slot saves, quota UX and export/import
+> shipped earlier. Still unbuilt: compression and encryption.
+> Full evidence: [`docs/audit/2026-08-verification-audit.md`](../audit/2026-08-verification-audit.md).
 
 > **Status:** rough sketch.
 

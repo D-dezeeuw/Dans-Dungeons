@@ -24,18 +24,41 @@ import {
 // Flags are the PRIMARY completion signal: mechanical events raise them, so a
 // beat finishes because something happened rather than because a language model
 // was asked whether the scene felt finished.
+//
+// An act can close on this path — the designed COMMON case: the act's last
+// beat completes on a mechanical flag like `boss-slain`. The closure used to
+// be discarded here, so the next act was never generated and the campaign's
+// story silently stopped. setStoryFlag is sync (called mid-commit); act
+// generation is an async LLM call — so the closure is queued, and the turn
+// loop drains it with `takePendingActClose()` at its async seam.
+let _pendingActClose = false;
+
 export function setStoryFlag(flag) {
   raiseFlag(flag);
-  autoCompleteFlaggedBeats();
+  const { actClosed } = autoCompleteFlaggedBeats();
+  if (actClosed) _pendingActClose = true;
 }
 
-// A beat whose dramatic purpose names a flag that is now raised is done. This is
-// what demotes the LLM judge to a fallback.
+export function takePendingActClose() {
+  const pending = _pendingActClose;
+  _pendingActClose = false;
+  return pending;
+}
+
+// A beat whose `completesOn` flags are ALL raised is done. This is what
+// demotes the LLM judge to a fallback. `completesOn` is an array per the act
+// schema — the old scalar read (`flags[completesOn]`) coerced the array to a
+// string, so only single-element arrays ever matched, by accident.
 function autoCompleteFlaggedBeats() {
   const beat = actsActiveBeat();
-  if (!beat) return;
-  const need = beat.completesOn ?? beat.flag ?? null;
-  if (need && appState.world?.thread?.flags?.[need]) actsCompleteBeat(beat.id);
+  if (!beat) return { completed: false, actClosed: false };
+  const need = Array.isArray(beat.completesOn)
+    ? beat.completesOn
+    : (beat.completesOn ?? beat.flag) ? [beat.completesOn ?? beat.flag] : [];
+  if (!need.length) return { completed: false, actClosed: false };
+  const flags = appState.world?.thread?.flags ?? {};
+  if (!need.every(f => !!flags[f])) return { completed: false, actClosed: false };
+  return actsCompleteBeat(beat.id);
 }
 
 // ─── Beats ──────────────────────────────────────────────────────────────────

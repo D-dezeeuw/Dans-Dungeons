@@ -115,8 +115,10 @@ export function rollOrder(participants, rng = Math.random, onInitiativeRoll) {
     const initiative = d20 + modFromScore(p.dexterity);
     // Optional per-roll callback — engine wrapper passes one that
     // appends a `rollInitiative` entry to the engine's roll log so
-    // the encounter's dice draws are replay-verifiable.
-    if (onInitiativeRoll) onInitiativeRoll({ id: p.id, dexterity: p.dexterity, value: initiative });
+    // the encounter's dice draws are replay-verifiable. `surprised`
+    // travels with it: a surprised combatant consumed TWO d20 draws,
+    // and replay must consume the same two or every later entry shifts.
+    if (onInitiativeRoll) onInitiativeRoll({ id: p.id, dexterity: p.dexterity, value: initiative, surprised: p.surprised === true });
     return { ...p, initiative, initiativeD20: d20 };
   });
   rolled.sort((a, b) => {

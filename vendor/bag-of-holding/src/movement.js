@@ -80,9 +80,9 @@ function strMod(actor) {
 }
 
 /**
- * Long jump distance per SRD: `STR mod` feet with a 10-ft running
- * start; halved without the running start. Returns the distance in
- * feet (always ≥ 0).
+ * Long jump distance per SRD 5.2: `STR score` feet with a 10-ft
+ * running start; halved without the running start. Returns the
+ * distance in feet (always ≥ 0).
  */
 function strScore(actor) {
   return actor?.abilityScores?.str ?? actor?.strength ?? actor?.abilityScores?.final?.str ?? 10;

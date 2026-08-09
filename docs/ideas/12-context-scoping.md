@@ -1,8 +1,14 @@
 # 12 — Context scoping (what the AI sees, per turn)
 
-> **IMPLEMENTATION STATUS (DOC-ONLY)** — audited 2026-08-07.
-> None of this is implemented. The narrator currently sees the last 3 transcript entries plus a digest chain — the single hardest blocker to an 80-hour campaign. This doc remains the right design; it is Epic E5 of the implementation plan, and Epic E2 (the world ledger) is the memory layer it needs underneath it.
-> Full evidence: [`docs/audit/2026-08-comprehensive-audit.md`](../audit/2026-08-comprehensive-audit.md).
+> **IMPLEMENTATION STATUS (IMPLEMENTED)** — re-audited 2026-08-09.
+> `src/game/scope.js` assembles the packet this doc designed — here / nearby /
+> region / world / memory / known, with `gmOnly` travelling only in the system
+> prompt — on the world ledger (Epic E2) underneath it. Budgets live in
+> `scope-budget.js` and are pinned by tests; region digests are refreshed from
+> the ledger's dirty tracking at chapter boundaries instead of freezing at
+> worldgen. The size-class budget TUNING is still first-guess, as this doc
+> predicted only real measurement would pin down.
+> Full evidence: [`docs/audit/2026-08-verification-audit.md`](../audit/2026-08-verification-audit.md).
 
 > **Status:** rough sketch. The biggest unknown is the size-class budget
 > tuning, which only real measurement will pin down.

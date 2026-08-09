@@ -57,18 +57,25 @@ export function actNumber()       { return thread().actIndex + 1; }
 
 export function raiseFlag(flag) {
   const t = thread();
-  const next = setActFlag(t, flag);
+  // The turn travels with the flag: progress restarts the stall clock from
+  // NOW (the old call made the detector measure from turn 0, so any late-game
+  // flag instantly read as a stall and fired a spurious escalation).
+  const next = setActFlag(t, flag, { turn: appState.session?.turnCount ?? 0 });
   return next === t ? false : (save(next), true);
 }
 
 // Complete a beat. Returns { completed, actClosed } so the caller can run the
 // act-transition ceremony (and generate the next act) at the right moment.
+// Completing a beat also pays any setup that was planted to pay into it.
 export function completeBeat(beatId) {
   const before = thread();
   const turn   = appState.session?.turnCount ?? 0;
   const after  = completeActBeat(before, beatId, { turn });
   if (after === before) return { completed: false, actClosed: false };
   save(after);
+  for (const setup of duePayoffs(after)) {
+    if (setup.paysInto === beatId) payClue(setup.id);
+  }
   return { completed: true, actClosed: after.actIndex > before.actIndex };
 }
 
@@ -143,16 +150,37 @@ export function nextActContext() {
   };
 }
 
-// Store a generated act and make it current.
+// Store a generated act and make it current — and plant its foreshadowing.
+// The generator now proposes `setups`; planting them here is what turned the
+// payoff ledger from an exported orphan into a channel with a producer.
 export function adoptAct(generated) {
   if (!generated?.beats?.length) return null;
   const t = thread();
+  const actNumber = t.acts.length + 1;
   const act = makeAct({
-    id:      `act-${t.acts.length + 1}`,
-    title:   generated.title   ?? `Act ${t.acts.length + 1}`,
+    id:      `act-${actNumber}`,
+    title:   generated.title   ?? `Act ${actNumber}`,
     premise: generated.premise ?? '',
     beats:   generated.beats,
   });
-  save(pushAct(t, act));
+  // The six generic completesOn signals are PER-ACT events: flags are sticky,
+  // so without this reset a new act's "reach a settlement" or "slay the boss"
+  // beat would complete instantly off something the player did an act ago.
+  // Specific flags (visited-<id>, boss-<id>-slain, beat-done-*) persist.
+  const GENERIC_SIGNALS = ['enemy-slain', 'boss-slain', 'treasure-taken',
+                           'gate-unlocked', 'settlement-reached', 'region-reached'];
+  const flags = { ...t.flags };
+  for (const f of GENERIC_SIGNALS) delete flags[f];
+  save(pushAct({ ...t, flags }, act));
+  for (const [i, setup] of (generated.setups ?? []).entries()) {
+    plantClue({
+      id:       `setup-act${actNumber}-${i + 1}`,
+      clue:     setup.clue,
+      paysInto: setup.paysInto ?? null,
+      // A clue paying into this act is due here; an open-ended one is due by
+      // the NEXT act, so generation must weave it in or abandon it on record.
+      dueByAct: setup.paysInto ? actNumber : actNumber + 1,
+    });
+  }
   return act;
 }

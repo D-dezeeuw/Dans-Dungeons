@@ -1,7 +1,7 @@
 // src/ui/exports.js — journal, screenshot, sketch gallery, and save file I/O.
 // All functions are triggered by user action; none interact with the game loop.
 
-import { appState, setValue, restoreState, commit, serializeSave, parseSave, fullTranscript,
+import { appState, setValue, restoreState, initState, commit, serializeSave, parseSave, fullTranscript,
          saveToSlot, loadFromSlot, slots, removeSlot, MAX_SLOTS, tick } from '../core/state.js';
 import { appendEntry, setThinking } from './transcript.js';
 import { pickFrom, prompt } from './input.js';
@@ -96,10 +96,7 @@ export function handleImportFile(e) {
         appendEntry('error', t('exports.importFail'));
         return;
       }
-      restoreState(snap);   // skips _timeTravel internally
-      // Re-derive the sheet from the imported record rather than trusting the
-      // sheet in the file (which may be stale or engine-version-mismatched).
-      if (appState.party?.pc) setValue('party.pc', reconcilePc(appState.party.pc));
+      resetAndRestore(snap);
       // Reconstruct undo/redo + branches if the file carried them; failsafe
       // re-restores the plain state so a bad blob never breaks the import.
       if (snap._timeTravel && appState.session?.phase === 'play') {
@@ -107,6 +104,9 @@ export function handleImportFile(e) {
       }
       commit();
       appendEntry('system', t('exports.imported', { file: file.name }));
+      // The flow FSM on screen is still driving the OLD campaign; a reload
+      // reboots it into the imported one instead of half-swapping underneath.
+      setTimeout(() => location.reload(), 600);
     } catch {
       appendEntry('error', t('exports.importFail'));
     }
@@ -380,11 +380,30 @@ export async function manageSlots() {
 
   const snap = loadFromSlot(choice.id);
   if (!snap) { appendEntry('error', t('slots.loadFail')); return; }
-  restoreState(snap);
+  resetAndRestore(snap);
+  // COMMIT before the reload: the previous restore-then-reload never saved, so
+  // the reload booted from the untouched autosave and loading a slot was a
+  // silent no-op — six slots that saved and never loaded.
+  commit();
+  appendEntry('system', t('slots.loaded'));
+  // The world on screen no longer matches the state, so the page reloads into
+  // it rather than half-swapping underneath the player.
+  setTimeout(() => location.reload(), 600);
+}
+
+// Restoring over a LIVE campaign must replace it, not blend with it: Spektrum's
+// deep-merge unions object maps, so without a reset the restored world kept the
+// old campaign's rooms, NPCs, quests and flags mixed into the new one — and
+// commit() then persisted the contamination. The importer's own credentials
+// survive the reset (save files and slots are credential-stripped by design).
+function resetAndRestore(snap) {
+  const { key, baseUrl } = appState.ai ?? {};
+  initState();
+  restoreState(snap);   // skips _timeTravel internally
+  if (key)     setValue('ai.key', key);
+  if (baseUrl) setValue('ai.baseUrl', baseUrl);
+  // Re-derive the sheet from the restored record rather than trusting the
+  // stored sheet (which may be stale or engine-version-mismatched).
   if (appState.party?.pc) setValue('party.pc', reconcilePc(appState.party.pc));
   tick();
-  appendEntry('system', t('slots.loaded'));
-  // Same as an imported save: the world on screen no longer matches the state,
-  // so the page reloads into it rather than half-swapping underneath the player.
-  setTimeout(() => location.reload(), 600);
 }

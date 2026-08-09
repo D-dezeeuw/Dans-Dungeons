@@ -15,14 +15,15 @@ import { checkKey }                          from '../ai/client.js';
 import { resolveRules, goblinRetaliates, commitAll, appendTranscript,
          isPcDown, resolveDownTurn, commitDownTurn } from './resolver.js';
 import { beginRoller, commitRoller }          from './rng.js';
-import { buildStoryContext, setStoryFlag, activeBeat, completeBeatNow } from './story.js';
+import { buildStoryContext, setStoryFlag, activeBeat, completeBeatNow, takePendingActClose } from './story.js';
 import { beginTurn, finalizeTurn }          from './undo.js';
 import { recordMechanical, currentPlaceId, currentRoomId, entitiesUnder,
-         detailsAt, recentEvents, encounterKey } from './ledger.js';
+         recentEvents, encounterKey } from './ledger.js';
 import { assembleScope }                     from './scope.js';
 import { extractCanon }                      from '../ai/canon.js';
 import { memoryContext, maybeRefreshDigest } from './chapters.js';
 import { commitCanon }                       from './canon-commit.js';
+import { resolveThreat }                     from './world-clocks.js';
 import { nextActContext, adoptAct, beatSatisfiedByFlags, TARGET_ACTS } from './acts-runtime.js';
 import { generateAct }                       from '../ai/acts.js';
 import { awardXp, xpForKill, announcementFor } from './progression.js';
@@ -80,25 +81,26 @@ export function buildScene() {
     }
   }
 
-  // Leaf-to-root digest path for world context (if campaign mode)
+  // The scope packet (Epic E5.S1) is assembled once and CONSUMED — its world
+  // and region slices are the budget-clamped digests, its details/recently are
+  // the ledger memory, its nearby/known are the sense and knowledge tiers.
+  // buildScene used to rebuild its own unclamped digest chain beside the
+  // packet, so the token budget applied to an object that never reached the
+  // prompt: budget theater, measured against nothing.
+  const packet = assembleScope();
+  const digestPath = [];
   const loc = appState.world?.location;
-  if (loc && appState.world?.digest) {
-    const digestPath = [];
-    if (loc.dungeonId) {
-      const d = appState.world.dungeons?.[loc.dungeonId];
-      if (d?.digest) digestPath.push(d.digest);
-    }
-    if (loc.settlementId) {
-      const s = appState.world.settlements?.[loc.settlementId];
-      if (s?.digest) digestPath.push(s.digest);
-    }
-    if (loc.regionId) {
-      const r = appState.world.regions?.[loc.regionId];
-      if (r?.digest) digestPath.push(r.digest);
-    }
-    if (appState.world.digest) digestPath.push(appState.world.digest);
-    if (digestPath.length) scene.worldContext = digestPath.join(' | ');
+  if (loc?.dungeonId) {
+    const d = appState.world.dungeons?.[loc.dungeonId];
+    if (d?.digest) digestPath.push(d.digest);
   }
+  if (loc?.settlementId) {
+    const s = appState.world.settlements?.[loc.settlementId];
+    if (s?.digest) digestPath.push(s.digest);
+  }
+  if (packet.region?.digest) digestPath.push(packet.region.digest);
+  if (packet.world?.digest)  digestPath.push(packet.world.digest);
+  if (digestPath.length) scene.worldContext = digestPath.join(' | ');
 
   // Phase 4: story context — current beat directive (GM-only), faction tensions,
   // active quests, recent flags — so the narrator weaves the red thread in.
@@ -107,22 +109,15 @@ export function buildScene() {
 
   // The generated world's tone travels with the scene so the narrator stops
   // hardcoding one voice regardless of what the blueprint rolled.
-  const tone = appState.world?.tone;
+  const tone = packet.world?.tone ?? appState.world?.tone;
   if (tone) scene.tone = tone;
 
   // Ledger memory (Epic E2): what this place has accumulated, and what the world
   // has been doing lately. This is what stops the GM contradicting itself — the
   // mould it described thirty turns ago comes back with the room.
-  const details = detailsAt(currentRoomId());
-  if (details.length) scene.knownDetails = details.map(d => `${d.name}: ${d.note}`);
+  if (packet.here?.details?.length) scene.knownDetails = packet.here.details;
+  if (packet.recently?.length)     scene.recentEvents = packet.recently;
 
-  const events = recentEvents({ limit: 5, minScope: 'local' });
-  if (events.length) scene.recentEvents = events.map(e => e.because);
-
-  // Scope tiers (Epic E5.S1): what is one step away, and what THIS character
-  // has actually learned. Merged into the scene rather than replacing it so the
-  // classifier's contract is unchanged.
-  const packet = assembleScope();
   if (packet.nearby?.length) scene.nearby = packet.nearby;
   if (packet.known?.length)  scene.known  = packet.known;
 
@@ -177,10 +172,15 @@ export async function processTurn(playerInput, onNarrationChunk) {
                                'unlock', 'rest', 'use', 'flee'].includes(resolved.intent);
   const goblinSurvived      = !['attack', 'cast'].includes(resolved.intent) || !resolved.targetDead;
   // Getting away means getting away: a successful flight is not punished by the
-  // enemy it just escaped. This is the same class of contradiction as a stealth
-  // success narrated alongside the hit it was supposed to prevent.
+  // enemy it just escaped — and neither is a successful STEALTH check, which is
+  // the exact contradiction the audit named twice: success narrated while the
+  // goblin's hit landed in the same paragraph. The resolver decides; the
+  // narrator only describes.
   const escaped             = resolved.intent === 'flee' && resolved.success === true;
-  const goblinResult        = (goblinTurnTriggered && goblinSurvived && !escaped)
+  const hidden              = resolved.intent === 'skill'
+    && resolved.skill === 'stealth'
+    && resolved.success === true;
+  const goblinResult        = (goblinTurnTriggered && goblinSurvived && !escaped && !hidden)
     ? goblinRetaliates(roller)
     : null;
 
@@ -259,6 +259,13 @@ export async function processTurn(playerInput, onNarrationChunk) {
   await maybeRefreshDigest();   // rolling chapter memory (Epic E4)
   await beatPass;
 
+  // An act can also close on the FLAG path (setStoryFlag → the act's last
+  // beat completes on a mechanical flag — the designed common case). That
+  // closure is queued synchronously and drained here, at the turn's async
+  // seam; before this drain existed, the next act was simply never generated
+  // and the campaign's story stopped without a word.
+  if (takePendingActClose()) { await onActClosed(); _actJustClosed = true; }
+
   // 7. Turn fully committed (mechanics + flags) — register the undo boundary (a
   //    throw above never reaches here) and autosave once.
   finalizeTurn(turnMark);
@@ -267,8 +274,19 @@ export async function processTurn(playerInput, onNarrationChunk) {
   return {
     ...narratorResp,
     progression: progression ? announcementFor(progression) : null,
+    epilogueLines: takeEpilogue(),
+    // flow.js cuts a chapter (with its banner ceremony) on an act transition —
+    // the loop cannot import flow, so the fact travels in the result.
+    actClosed: takeActClosed(),
     _debug: { classified, resolved, goblinResult, progression },
   };
+}
+
+let _actJustClosed = false;
+function takeActClosed() {
+  const closed = _actJustClosed;
+  _actJustClosed = false;
+  return closed;
 }
 
 // ─── World ledger (Epic E2) ──────────────────────────────────────────────────
@@ -284,6 +302,10 @@ function recordTurnMechanics(resolved, goblinResult, killedNpc) {
       scope:   killedNpc.isBoss ? 'regional' : 'local',
       because: `${killedNpc.name} was slain by the party`,
     });
+    // A MINTED creature (the GM invented it, the extractor made it real) has
+    // its own ledger identity and possibly a threat clock — killing it must
+    // resolve THAT entity, or the rumours keep circulating about a dead thing.
+    if (killedNpc.mintedId) resolveThreat(killedNpc.mintedId, { name: killedNpc.name });
   }
   // The resolver returns itemId/itemName; this read `resolved.item`, which the
   // take branch has never set — so no pickup has ever reached the ledger.
@@ -356,7 +378,7 @@ async function maybeAdvanceBeat(narration) {
     const byFlags = beatSatisfiedByFlags();
     if (byFlags) {
       const { completed, actClosed } = completeBeatNow(byFlags);
-      if (actClosed) await onActClosed();
+      if (actClosed) { await onActClosed(); _actJustClosed = true; }
       return completed;
     }
 
@@ -366,19 +388,48 @@ async function maybeAdvanceBeat(narration) {
     // An act closing is the campaign's biggest structural moment: the next act
     // is written from what actually happened, so the story bends toward the
     // campaign the player is really having.
-    if (actClosed) await onActClosed();
+    if (actClosed) { await onActClosed(); _actJustClosed = true; }
     return completed;
   } catch { /* narration check is best-effort */ }
   return false;
 }
 
-// Generate and adopt the next act, unless the campaign is over.
+// Generate and adopt the next act — or, when the finale act just closed, end
+// the campaign properly. Completing the last act used to return null into
+// silence: no epilogue, no completion state, play drifting on actless — the
+// old "completing the last beat changes a progress line" defect, one level up.
 export async function onActClosed() {
   const ctx = nextActContext();
-  if (ctx.actNumber > TARGET_ACTS) return null;   // the finale has been played
+  if (ctx.actNumber > TARGET_ACTS) return finishCampaign();
   const generated = await generateAct(ctx);
   if (!generated) return null;
   return adoptAct(generated);
+}
+
+// The campaign's ending, rendered from the ledger — the world's own record of
+// what the player did, not a model's guess at it. Runs once; the flag is
+// persisted so a reload does not replay the ceremony.
+let _epilogueLines = null;
+function takeEpilogue() {
+  const lines = _epilogueLines;
+  _epilogueLines = null;
+  return lines;
+}
+
+function finishCampaign() {
+  if (appState.session?.campaignComplete) return null;
+  setValue('session.campaignComplete', true);
+  const deeds = recentEvents({ limit: 6, minScope: 'regional' }).map(e => e.because).filter(Boolean);
+  const name = appState.party?.pc?.record?.name ?? t('story.epilogueUnknownHero');
+  const world = appState.world?.name ?? '';
+  _epilogueLines = [
+    t('story.epilogueHeader'),
+    t('story.epilogueOpening', { name, world }),
+    ...deeds.map(d => t('story.epilogueDeed', { deed: d })),
+    t('story.epilogueClosing'),
+  ];
+  tick();
+  return { complete: true };
 }
 
 // ─── Down turn (deterministic, no AI) ────────────────────────────────────────

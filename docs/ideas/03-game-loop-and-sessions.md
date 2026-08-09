@@ -1,8 +1,12 @@
 # 03 — Game loop & sessions
 
-> **IMPLEMENTATION STATUS (DOC-ONLY)** — audited 2026-08-07.
-> The turn loop shipped; the SESSION layer in this doc did not. There are no chapters, no recaps and no transcript summarization — session.chapterId is a hardcoded dead field. This is Epic E4 of the implementation plan and one of the four things gating the 80-hour goal.
-> Full evidence: [`docs/audit/2026-08-comprehensive-audit.md`](../audit/2026-08-comprehensive-audit.md).
+> **IMPLEMENTATION STATUS (IMPLEMENTED)** — re-audited 2026-08-09.
+> The session layer exists now: `src/game/chapters.js` keeps a rolling digest of
+> the live chapter, freezes titled digests at boundaries (dungeon cleared, act
+> completed, region changed, 40-turn backstop — the backstop is checked every
+> turn), plays a "previously on…" recap on resume, and chapters are named by a
+> tiny-tier call with a numbered fallback. Epic E4 is done.
+> Full evidence: [`docs/audit/2026-08-verification-audit.md`](../audit/2026-08-verification-audit.md).
 
 > **Status:** rough sketch.
 

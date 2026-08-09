@@ -1,8 +1,12 @@
 # 07 — UI / UX
 
-> **IMPLEMENTATION STATUS (PARTIAL)** — audited 2026-08-07.
-> The console, action bar, streaming transcript and sidebar shipped. The chip layer described here was silently dead until 2026-08 (its containers were never in the markup). Wait-state feedback, accessibility and mobile polish remain open — Epic E10.
-> Full evidence: [`docs/audit/2026-08-comprehensive-audit.md`](../audit/2026-08-comprehensive-audit.md).
+> **IMPLEMENTATION STATUS (PARTIAL)** — re-audited 2026-08-09.
+> The console, action bar, streaming transcript, sidebar and chip layer all
+> work and are guarded by Playwright now (every e2e test fails on an uncaught
+> page error). Wait-state feedback exists at v1: the thinking indicator names
+> its stage, and the roll stage only appears once resolution actually takes
+> long enough to matter. Accessibility and mobile polish remain open — Epic E10.
+> Full evidence: [`docs/audit/2026-08-verification-audit.md`](../audit/2026-08-verification-audit.md).
 
 > **Status:** rough sketch.
 

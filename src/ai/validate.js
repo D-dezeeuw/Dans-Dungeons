@@ -146,10 +146,18 @@ export function validateAct(out) {
   const seen = new Set();
   const unique = beats.filter(b => (seen.has(b.id) ? (violation('act', `duplicate beat id '${b.id}'`), false) : seen.add(b.id)));
 
+  // Setups are optional foreshadowing; a paysInto that names no beat in THIS
+  // act is kept (it may pay into a later act) but normalised to a string/null.
+  const setups = asArray(out.setups)
+    .filter(s => isObj(s) && isStr(s.clue))
+    .map(s => ({ clue: s.clue, paysInto: isStr(s.paysInto) ? s.paysInto : null }))
+    .slice(0, 4);
+
   return {
     title:   isStr(out.title)   ? out.title   : 'Untitled Act',
     premise: isStr(out.premise) ? out.premise : '',
     beats:   unique,
+    setups,
   };
 }
 

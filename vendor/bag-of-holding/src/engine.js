@@ -245,6 +245,8 @@ function buildConditions(extraConditions = []) {
     isImmuneTo: ConditionsBase.isImmuneTo,
     apply: (actor, condition) => ConditionsBase.apply(actor, condition, combined),
     remove: ConditionsBase.remove,
+    conditionName: ConditionsBase.conditionName,
+    conditionsRequiringSave: ConditionsBase.conditionsRequiringSave,
     effectsFor: ConditionsBase.effectsFor,
     attackStance: ConditionsBase.attackStance,
     exhaustion: ConditionsBase.exhaustion
@@ -578,11 +580,13 @@ export function createEngine(opts = {}) {
     // session end-to-end.
     startEncounter: (participants) => EncounterBase.startEncounter(
       participants, rng,
-      ({ dexterity, value }) => record('rollInitiative', { dexterity, value })
+      ({ dexterity, value, surprised }) => record('rollInitiative',
+        surprised ? { dexterity, value, surprised: true } : { dexterity, value })
     ),
     rollOrder: (participants) => EncounterBase.rollOrder(
       participants, rng,
-      ({ dexterity, value }) => record('rollInitiative', { dexterity, value })
+      ({ dexterity, value, surprised }) => record('rollInitiative',
+        surprised ? { dexterity, value, surprised: true } : { dexterity, value })
     ),
     currentActor: EncounterBase.currentActor,
     endTurn: EncounterBase.endTurn,
@@ -666,8 +670,9 @@ export function createEngine(opts = {}) {
     reviveTo: CombatBase.reviveTo,
     // SRD 5.2 § Damage and Healing (Stabilizing): rolls the 1d4-hour
     // timer for stable-creature regen through the engine rng so the
-    // tick is replay-deterministic.
-    rollStableRegenHours: () => CombatBase.rollStableRegenHours(rng),
+    // tick is replay-deterministic — and through counted() so the
+    // draw lands in the roll log instead of silently shifting it.
+    rollStableRegenHours: counted((r) => CombatBase.rollStableRegenHours(r), 'Combat.rollStableRegenHours'),
 
     // === Damage pipeline (since 1.4.0) ===
     //
@@ -910,7 +915,9 @@ export function createEngine(opts = {}) {
         castFromScroll: (actor, spell, args) => {
           const cancel = fireOnCast(actor, spell, args);
           if (cancel) return cancel;
-          return Spellcasting.castFromScroll(actor, spell, args, rng);
+          // The higher-level scroll check draws a d20 — through
+          // counted() so the draw is recorded and replay stays aligned.
+          return counted((r) => Spellcasting.castFromScroll(actor, spell, args, r), 'Spellcasting.castFromScroll')();
         }
       };
     })(),
@@ -1003,8 +1010,8 @@ export function createEngine(opts = {}) {
       hasInspiration: InspirationBase.hasInspiration,
       grant: InspirationBase.grantInspiration,
       spend: InspirationBase.spendInspiration,
-      applyHalflingLucky: (originalD20) => InspirationBase.applyHalflingLucky(originalD20, rng),
-      rerollFailedSave: (args) => InspirationBase.rerollFailedSave(args, rng),
+      applyHalflingLucky: counted((r, originalD20) => InspirationBase.applyHalflingLucky(originalD20, r), 'Inspiration.applyHalflingLucky'),
+      rerollFailedSave: counted((r, args) => InspirationBase.rerollFailedSave(args, r), 'Inspiration.rerollFailedSave'),
       groupCheck: InspirationBase.groupCheck,
       workingTogether: InspirationBase.workingTogether
     }),

@@ -5,7 +5,7 @@
 // each engine instance, so consumers mostly reach it via that path.
 
 import { seededRng, rollDie, roll, rollAdvantage, rollDisadvantage } from './dice.js';
-import { abilityCheck, savingThrow } from './checks.js';
+import { abilityCheck, savingThrow, modFromScore } from './checks.js';
 import { attackRoll, damageRoll, rollInitiative } from './combat.js';
 import { DEFAULT_RULES, buildRules } from './rules.js';
 
@@ -92,7 +92,15 @@ export function verifyLog({ seed, log, rules: rulesOpt }) {
         }
         break;
       case 'rollInitiative':
-        actual = rollInitiative({ dexterity: entry.dexterity }, rng);
+        // A surprised combatant rolled initiative at Disadvantage —
+        // TWO d20 draws, keep the lower (SRD 5.2 § Combat). The entry
+        // carries `surprised: true` for those; older logs without the
+        // flag replay as the single-die path unchanged.
+        if (entry.surprised === true) {
+          actual = Math.min(rollDie(20, rng), rollDie(20, rng)) + modFromScore(entry.dexterity);
+        } else {
+          actual = rollInitiative({ dexterity: entry.dexterity }, rng);
+        }
         if (actual !== entry.value) {
           return { ok: false, divergedAt: i, expected: entry.value, actual };
         }
@@ -144,6 +152,11 @@ export function verifyLog({ seed, log, rules: rulesOpt }) {
         }
         break;
       case 'savingThrow':
+        // Paralyzed / stunned / petrified / unconscious auto-fail
+        // STR/DEX saves without rolling: the engine records d20: 0
+        // with `autoFailed: true` and consumed no draw, so replay
+        // must consume none either.
+        if (entry.autoFailed === true) break;
         actual = savingThrow({
           abilityScore: entry.abilityScore,
           proficient: entry.proficient,
