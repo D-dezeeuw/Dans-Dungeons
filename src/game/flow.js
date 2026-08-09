@@ -26,7 +26,9 @@ import { awardMilestone, announcementFor, xpProgress, awardXp, xpForKill } from 
 import { storyStalled, gmDirective, raiseFlag, progress as storyProgress, actNumber } from './acts-runtime.js';
 import { armThreatClocks, rumours, activeThreatsAt, resolveThreat } from './world-clocks.js';
 import { statBlockFor } from './bestiary.js';
-import { initAtlas, initialAtlas, stubToward, hydrateRegion, mapView } from './atlas.js';
+import { initAtlas, initialAtlas, stubToward, hydrateRegion, mapView,
+         applyContinentOutlines, applyProvinceOutline, provinceOf,
+         seaLaneFrom, addRegionUnderProvince, landedRegionOf } from './atlas.js';
 import { seedCombat }     from './rng.js';
 import {
   goldOf, resolvePurchase, addToInventory, resolveRest, DEFAULT_REST_COST,
@@ -313,10 +315,30 @@ async function startCampaign() {
     settlements: { [settlement.id]: { ...settlement, regionId: region.id } },
     dungeons: {},
     location: { type: 'settlement', regionId: region.id, settlementId: settlement.id, dungeonId: null },
-    // Seed the map: this region, plus three neighbours minted as stubs. They
-    // cost nothing until visited, but they already know what they will be.
-    geography: initialAtlas(region.id, region.name, appState.world?.seed),
+    // Seed the map: the layered skeleton (continents, provinces, ports, sea
+    // lanes — doc 17), the starting region under its first province, and
+    // three neighbour stubs. Costs nothing until visited. Seeded from the
+    // NUMERIC blueprint seed — world.seed holds the world's NAME, and the
+    // old read degenerated every skeleton to seed 0.
+    geography: initialAtlas(region.id, region.name, blueprintSeed),
   };
+
+  // The global outline (doc 17, detail 0 → 1 for every continent, one call):
+  // ~50 words each of what the continent is ABOUT, plus faction homelands.
+  // Best-effort — a failed outline leaves named stubs, never an error.
+  try {
+    progress('worldgenStepContinents');
+    const { generateContinentOutlines } = await import('./worldgen.js');
+    const continentNodes = Object.values(worldState.geography.nodes).filter(n => n.kind === 'continent');
+    const outlined = await generateContinentOutlines(seed.digest, continentNodes, factions, blueprint);
+    if (outlined?.continents?.length) {
+      worldState.geography = applyContinentOutlines(worldState.geography, outlined.continents);
+      progress('detail', outlined.continents.map(c => c.name).join(' · '));
+    }
+  } catch (e) {
+    console.warn('Continent outlines failed (stubs stand):', e.message);
+  }
+
   setValue('world', worldState);
 
   setValue('session.phase', 'play');
@@ -369,6 +391,13 @@ async function renderSettlement(settlement, settlementId) {
   UI.appendEntry('system', '');
   const settlementIntro = settlement.description ?? t('settlement.youAreIn', { name: settlement.name });
   UI.appendEntry('gm', settlementIntro);
+  // A journey's arrival note survives the scene change: towns own the screen
+  // (UI.clear above), which wiped the crossing prose the moment the player
+  // landed — the test run watched the sea vanish. The note re-anchors it.
+  if (_arrivalNote) {
+    UI.appendEntry('gm', _arrivalNote);
+    _arrivalNote = null;
+  }
   recordOpening(settlementIntro);   // persist the opening narration (survives undo/redo + reload)
   UI.appendEntry('system', '');
 
@@ -430,6 +459,13 @@ function settlementChips(settlement) {
   for (const threat of activeThreatsAt()) {
     chips.push({ label: t('settlement.confrontChip', { name: threat.name }), value: t('settlement.confrontCmd', { name: threat.name }) });
   }
+  // A port province with a sea lane can sail (doc 17): the crossing to
+  // another continent, resolved deterministically like fasttravel.
+  const homeProvince = provinceOf();
+  if (homeProvince?.port) {
+    const lane = seaLaneFrom(homeProvince.id);
+    if (lane) chips.push({ label: t('settlement.sailChip', { name: lane.to.name }), value: 'sail' });
+  }
   chips.push({ label: t('settlement.rest'),          value: t('settlement.restCmd') });
   chips.push({ label: t('settlement.questsChip'),    value: t('settlement.questsCmd') });
   chips.push({ label: t('settlement.inventoryChip'), value: t('settlement.inventoryCmd') });
@@ -479,6 +515,15 @@ async function settlementLoop(settlementId) {
     // Fast travel to an already-discovered settlement (chip value).
     const ft = raw.match(/^fasttravel:(.+)$/);
     if (ft) { UI.clearChips(); return await fastTravelTo(ft[1]); }
+
+    // Set sail (chip value / typed) — the sea crossing to another continent.
+    if (/^(sail|set sail|zeil|uitvaren)\b/i.test(raw.trim())) {
+      UI.appendEntry('player', `> ${raw}`);
+      UI.clearChips();
+      const next = await sailAcross(settlementId);
+      if (next) return next;
+      continue;
+    }
 
     // Confront chip / typed command — resolved deterministically, before the
     // classifier. The chip's value is plain text; routing it through the LLM
@@ -710,6 +755,11 @@ async function converseWithNpc(settlementId, npcId) {
     } catch {
       resp = { reply: t('settlement.npcSilent', { name: npc.name }), revealsSecret: false };
     }
+    // A null RETURN (validation failure after a rate-limit fallback walk) is
+    // not a throw — it slipped past the catch and read `.reply` off null,
+    // crashing the conversation with a raw Fatal. Found by the live red-line
+    // run; the mock always answers, only real model chaos exposes this seam.
+    resp ??= { reply: t('settlement.npcSilent', { name: npc.name }), revealsSecret: false };
     UI.setThinking(false);
 
     UI.appendEntry('gm', `${npc.name}: "${resp.reply}"`);
@@ -1181,15 +1231,122 @@ async function generateNeighbourRegion(exit) {
   }
 }
 
+// ─── The sea crossing (doc 17: continent travel) ─────────────────────────────
+
+// One line that outlives the arrival's screen clear — set by the crossing,
+// printed by renderSettlement right after the town intro.
+let _arrivalNote = null;
+
+// Sail from the current (port) province to the far side of its sea lane.
+// Three lazy loads happen exactly when the crossing needs them: the far
+// province outlines (detail 0 → 1) as the ship approaches, the landfall
+// region + settlement generate (detail 2) on arrival, and a second sailing
+// lands where the first one did — the far shore persists like everywhere
+// else. Returns the settlement id to transition to, or null to stay.
+async function sailAcross(fromSettlementId) {
+  const home = provinceOf();
+  const lane = home?.port ? seaLaneFrom(home.id) : null;
+  if (!lane) { UI.appendEntry('system', t('sail.noLane')); return null; }
+
+  const far = lane.to;
+  UI.appendEntry('system', '');
+  UI.appendEntry('gm', t('sail.depart', { name: far.name, days: lane.days }));
+
+  // Already landed there once? The far shore is a place, not a generator.
+  const landed = landedRegionOf(far.id);
+  if (landed) {
+    const sid = appState.world?.regions?.[landed.id]?.settlements?.[0];
+    if (sid && appState.world?.settlements?.[sid]) {
+      setValue('world', { ...appState.world,
+        location: { ...appState.world.location, regionId: landed.id } });
+      commit();
+      _arrivalNote = t('sail.arrivalNote', { name: landed.name, days: lane.days });
+      UI.appendEntry('gm', t('sail.arriveKnown', { name: landed.name }));
+      return sid;
+    }
+  }
+
+  if ((appState.ai?.tier ?? 'free') !== 'deluxe' || !appState.world?.blueprint) {
+    UI.appendEntry('gm', t('sail.noPassage'));
+    return null;
+  }
+
+  try {
+    const { generateProvinceOutline, generateRegion, generateSettlement } = await import('./worldgen.js');
+
+    // Approach: outline the far province if it is still a stub (0 → 1).
+    let province = far;
+    if ((far.detail ?? 0) < 1) {
+      const parentDigest = appState.world?.digest ?? appState.world?.name ?? 'the known world';
+      const outline = await generateProvinceOutline(parentDigest, far, appState.world.blueprint).catch(() => null);
+      if (outline) {
+        const geo = applyProvinceOutline(far.id, outline);
+        province = geo.nodes[far.id] ?? far;
+        UI.appendEntry('gm', t('sail.sight', { name: province.name, digest: province.digest ?? province.hook ?? '' }));
+      }
+    } else if (far.digest) {
+      UI.appendEntry('gm', t('sail.sight', { name: far.name, digest: far.digest }));
+    }
+
+    // Landfall: a fresh region + settlement under the far province, generated
+    // from the province's own seed with the province's climate — the layer
+    // owns what varies (doc 17), so the far continent stops inheriting the
+    // home blueprint's climate and domains wholesale.
+    const seed = (province.seed ?? Math.floor(Math.random() * 2147483647)) >>> 0;
+    const fresh = buildWorldBlueprint(seed);
+    const base = appState.world.blueprint;
+    const bp = { ...fresh, tone: base.tone, worldArchetype: base.worldArchetype, threatType: base.threatType,
+                 beatArc: base.beatArc, factionSlots: base.factionSlots,
+                 climate: province.climate ?? fresh.climate };
+
+    const parentDigest = province.digest ?? appState.world?.digest ?? 'a far shore';
+    const region = await generateRegion(parentDigest, bp);
+    if (!region) { UI.appendEntry('gm', t('sail.noPassage')); return null; }
+    region.id = `${far.id}.landing`;
+    if (!region.digest) region.digest = `${region.name} — ${region.climate}.`;
+
+    const settlement = await generateSettlement(region.digest, region.id, bp);
+    if (!settlement) { UI.appendEntry('gm', t('sail.noPassage')); return null; }
+    settlement.id ??= `settlement-${seed}`;
+    if (!settlement.digest) settlement.digest = `${settlement.name} — ${(settlement.npcs ?? []).map(n => n.name).join(', ')}.`;
+
+    addRegionUnderProvince({
+      regionId: region.id, regionName: region.name, provinceId: far.id,
+      seed, fromRegionId: appState.world.location.regionId, days: lane.days,
+    });
+
+    const regions = { ...appState.world.regions,
+      [region.id]: { ...region, settlements: [settlement.id], dungeons: [], adjacentRegions: region.adjacentHints ?? [], blueprint: bp } };
+    const settlements = { ...appState.world.settlements, [settlement.id]: { ...settlement, regionId: region.id } };
+    setValue('world', { ...appState.world, regions, settlements,
+      location: { ...appState.world.location, regionId: region.id } });
+    commit();
+
+    _arrivalNote = t('sail.arrivalNote', { name: region.name, days: lane.days });
+    UI.appendEntry('gm', t('sail.arrive', { name: region.name, settlement: settlement.name }));
+    return settlement.id;
+  } catch (e) {
+    console.warn('Sea crossing failed:', e.message);
+    UI.appendEntry('gm', t('sail.noPassage'));
+    return null;
+  }
+}
+
 // ─── Enter dungeon from settlement ───────────────────────────────────────────
 
 async function enterDungeon(exit, settlementId) {
   clearTurnMarks();   // fresh dungeon context — never inherit a prior dungeon/town's undo marks
   const dungeonId = exit.targetId ?? `dungeon-${Date.now()}`;
 
-  // Generate dungeon if not already in world state
-  if (!appState.world?.dungeons?.[dungeonId]) {
-    const dungeon = createDungeonEntry({
+  // Generate if not already in world state — held in a LOCAL: reading the
+  // entry back through appState got the pre-tick value (undefined), so the
+  // first entry into any freshly generated campaign dungeon was fatal, and
+  // the second whole-world write below (built from the same stale appState)
+  // silently dropped the dungeons map the first write had added. Caught by
+  // the campaign e2e's first-ever played dungeon — the seam the audit named.
+  let dungeon = appState.world?.dungeons?.[dungeonId];
+  if (!dungeon) {
+    dungeon = createDungeonEntry({
       id:        dungeonId,
       name:      exit.targetName,
       regionId:  appState.world?.location?.regionId ?? null,
@@ -1200,16 +1357,15 @@ async function enterDungeon(exit, settlementId) {
       partyLevel: appState.party?.pc?.record?.level ?? 1,
       act:        actNumber(),
     });
-    const dungeons = { ...(appState.world?.dungeons ?? {}), [dungeonId]: dungeon };
-    setValue('world', { ...appState.world, dungeons });
   }
 
-  const dungeon = appState.world.dungeons[dungeonId];
   seedCombat(dungeon.seed);   // epoch-seeded combat dice for this dungeon (rng.js)
 
-  // Set flat world fields for the resolver (legacy compat)
+  // One write carries everything: the stored entry AND the flat fields the
+  // resolver reads (legacy compat).
   setValue('world', {
     ...appState.world,
+    dungeons:    { ...(appState.world?.dungeons ?? {}), [dungeonId]: dungeon },
     currentRoom: dungeon.currentRoom,
     exitRoomId:  dungeon.exitRoomId,
     rooms:       dungeon.rooms,

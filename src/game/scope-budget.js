@@ -13,12 +13,17 @@ export const estimateTokens = (obj) => Math.ceil(JSON.stringify(obj ?? '').lengt
 // Per-tier ceilings, in tokens. A quiet room should cost a few hundred; a
 // set-piece with a dozen NPCs may cost more, but never without bound.
 export const BUDGET = Object.freeze({
-  here:   900,
-  nearby: 200,
-  region: 400,
-  world:  300,
-  memory: 900,
-  known:  300,
+  here:      900,
+  nearby:    200,
+  region:    400,
+  // The layered chain (doc 17): farther means fewer tokens. A continent or
+  // province digest is ~50 words of what the place is ABOUT — rumour-distance
+  // text, not content.
+  province:  180,
+  continent: 150,
+  world:     300,
+  memory:    900,
+  known:     300,
 });
 
 // What the packet costs, per tier and in total, and which tiers are over.

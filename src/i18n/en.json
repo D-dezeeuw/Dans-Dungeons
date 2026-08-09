@@ -239,7 +239,8 @@
     "confrontCmd": "confront {{name}}",
     "confrontIntro": "You go looking for trouble — and find it. {{name}} turns to face you.",
     "threatResolved": "{{name}} is dealt with. The place breathes easier.",
-    "noThreatHere": "There is nothing here to confront."
+    "noThreatHere": "There is nothing here to confront.",
+    "sailChip": "Set sail for {{name}}"
   },
   "adventure": {
     "banner": "── THE ADVENTURE BEGINS ──────────────────────",
@@ -1055,7 +1056,12 @@
     "settlementLine": "    • {{name}}{{here}}",
     "connectsLine": "    → leads toward: {{names}}",
     "rumouredHeader": "Beyond the map you have walked:",
-    "rumouredLine": "  {{name}} — {{hook}}"
+    "rumouredLine": "  {{name}} — {{hook}}",
+    "continentLine": "{{name}} {{held}}",
+    "continentDigest": "   {{digest}}",
+    "provinceLine": "  ◦ {{name}} ({{climate}}) {{marks}}",
+    "heldBy": "— homeland of {{names}}",
+    "portMark": "⚓"
   },
   "story": {
     "header": "── Story ──",
@@ -1123,7 +1129,12 @@
     "defaultTone": "gritty low fantasy",
     "actPrompt": "You are the author of an ongoing fantasy campaign, writing Act {{actNumber}}.\n\n{{finale}}\n\nWhat has happened so far:\n{{context}}\n\nWrite the next act as 5 to 7 beats. Rules:\n- Build on what actually happened. Reference the places, factions and events in the context by name — the player earned them.\n- Any unpaidSetups MUST be paid off in this act, or deliberately turned into something else. A clue that never lands is a broken promise.\n- Each beat needs an id (kebab-case, unique), a title, and a dramaticPurpose: one sentence stating what must become true for the beat to be over. Write the purpose so a reader can tell whether it has happened.\n- Set location to a place name from the context when the beat belongs somewhere specific, otherwise null.\n- Use requires to gate a beat behind an earlier one, as [\"beat-done-<id>\"]. Keep the act mostly linear with one or two optional branches.\n- Set completesOn to the mechanical flags that would end the beat by themselves, chosen ONLY from: [\"enemy-slain\", \"boss-slain\", \"treasure-taken\", \"gate-unlocked\", \"settlement-reached\", \"region-reached\"]. Use it whenever the beat turns on something the dice decide (a kill, a door, an arrival); use [] when the beat is about a conversation, a discovery, or a choice.\n- Escalate: this act should cost the player more than the last one.\n- setups: 1 or 2 clues this act plants for LATER payoff — a detail the narrator can drop in passing that becomes meaningful when its beat arrives. Each has a clue (one evocative sentence) and paysInto (the id of the beat in THIS act that pays it off, or null if a future act should). Use [] only when nothing is worth foreshadowing.\n\nWrite in {{language}}. Return only JSON.",
     "actFinaleNote": "This is the FINAL act. It must resolve the campaign's central conflict and give the player a decisive confrontation — a real ending, not another errand.",
-    "actUserMsg": "Write the next act."
+    "actUserMsg": "Write the next act.",
+    "continentsPrompt": "You are a fantasy world architect. The world below has continents that exist only as names on a chart. Give each one an outline: what it is ABOUT.\n\nWorld digest:\n{{parentDigest}}\n\nThe continents (keep the ids EXACTLY as given; you may rename the working names):\n{{skeleton}}\n\nFactions of this world: {{factions}}\n\nFor each continent produce:\n- id: exactly the id given above\n- name: its true name (evocative, 1-2 words; the working name is a placeholder)\n- digest: 40-60 words of what the continent is about — its character, its dangers, what draws travellers\n- factionHomelands: for each faction that matters here, {factionId, presence} where presence is homeland, strong, contested, or absent\n\nMake the continents DIFFER from each other. Respond entirely in English. Output ONLY a JSON object matching the schema.",
+    "continentsUserMsg": "Outline the continents.",
+    "provincePrompt": "You are a fantasy world architect. A ship is approaching the province below; outline what the traveller finds.\n\nWorld so far:\n{{parentDigest}}\n\nThe province: id \"{{id}}\", working name \"{{name}}\", climate {{climate}}. Hook: {{hook}}\n\nProduce:\n- id: exactly \"{{id}}\"\n- name: its true name (the working name is a placeholder)\n- digest: 40-60 words of what this province is about\n- conflicts: exactly 2 short lines of live tension here\n- landmarks: exactly 2 signature places a traveller would hear of\n- dominantFactionId: the locally dominant faction id, or null\n- factionStance: dominant, contested, or absent\n\nRespond entirely in English. Output ONLY a JSON object matching the schema.",
+    "provinceUserMsg": "Outline the province.",
+    "worldgenStepContinents": "Charting the continents…"
   },
   "thinking": {
     "reading": "The Dungeon Master considers your words",
@@ -1197,5 +1208,14 @@
       "full": "All slots are in use. Overwrite or delete one first.",
       "quota": "There was no room to write the slot. Free some space and try again."
     }
+  },
+  "sail": {
+    "noLane": "No sea lane leaves this coast.",
+    "depart": "You take passage across the water — {{days}} days of open sea toward {{name}}.",
+    "sight": "Land rises on the horizon: {{name}}. {{digest}}",
+    "arriveKnown": "The crossing is familiar now. You come ashore in {{name}}.",
+    "arrive": "The ship puts in at {{settlement}}, on the shore of {{name}}.",
+    "noPassage": "No ship will make the crossing today. The harbour waits.",
+    "arrivalNote": "You came ashore here after {{days}} days at sea — the salt of the crossing still on your coat."
   }
 }

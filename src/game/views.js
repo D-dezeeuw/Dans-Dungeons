@@ -15,7 +15,7 @@ import * as UI from '../ui/console.js';
 import { t } from '../i18n/i18n.js';
 import { progress as storyProgress, actNumber, gmDirective } from './acts-runtime.js';
 import { reputationStanding, awardReputation, setStoryFlag } from './story.js';
-import { mapView } from './atlas.js';
+import { mapView, provinceOf } from './atlas.js';
 import { rumours } from './world-clocks.js';
 import { xpProgress, awardMilestone, announcementFor } from './progression.js';
 import { goldOf } from 'bag-of-holding-client';
@@ -81,6 +81,30 @@ export function renderRegionMap() {
   const curRegionId = appState.world?.location?.regionId;
   const curSettlementId = appState.world?.location?.settlementId;
   UI.appendEntry('system', t('map.header'));
+
+  // The layers above the region (doc 17): continents with their outlines and
+  // faction homelands, provinces beneath them — the durable surface for the
+  // global outline, which otherwise only flashed by in worldgen progress.
+  const geo = appState.world?.geography;
+  const continents = Object.values(geo?.nodes ?? {}).filter(n => n.kind === 'continent');
+  if (continents.length) {
+    const curProvince = provinceOf(curRegionId);
+    for (const c of continents) {
+      const homelands = (c.factionHomelands ?? [])
+        .filter(h => h.presence === 'homeland')
+        .map(h => appState.world?.factions?.[h.factionId]?.name ?? h.factionId);
+      const held = homelands.length ? t('map.heldBy', { names: homelands.join(', ') }) : '';
+      UI.appendEntry('system', t('map.continentLine', { name: c.name, held }));
+      if (c.digest) UI.appendEntry('system', t('map.continentDigest', { digest: c.digest }));
+      for (const p of Object.values(geo.nodes).filter(n => n.kind === 'province' && n.parent === c.id)) {
+        const marks = [p.port ? t('map.portMark') : '', p.id === curProvince?.id ? t('map.youAreHere') : '']
+          .filter(Boolean).join(' ');
+        UI.appendEntry('system', t('map.provinceLine', { name: p.name, climate: p.climate ?? '?', marks }));
+      }
+    }
+    UI.appendEntry('system', '');
+  }
+
   for (const r of regions) {
     const here = r.id === curRegionId ? t('map.youAreHere') : '';
     UI.appendEntry('system', t('map.regionLine', { name: r.name, climate: r.climate ?? '?', here }));

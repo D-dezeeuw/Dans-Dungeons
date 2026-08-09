@@ -64,6 +64,10 @@ const SHARED_VERBATIM = new Set([
   'spells.slotsLeft',        // "Slots: {{…}}" — the loanword Dutch tables use
   'progress.xpGained',       // pure format string
   'story.epilogueDeed',      // pure format string ("  · {{deed}}")
+  'map.continentLine',       // pure format string ("{{name}} {{held}}")
+  'map.continentDigest',     // pure format string (indented "{{digest}}")
+  'map.provinceLine',        // pure format string ("  ◦ {{name}} ({{climate}}) {{marks}}")
+  'map.portMark',            // "⚓" — a glyph, not a word
   'meta.status',
   'meta.helpList',
   'settlement.banner',

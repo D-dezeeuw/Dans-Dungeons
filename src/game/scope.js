@@ -26,6 +26,7 @@ import { entitiesUnder, detailsAt, recentEvents, currentPlaceId, currentRoomId, 
 import { memoryContext } from './chapters.js';
 import { buildStoryContext } from './story.js';
 import { BUDGET, estimateTokens, scopeCost } from './scope-budget.js';
+import { ancestorsOf } from 'bag-of-holding-client';
 
 export { BUDGET, estimateTokens, scopeCost };
 
@@ -39,8 +40,18 @@ export function assembleScope({ includeGmOnly = false } = {}) {
   const world = appState.world ?? {};
   if (world.digest) packet.world = { name: world.name, tone: world.tone, digest: clamp(world.digest, BUDGET.world) };
 
+  // The layered chain (doc 17): world → continent → province → region, each
+  // clamped tighter than the last as the camera pulls back. Only OUTLINED
+  // layers (detail ≥ 1, i.e. they have a digest) are served — a stub is a
+  // name and a hook, and the narrator has no business inventing more.
   const regionId = world.location?.regionId;
-  const region   = regionId ? world.regions?.[regionId] : null;
+  const geoChain = (world.geography && regionId) ? ancestorsOf(world.geography, regionId) : [];
+  const continent = geoChain.find(n => n.kind === 'continent');
+  const province  = geoChain.find(n => n.kind === 'province');
+  if (continent?.digest) packet.continent = { name: continent.name, digest: clamp(continent.digest, BUDGET.continent) };
+  if (province?.digest)  packet.province  = { name: province.name,  digest: clamp(province.digest, BUDGET.province) };
+
+  const region = regionId ? world.regions?.[regionId] : null;
   if (region?.digest) packet.region = { name: region.name, digest: clamp(region.digest, BUDGET.region) };
 
   // ── memory: chapter digests, then the live chapter ────────────────────────
