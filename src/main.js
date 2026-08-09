@@ -198,16 +198,20 @@ async function boot() {
   const savedTimeTravel = save?._timeTravel ?? null;   // reconstructed after initTimeTravel (below)
   if (save) {
     restoreState(save);   // skips _timeTravel internally
-    // Re-derive the sheet from the record — never trust the persisted sheet,
-    // which may have been produced by an older rules engine.
-    if (appState.party?.pc) setValue('party.pc', reconcilePc(appState.party.pc));
+    // Re-derive the sheet from the SAVE's record — never trust the persisted
+    // sheet, which may have been produced by an older rules engine. Reading
+    // appState here was a pre-tick no-op: restoreState defers until tick(),
+    // so the re-derivation never ran for the repo's whole history (audit F2).
+    if (save.party?.pc) setValue('party.pc', reconcilePc(save.party.pc));
     // Saves written before the archive watermark existed left a cold store
     // full of duplicated slices. One best-effort pass dedupes and rewrites it;
     // once `session.archived` exists this is a no-op forever.
     compactColdArchive().catch(() => {});
   }
-  if (appState.settings?.roleplayMode) document.body.classList.add('roleplay-mode');
-  if (appState.settings?.autoplay) document.getElementById('autoplay-btn')?.classList.add('active');
+  // Same pre-tick trap: these settings live in the save object, not in the
+  // not-yet-ticked appState.
+  if (save?.settings?.roleplayMode) document.body.classList.add('roleplay-mode');
+  if (save?.settings?.autoplay) document.getElementById('autoplay-btn')?.classList.add('active');
 
   // Handle the OAuth callback (?code=).
   //

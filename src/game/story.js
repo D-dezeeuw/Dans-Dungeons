@@ -45,6 +45,13 @@ export function takePendingActClose() {
   return pending;
 }
 
+// Put a taken close back. Two callers: a failed act generation (the close
+// must survive to retry next turn, not die with one bad LLM response), and
+// the resume healer (the queue is module-local, so a close taken to a reload
+// — e.g. raised in a settlement, where no turn loop drains it — was lost and
+// the thread stranded actless; audit F3).
+export function requeueActClose() { _pendingActClose = true; }
+
 // A beat whose `completesOn` flags are ALL raised is done. This is what
 // demotes the LLM judge to a fallback. `completesOn` is an array per the act
 // schema — the old scalar read (`flags[completesOn]`) coerced the array to a

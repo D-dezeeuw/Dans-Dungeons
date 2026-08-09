@@ -8,7 +8,7 @@ import { generateDungeon, createDungeonEntry, buildEnemy } from './world.js';
 import { buildWorldBlueprint } from './worldseed.js';
 import { OVERWORLD_ENEMY_IDS } from './creatures.js';
 import { createCharacter } from './character.js';
-import { processTurn, generateTurnImage, buildScene } from './loop.js';
+import { processTurn, generateTurnImage, buildScene, drainActClose } from './loop.js';
 // Key acquisition, tier application and model healing live in their own module:
 // they all run before the first turn or between campaigns, touch only
 // appState.ai / settings, and share nothing with the play loop.
@@ -35,7 +35,7 @@ import {
   adjustPrice, isHostile, standing,
   beginTravel, stepTravel, isTravelDone, pickEncounter,
 } from 'bag-of-holding-client';
-import { setStoryFlag, awardReputation, reputationStanding, progress as storyProgressNow } from './story.js';
+import { setStoryFlag, awardReputation, reputationStanding, requeueActClose } from './story.js';
 import * as UI from '../ui/console.js';
 import { t, tRaw } from '../i18n/i18n.js';
 import { getSkills } from '../ui/chips.js';
@@ -455,6 +455,19 @@ async function settlementLoop(settlementId) {
 
   while (true) {
     if (appState.session.phase !== 'play') return null;
+
+    // Towns never run processTurn, so an act that closed on a settlement flag
+    // (settlement-reached, region-reached, a visited-* beat) used to queue a
+    // close that nothing drained while the player stayed in town — and the
+    // queue is module-local, so a reload lost it and stranded the thread
+    // actless. Drained here, at the top of every town beat, with the same
+    // ceremony the play loops hold.
+    const actClose = await drainActClose();
+    if (actClose) {
+      for (const line of (actClose.epilogueLines ?? [])) UI.appendEntry('system', line);
+      await markChapterBoundary('act-completed');
+    }
+
     const settlement = appState.world.settlements[settlementId];
 
     UI.showActionChips(settlementChips(settlement));
@@ -466,6 +479,23 @@ async function settlementLoop(settlementId) {
     // Fast travel to an already-discovered settlement (chip value).
     const ft = raw.match(/^fasttravel:(.+)$/);
     if (ft) { UI.clearChips(); return await fastTravelTo(ft[1]); }
+
+    // Confront chip / typed command — resolved deterministically, before the
+    // classifier. The chip's value is plain text; routing it through the LLM
+    // turned "Confront the ghoul" into a look (audit F4).
+    const cf = raw.match(/^(?:confront|bestrijd)\s+(.+)$/i);
+    if (cf) {
+      const threats = activeThreatsAt();
+      const tl = cf[1].toLowerCase();
+      const threat = threats.find(th => th.name.toLowerCase().includes(tl) || tl.includes(th.name.toLowerCase())) ?? threats[0] ?? null;
+      if (threat) {
+        UI.appendEntry('player', `> ${raw}`);
+        UI.clearChips();
+        const next = await handleSettlementAction({ type: 'confront', threat }, settlementId);
+        if (next) return next;
+        continue;
+      }
+    }
 
     UI.appendEntry('player', `> ${raw}`);
     UI.clearChips();
@@ -560,6 +590,18 @@ function normalizeSettlementAction(r, settlement) {
   if (intent === 'rest')   return { type: 'rest' };
   if (intent === 'quest')  return { type: 'quest' };
   if (intent === 'inventory') return { type: 'inventory' };
+  if (intent === 'confront') {
+    // Match the named threat, else the first active one — same policy as the
+    // offline fallback. The intent existed in the chips and the fallback but
+    // not in the classifier's schema, so when the AI WORKED the confront path
+    // was unreachable: the model had no way to say it (audit F4).
+    const threats = activeThreatsAt();
+    const tl = String(r?.target ?? '').toLowerCase();
+    const named = threats.find(th => tl && th.name.toLowerCase().includes(tl));
+    const threat = named ?? threats[0] ?? null;
+    if (threat) return { type: 'confront', threat };
+    return { type: 'look' };
+  }
   return { type: 'look' };
 }
 
@@ -1568,6 +1610,17 @@ async function awaitRestart() {
 export async function resumeGame() {
   UI.appendEntry('system', t('adventure.resumeBanner'));
   UI.appendEntry('system', '');
+
+  // Heal a stranded act close: the close queue is module-local, so a close
+  // taken to a reload (raised in a settlement, where no turn loop drained it)
+  // died with the tab and left the thread actless — actIndex past the last
+  // act with no next act ever generated and no epilogue. The state itself is
+  // the evidence; re-queue and the next drain point regenerates.
+  const thread = appState.world?.thread;
+  if (thread?.acts?.length && thread.actIndex >= thread.acts.length
+      && !appState.session?.campaignComplete) {
+    requeueActClose();
+  }
 
   // "Previously on…" — built from stored chapter digests, no AI call.
   const previously = recap();

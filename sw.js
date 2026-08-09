@@ -4,7 +4,7 @@
 // The page fetches vendor/app.version on every load and posts the hash
 // to the SW. On mismatch: purge caches, unregister, reload all tabs.
 
-const VERSION  = 'app-7b7728e';
+const VERSION  = 'app-2b89af3';
 const BASE     = '/Dans-Dungeons';
 const PRECACHE = [
   `${BASE}/`,

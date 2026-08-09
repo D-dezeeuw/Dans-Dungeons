@@ -10,6 +10,7 @@ import { wrapEnvelope, saveEnvelope, loadEnvelope, makeCommit, restoreBackup, LO
 
 import { createSpektrum } from 'spektrum';
 import { isPrimaryTab } from './tabs.js';
+import { stripSaveCredentials } from './utils.js';
 import { saveSlot as libSaveSlot, readSlot, listSlots, deleteSlot, MAX_SLOTS } from './slots.js';
 export { MAX_SLOTS };
 
@@ -199,28 +200,19 @@ export function pickPersisted() {
   return Object.fromEntries(PERSIST_KEYS.map(k => [k, appState[k]]));
 }
 
-// Credentials and endpoints for the SHAREABLE export. A .dnd.json is meant to be
-// passed around, and it carried the player's API key; on the way back in, an
-// imported baseUrl would silently redirect every future call (and that key) to
-// whatever host the file named. Strip both — the importer keeps their own.
-const CREDENTIAL_FIELDS = ['key', 'baseUrl'];
-
 // Transient session facts that must never travel in a save: whether THIS tab
 // is a spectator says nothing about the campaign and would follow an exported
 // file into someone else's browser.
 const TRANSIENT_SESSION = ['spectator'];
 
-function withoutCredentials(snapshot) {
-  if (!snapshot?.ai) return snapshot;
-  const ai = { ...snapshot.ai };
-  for (const f of CREDENTIAL_FIELDS) delete ai[f];
-  return { ...snapshot, ai };
-}
-
 // Drop credential fields from imported data so a hostile or careless save file
-// can never rewrite where this browser sends prose and keys.
+// can never rewrite where this browser sends prose and keys. Deep: the
+// time-travel blob's epoch root is a full PERSIST_KEYS clone including `ai`,
+// and stripping only the top level leaked the live key in exports and let an
+// imported root re-apply a hostile baseUrl (audit S1). The pure helpers live
+// in utils.js so the save boundary is testable under node.
 export function sanitizeImported(data) {
-  return withoutCredentials(data);
+  return stripSaveCredentials(data);
 }
 
 function buildSaveSnapshot() {
@@ -443,7 +435,7 @@ export function hasCorruptSaveBackup() {
 // downloadable save file. Same { v, data } shape as the localStorage save, so a
 // file and a browser save are interchangeable.
 export function serializeSave() {
-  return JSON.stringify(wrapEnvelope(withoutCredentials(buildSaveSnapshot()), SAVE_VERSION), null, 2);
+  return JSON.stringify(wrapEnvelope(stripSaveCredentials(buildSaveSnapshot()), SAVE_VERSION), null, 2);
 }
 
 // Parse a save file's text — envelope-aware, so it accepts both new versioned

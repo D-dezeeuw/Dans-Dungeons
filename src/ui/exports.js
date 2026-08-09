@@ -402,8 +402,9 @@ function resetAndRestore(snap) {
   restoreState(snap);   // skips _timeTravel internally
   if (key)     setValue('ai.key', key);
   if (baseUrl) setValue('ai.baseUrl', baseUrl);
-  // Re-derive the sheet from the restored record rather than trusting the
-  // stored sheet (which may be stale or engine-version-mismatched).
-  if (appState.party?.pc) setValue('party.pc', reconcilePc(appState.party.pc));
+  // Re-derive the sheet from the SNAPSHOT's record rather than trusting the
+  // stored sheet. Reading appState here got the pre-tick value — the OLD live
+  // campaign's character — and wrote it over the import (audit F2).
+  if (snap?.party?.pc) setValue('party.pc', reconcilePc(snap.party.pc));
   tick();
 }
