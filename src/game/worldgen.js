@@ -8,6 +8,7 @@ import { t } from '../i18n/i18n.js';
 import {
   worldSeedConstraints, beatsHints, factionsHints, regionHints, settlementHints, runPipeline,
   WORLD_SEED_SCHEMA, REGION_SCHEMA, SETTLEMENT_SCHEMA, FACTIONS_SCHEMA, RED_THREAD_SCHEMA,
+  CONTINENTS_OUTLINE_SCHEMA, PROVINCE_OUTLINE_SCHEMA,
 } from 'bag-of-holding-client';
 
 // ─── World seed (L00) ────────────────────────────────────────────────────────
@@ -50,6 +51,41 @@ async function generateFactions(worldDigest, blueprint) {
       { role: 'user',   content: t('ai.factionsUserMsg') },
     ],
     schema: FACTIONS_SCHEMA,
+  });
+}
+
+// ─── Layer outlines (doc 17: textual LOD, detail 0 → 1) ──────────────────────
+//
+// One call outlines every continent at genesis — the "global outline" the
+// layered world promises from hour zero. A province outlines lazily on first
+// approach. Both are ~50 words per place: what it is ABOUT, not its content.
+
+export async function generateContinentOutlines(worldDigest, continents, factions, blueprint) {
+  const skeleton = continents.map(c => `- id "${c.id}", working name "${c.name}", hook: ${c.hook}`).join('\n');
+  const factionList = (factions ?? []).map(f => `${f.id}: ${f.name}`).join('; ') || '(none)';
+  return chatCompletion({
+    tier: 'medium',
+    maxTokens: 900,
+    messages: [
+      { role: 'system', content: t('ai.continentsPrompt', { parentDigest: worldDigest, skeleton, factions: factionList }) },
+      { role: 'user',   content: t('ai.continentsUserMsg') },
+    ],
+    schema: CONTINENTS_OUTLINE_SCHEMA,
+  });
+}
+
+export async function generateProvinceOutline(parentDigest, node, blueprint) {
+  return chatCompletion({
+    tier: 'medium',
+    maxTokens: 500,
+    messages: [
+      { role: 'system', content: t('ai.provincePrompt', {
+          parentDigest, id: node.id, name: node.name,
+          climate: node.climate ?? 'temperate', hook: node.hook ?? '',
+        }) },
+      { role: 'user',   content: t('ai.provinceUserMsg') },
+    ],
+    schema: PROVINCE_OUTLINE_SCHEMA,
   });
 }
 

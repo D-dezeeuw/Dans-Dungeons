@@ -64,6 +64,11 @@ describe('every capability has a consumer', () => {
     ['initAtlas',         'src/game/atlas.js',              'pre-atlas saves gaining a map on resume'],
     ['activeThreatsAt',   'src/game/world-clocks.js',       'minted threats being findable'],
     ['resolveThreat',     'src/game/world-clocks.js',       'a dealt-with threat staying dealt with'],
+    ['generateContinentOutlines', 'src/game/worldgen.js',   'the global outline at genesis (doc 17)'],
+    ['generateProvinceOutline',   'src/game/worldgen.js',   'provinces outlining on approach'],
+    ['applyContinentOutlines',    'src/game/atlas.js',      'outlines landing on the skeleton'],
+    ['seaLaneFrom',       'src/game/atlas.js',              'continents reachable by sea'],
+    ['provinceOf',        'src/game/atlas.js',              'regions knowing their province'],
   ];
 
   for (const [symbol, definedIn, powers] of WIRED) {

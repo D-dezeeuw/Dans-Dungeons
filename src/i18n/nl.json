@@ -239,7 +239,8 @@
     "confrontCmd": "bestrijd {{name}}",
     "confrontIntro": "Je zoekt de dreiging op — en vindt haar. {{name}} draait zich naar je toe.",
     "threatResolved": "{{name}} is verslagen. De plek haalt opgelucht adem.",
-    "noThreatHere": "Er valt hier niets te bestrijden."
+    "noThreatHere": "Er valt hier niets te bestrijden.",
+    "sailChip": "Zeil naar {{name}}"
   },
   "adventure": {
     "banner": "── HET AVONTUUR BEGINT ───────────────────────",
@@ -1123,7 +1124,12 @@
     "defaultTone": "rauwe, aardse fantasy",
     "actPrompt": "Je bent de auteur van een lopende fantasycampagne en schrijft Akte {{actNumber}}.\n\n{{finale}}\n\nWat er tot nu toe gebeurd is:\n{{context}}\n\nSchrijf de volgende akte als 5 tot 7 beats. Regels:\n- Bouw voort op wat er echt gebeurd is. Noem de plaatsen, facties en gebeurtenissen uit de context bij naam — de speler heeft ze verdiend.\n- Alle unpaidSetups MOETEN in deze akte worden ingelost, of bewust in iets anders veranderen. Een aanwijzing die nooit landt is een gebroken belofte.\n- Elke beat heeft een id (kebab-case, uniek), een title, en een dramaticPurpose: één zin die zegt wat waar moet worden voordat de beat voorbij is. Schrijf het doel zo dat een lezer kan zien of het gebeurd is.\n- Zet location op een plaatsnaam uit de context als de beat ergens specifiek hoort, anders null.\n- Gebruik requires om een beat achter een eerdere te zetten, als [\"beat-done-<id>\"]. Houd de akte grotendeels lineair met één of twee optionele vertakkingen.\n- Zet completesOn op de mechanische vlaggen die de slag vanzelf zouden afsluiten, uitsluitend gekozen uit: [\"enemy-slain\", \"boss-slain\", \"treasure-taken\", \"gate-unlocked\", \"settlement-reached\", \"region-reached\"]. Gebruik het wanneer de slag draait om iets dat de dobbelstenen bepalen (een gedode vijand, een deur, een aankomst); gebruik [] wanneer de slag om een gesprek, een ontdekking of een keuze gaat.\n- Escaleer: deze akte moet de speler meer kosten dan de vorige.\n- setups: 1 of 2 aanwijzingen die deze akte plant voor een LATERE uitbetaling — een detail dat de verteller terloops kan laten vallen en dat betekenis krijgt wanneer zijn beat aanbreekt. Elk heeft een clue (één suggestieve zin) en paysInto (het id van de beat in DEZE akte die hem inlost, of null als een latere akte dat moet doen). Gebruik [] alleen als niets het voorafschaduwen waard is.\n\nSchrijf in het {{language}}. Geef alleen JSON terug.",
     "actFinaleNote": "Dit is de LAATSTE akte. Die moet het centrale conflict van de campagne oplossen en de speler een beslissende confrontatie geven — een echt einde, geen volgend klusje.",
-    "actUserMsg": "Schrijf de volgende akte."
+    "actUserMsg": "Schrijf de volgende akte.",
+    "continentsPrompt": "Je bent een fantasy-wereldarchitect. De wereld hieronder heeft continenten die alleen als namen op een kaart bestaan. Geef elk een schets: waar het OVER gaat.\n\nWereld-digest:\n{{parentDigest}}\n\nDe continenten (houd de ids EXACT zoals gegeven; de werknamen mag je hernoemen):\n{{skeleton}}\n\nFacties van deze wereld: {{factions}}\n\nLever per continent:\n- id: exact het gegeven id\n- name: de echte naam (suggestief, 1-2 woorden; de werknaam is een plaatshouder)\n- digest: 40-60 woorden over waar het continent om draait — karakter, gevaren, wat reizigers trekt\n- factionHomelands: per relevante factie {factionId, presence} met presence homeland, strong, contested of absent\n\nLaat de continenten van elkaar VERSCHILLEN. Antwoord volledig in het Nederlands. Geef ALLEEN een JSON-object dat het schema volgt.",
+    "continentsUserMsg": "Schets de continenten.",
+    "provincePrompt": "Je bent een fantasy-wereldarchitect. Een schip nadert de provincie hieronder; schets wat de reiziger aantreft.\n\nWereld tot nu toe:\n{{parentDigest}}\n\nDe provincie: id \"{{id}}\", werknaam \"{{name}}\", klimaat {{climate}}. Haakje: {{hook}}\n\nLever:\n- id: exact \"{{id}}\"\n- name: de echte naam (de werknaam is een plaatshouder)\n- digest: 40-60 woorden over waar deze provincie om draait\n- conflicts: precies 2 korte regels met levende spanning\n- landmarks: precies 2 kenmerkende plekken waar een reiziger van hoort\n- dominantFactionId: het lokaal dominante factie-id, of null\n- factionStance: dominant, contested of absent\n\nAntwoord volledig in het Nederlands. Geef ALLEEN een JSON-object dat het schema volgt.",
+    "provinceUserMsg": "Schets de provincie.",
+    "worldgenStepContinents": "De continenten in kaart brengen…"
   },
   "thinking": {
     "reading": "De Dungeon Master overweegt je woorden",
@@ -1197,5 +1203,13 @@
       "full": "Alle plekken zijn in gebruik. Overschrijf of verwijder er eerst een.",
       "quota": "Er was geen ruimte om de plek te schrijven. Maak ruimte vrij en probeer opnieuw."
     }
+  },
+  "sail": {
+    "noLane": "Er vertrekt geen zeeroute van deze kust.",
+    "depart": "Je neemt de overtocht — {{days}} dagen open zee richting {{name}}.",
+    "sight": "Land doemt op aan de horizon: {{name}}. {{digest}}",
+    "arriveKnown": "De oversteek is inmiddels vertrouwd. Je gaat aan land in {{name}}.",
+    "arrive": "Het schip meert aan bij {{settlement}}, aan de kust van {{name}}.",
+    "noPassage": "Geen schip waagt vandaag de oversteek. De haven wacht."
   }
 }
