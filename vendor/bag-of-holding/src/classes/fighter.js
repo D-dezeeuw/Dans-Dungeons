@@ -64,16 +64,26 @@ export default {
     19: ['Epic Boon'],
     20: ['Three Extra Attacks']
   },
-  // Resource-bearing features (since 1.3.0). Indomitable arrives at
-  // L9 with one use, and bumps to two uses at L13 per the SRD table;
-  // the mechanic helper reads the current `max` from the actor's
-  // resources, so the level-up flow updates `indomitable.max`.
+  // Resource-bearing features (since 1.3.0). Level-scaled maxima use the
+  // same `max: (level) => …` form Rage does, so `Mechanics.freshResources`
+  // derives the right pool at any level instead of trusting a level-up flow
+  // to remember.
   resources: {
-    // SRD 5.2: two uses at level 1 (3 at 4th, 4 at 10th), all back on a long
-    // rest and one back on a short rest. This was the 2014 single use.
-    secondWind: { max: 2, refreshes: 'short' },
-    actionSurge: { max: 1, refreshes: 'short' },
-    indomitable: { max: 1, refreshes: 'long' }
+    // SRD 5.2 § Fighter — Second Wind: two uses at level 1, three at 4th,
+    // four at 10th; ALL return on a Long Rest and ONE on a Short Rest.
+    // (The previous `{ max: 2, refreshes: 'short' }` refilled the whole
+    // pool every short rest — a rule from neither edition.)
+    secondWind: {
+      max: (level) => (level >= 10 ? 4 : level >= 4 ? 3 : 2),
+      refreshes: 'long',
+      shortRestRecovery: 1
+    },
+    // SRD 5.2 § Fighter — Action Surge: refreshes on a Short or Long
+    // Rest; a second use arrives at 17th (the features table always
+    // said so; the counter now agrees).
+    actionSurge: { max: (level) => (level >= 17 ? 2 : 1), refreshes: 'short' },
+    // Indomitable: one use at 9th, two at 13th, three at 17th, per Long Rest.
+    indomitable: { max: (level) => (level >= 17 ? 3 : level >= 13 ? 2 : 1), refreshes: 'long' }
   },
   mechanics: {
     /**

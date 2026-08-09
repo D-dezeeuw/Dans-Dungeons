@@ -1,7 +1,13 @@
-// SRD 5.2 monster stat blocks — a representative sample for hosts
-// that don't AI-generate creatures. Each entry carries the fields a
-// host needs to wire a stat block into the encounter system: AC, HP,
-// abilities, speed, attacks (with damage spec), and CR.
+// Monster stat blocks — a representative sample for hosts that don't
+// AI-generate creatures. Each entry carries the fields a host needs to
+// wire a stat block into the encounter system: AC, HP, abilities,
+// speed, attacks (with damage spec), and CR.
+//
+// EDITION HONESTY: most of these numbers were transcribed from the
+// 2014 (5.1) blocks, and a full re-audit against SRD 5.2 has not been
+// done. Entries verified against 5.2 say so; deliberate 2014 holdovers
+// are tagged `// HOUSE RULE`. Do not cite this file as "SRD 5.2" for
+// an entry that carries neither marker.
 //
 // This isn't the full SRD bestiary — it's the set a starter campaign
 // reaches for. Plugins add more via `createEngine({ extraMonsters })`
@@ -10,14 +16,18 @@
 
 export default {
   goblin: {
+    // Verified against SRD 5.2 (Goblin Warrior): AC 15, HP 10.
     id: 'goblin', name: 'Goblin',
-    cr: 0.25, ac: 15, hp: 7,
+    cr: 0.25, ac: 15, hp: 10,
     size: 'small', speed: 30,
     abilityScores: { str: 8, dex: 14, con: 10, int: 10, wis: 8, cha: 8 },
     attacks: [{ name: 'Scimitar', attackBonus: 4, damage: '1d6+2', damageType: 'slashing' }],
     skills: { stealth: 6 }
   },
   orc: {
+    // HOUSE RULE: the Orc is not in SRD 5.2 at all (removed in the 2024
+    // revision). This is the 2014 block, kept because campaigns and
+    // creature pools already reference the id.
     id: 'orc', name: 'Orc',
     cr: 0.5, ac: 13, hp: 15,
     size: 'medium', speed: 30,

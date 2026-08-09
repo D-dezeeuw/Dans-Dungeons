@@ -2,7 +2,7 @@
 // Game lifecycle → flow.js  |  UI modules → ui/*  |  Reactive bindings → reactive.js
 
 import { appState, setValue, bindDOM, initState, restoreState, loadFromStorage, saveToStorage, run, tick,
-         onSaveHealthChange, storagePressure, hasCorruptSaveBackup } from './core/state.js';
+         onSaveHealthChange, storagePressure, hasCorruptSaveBackup, compactColdArchive } from './core/state.js';
 import { registerReactiveSidebar }                                                           from './ui/reactive.js';
 import { createJournal, exportScreenshot, exportAllSketches, exportSave, importSave, handleImportFile, exportWorldBible, manageSlots } from './ui/exports.js';
 import { startNewGame, resumeGame, ensureKey, applySketchView, sketchThisScene, upgradeToDeluxe, requireDeluxe } from './game/flow.js';
@@ -201,6 +201,10 @@ async function boot() {
     // Re-derive the sheet from the record — never trust the persisted sheet,
     // which may have been produced by an older rules engine.
     if (appState.party?.pc) setValue('party.pc', reconcilePc(appState.party.pc));
+    // Saves written before the archive watermark existed left a cold store
+    // full of duplicated slices. One best-effort pass dedupes and rewrites it;
+    // once `session.archived` exists this is a no-op forever.
+    compactColdArchive().catch(() => {});
   }
   if (appState.settings?.roleplayMode) document.body.classList.add('roleplay-mode');
   if (appState.settings?.autoplay) document.getElementById('autoplay-btn')?.classList.add('active');

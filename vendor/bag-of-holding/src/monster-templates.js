@@ -64,6 +64,14 @@ export function elevate(monster, tierName = 'elite') {
     damage: scaleDamage(a.damage, tier.damageMultiplier),
   }));
 
+  // Two strikes a round is the difference between a solo boss and a punching
+  // bag: one creature against a party is already losing the action economy.
+  // A base with a single attack strikes with it twice — exactly how the SRD
+  // writes single-weapon multiattacks — instead of a one-entry "multi"attack.
+  const multiattackRefs = (attacks.length >= 2 ? attacks.slice(0, 2) : [attacks[0], attacks[0]])
+    .filter(Boolean)
+    .map(a => ({ name: a.name, attackRef: a.name }));
+
   return {
     ...monster,
     id:   `${monster.id}-${tierName}`,
@@ -72,17 +80,18 @@ export function elevate(monster, tierName = 'elite') {
     hp:   Math.round((monster.hp ?? 1) * tier.hpMultiplier),
     ac:   (monster.ac ?? 10) + tier.acBonus,
     attacks,
-    // Two strikes a round is the difference between a solo boss and a punching
-    // bag: one creature against a party is already losing the action economy.
-    multiattack: {
-      attacks: attacks.slice(0, 2).map(a => ({ name: a.name, attackRef: a.name })),
-    },
+    multiattack: { attacks: multiattackRefs },
+    // `options` with stable ids is the shape `useLegendaryAction` looks up
+    // (monsters.js) — the previous `actions`/name-only shape meant a derived
+    // boss had legendary actions it could never actually use.
+    // Lair actions are deliberately NOT derived: they fire on initiative 20
+    // from a host-driven trigger no template can invent data for.
     legendaryActions: {
       uses: tier.legendaryActions,
-      actions: [
-        { name: 'Strike',  cost: 1, attackRef: attacks[0]?.name ?? 'Attack' },
-        { name: 'Move',    cost: 1 },
-        { name: 'Rally',   cost: 2 },
+      options: [
+        { id: 'strike', name: 'Strike', cost: 1, attackRef: attacks[0]?.name ?? 'Attack' },
+        { id: 'move',   name: 'Move',   cost: 1 },
+        { id: 'rally',  name: 'Rally',  cost: 2 },
       ],
     },
     legendaryResistance: { uses: tier.legendaryResistance },

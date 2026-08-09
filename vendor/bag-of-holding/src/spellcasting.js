@@ -15,9 +15,12 @@
 //     declares; the actual hook plumbing lives in engine.js.
 //
 // Why a new module: it has its own opinions (slot tables, rest
-// semantics) and pulls in nothing else. Folding it into engine.js
-// would inflate the factory; folding it into spells.js would mix
-// data and mechanics.
+// semantics). Its one import is the SRD class-list data (2.5.0),
+// which casting consults so a wizard cannot cast Cure Wounds.
+// Folding it into engine.js would inflate the factory; folding it
+// into spells.js would mix data and mechanics.
+
+import { classesFor, isOnClassList, CASTER_CLASSES } from './srd/spell-lists.js';
 
 // === Slot tables ===
 //
@@ -91,7 +94,8 @@ export function halfCasterSlots(casterLevel, spellLevel) {
   return HALF_CASTER_TABLE[casterLevel - 1][spellLevel];
 }
 
-// Rows are caster levels 2..20 (level 1 has no slots).
+// Rows are caster levels 1..20. SRD 5.2 half-casters have two
+// first-level slots at level 1 (the 2014 no-slots-at-L1 rule is gone).
 const HALF_CASTER_TABLE = [
   /* L1  */ [0, 2, 0, 0, 0, 0],
   /* L2  */ [0, 2, 0, 0, 0, 0],
@@ -321,20 +325,35 @@ export function scaledDamageSpec(baseSpec, casterLevel) {
 // re-prep. We model "valid prep list?" — the host owns the
 // transition.
 
-/** How many spells a class prepares per day at a given level.
- *  SRD 5.2: spellcasting ability mod + level (or half-level for
- *  half-casters). Defaults to `ability mod + level`. */
-export function preparedSpellCount({ casterLevel, abilityMod, progression = 'full' }) {
+// SRD 5.2 prepared-spell counts are FIXED per class level — the 2014
+// `ability mod + level` formula is gone from the 2024 rules entirely.
+// `full` is the Cleric/Druid column; `half` is the Paladin/Ranger column.
+// Index = caster level (index 0 unused).
+const PREPARED_FULL = [null, 4, 5, 6, 7, 9, 10, 11, 12, 14, 15, 16, 16, 17, 17, 18, 18, 19, 20, 21, 22];
+const PREPARED_HALF = [null, 2, 3, 4, 5, 6, 6, 7, 7, 9, 9, 10, 10, 11, 11, 12, 12, 14, 14, 15, 15];
+
+/** How many spells a class prepares at a given level.
+ *
+ *  SRD 5.2: a fixed per-level count from the class table (the 2014
+ *  `ability mod + level` formula this function used to implement no
+ *  longer exists in the 2024 rules).
+ *
+ *  `abilityMod` is accepted for call-site compatibility and IGNORED —
+ *  the 2024 tables don't use it.
+ *  HOUSE RULE: one shared column per progression. The real 2024 classes
+ *  differ by a spell or two at some levels (a Wizard prepares slightly
+ *  more at high levels than a Cleric); this engine models the modal
+ *  Cleric/Druid and Paladin/Ranger columns rather than per-class tables.
+ */
+export function preparedSpellCount({ casterLevel, abilityMod = 0, progression = 'full' }) {
   if (!Number.isInteger(casterLevel) || casterLevel < 1) {
     throw new Error('casterLevel must be a positive integer');
   }
   if (!Number.isInteger(abilityMod)) {
     throw new Error('abilityMod must be an integer');
   }
-  const levelPortion = progression === 'half'
-    ? Math.floor(casterLevel / 2)
-    : casterLevel;
-  return Math.max(1, abilityMod + levelPortion);
+  const table = progression === 'half' ? PREPARED_HALF : PREPARED_FULL;
+  return table[Math.min(casterLevel, 20)];
 }
 
 /**
@@ -402,6 +421,20 @@ export function validatePreparation({ known, prepared, casterLevel, abilityMod, 
  *   - `actor.spellSlots[]` — consumed unless ritual or cantrip.
  */
 export function castSpell(actor, spell, args = {}) {
+  // 0. Class-list gate (SRD § class spell lists; since 2.5.0 the lists ship
+  // in src/srd/spell-lists.js and casting finally consults them — before
+  // this, a wizard could cast Cure Wounds with `ok: true`). The gate only
+  // engages when it can be sure of both sides: the actor declares a class
+  // the lists know, AND the spell is a listed SRD spell. Monsters, classless
+  // actors and homebrew spells pass through, and `args.ignoreClassList`
+  // opts out for effects that legitimately cross lists (magic items, wishes).
+  if (args.ignoreClassList !== true && actor.classId && CASTER_CLASSES.includes(actor.classId)) {
+    const owners = classesFor(spell.id);
+    if (owners.length > 0 && !owners.includes(actor.classId)) {
+      return { ok: false, reason: `${spell.id} is not on the ${actor.classId} spell list` };
+    }
+  }
+
   // 1. Component checks (SRD § Spells — Components).
   const components = spell.components ?? {};
   if (components.v && actor.silenced === true) {
@@ -541,7 +574,15 @@ export function castFromScroll(actor, spell, args = {}, rng = Math.random) {
   }
   // Compute the would-be DC for any higher-level scroll check.
   const maxCastable = args.maxCastableLevel ?? actor.maxCastableLevel ?? 0;
-  const onClassList = args.onClassList !== false; // host defaults to true
+  // A caller-supplied boolean stays authoritative; when the host doesn't
+  // say, consult the SRD class lists directly (since 2.5.0 the data exists
+  // one module over — before that, this was a boolean the host had to
+  // invent). Unknown class or unlisted spell defaults to true, as before.
+  const onClassList = args.onClassList !== undefined
+    ? args.onClassList !== false
+    : (actor.classId && classesFor(spell.id).length > 0
+        ? isOnClassList(actor.classId, spell.id)
+        : true);
   let check = null;
   if (onClassList && spell.level > 0 && spell.level > maxCastable) {
     const dc = 10 + spell.level;
@@ -566,9 +607,13 @@ export function castFromScroll(actor, spell, args = {}, rng = Math.random) {
   // ritual (no slot) when not on class list; otherwise consume a
   // notional slot of the spell's own level from a temporary array.
   const slotArr = [{ level: spell.level, used: 0, max: 1 }];
+  // Scrolls legitimately cross class lists (that is what the higher-level
+  // check above adjudicates), so the inner cast opts out of the class-list
+  // gate — otherwise a wizard could never use a cure-wounds scroll at all.
   const castResult = castSpell({ ...castActor, spellSlots: slotArr, spellsPrepared: [spell.id] }, spell, {
     ...args,
-    slotLevel: spell.level
+    slotLevel: spell.level,
+    ignoreClassList: true
   });
   return { ...castResult, scrollConsumed: true, check };
 }
@@ -723,9 +768,22 @@ export function applyEvasion(results, targetsById) {
  * the engine's bound `savingThrow` doesn't yet take an `advantage`
  * argument. Equivalent to the engine's standard advantage proxy.
  */
-export function magicResistanceDcFor(target, baseDc) {
-  if (!target || target.magicResistance !== true) return baseDc;
-  return Math.max(0, baseDc - 5);
+/**
+ * RETIRED (2.5.0): Magic Resistance is *advantage on the save*, and since
+ * 2.3.0 `savingThrow` takes a real `advantage` flag — so the old −5-DC
+ * approximation this function applied would DOUBLE-COUNT for any host that
+ * passes both. The name survives so old call sites keep compiling, but it
+ * now returns the DC unchanged. Use `magicResistanceAdvantage(target)` to
+ * feed the save's `advantage` argument instead.
+ */
+export function magicResistanceDcFor(_target, baseDc) {
+  return baseDc;
+}
+
+/** SRD § Monsters — Magic Resistance: advantage on saves vs spells and
+ *  other magical effects. Feed this into `savingThrow`'s `advantage`. */
+export function magicResistanceAdvantage(target) {
+  return target?.magicResistance === true;
 }
 
 /**

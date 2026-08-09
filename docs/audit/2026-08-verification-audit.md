@@ -482,7 +482,7 @@ Effort: S ≤ 1 day, M ≤ 1 week.
 | P0-6 | Slot load commit; import resets before restore (or routes through the boot path) | game | S |
 | P0-7 | Spawn minted creatures into `world.npcs` (+attitude); fix clock-pressure id encoding; give escalation its promised patches | game | M |
 | P0-8 | Loot field pass-through (generator + travel); level-up max-HP read-after-tick | game+client | S |
-| P0-9 | **Revoke the leaked OpenRouter key** (unchanged since August 7; recoverable at `42dc51d`) | owner | S |
+| P0-9 | ~~Revoke the leaked OpenRouter key~~ **Resolved 2026-08-09**: owner confirms the key was already replaced and was free-tier only. The BYOK decision is recorded in `docs/ideas/05-ai-runtime.md`. | owner | done |
 | P0-10 | De-flake the death-save test (seeded rng or complete enum) | engine | S |
 | P1-1 | Replay: record surprise initiative + auto-failed saves + the four unlogged draw sites | engine | M |
 | P1-2 | Legendary-action shape fix (`options[].id` vs `actions[].name`) + a use-on-elevated test; integrate spell lists into `castSpell` | engine | S–M |

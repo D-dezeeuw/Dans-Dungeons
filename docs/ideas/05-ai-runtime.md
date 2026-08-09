@@ -1,8 +1,21 @@
 # 05 — AI runtime
 
-> **IMPLEMENTATION STATUS (PARTIAL)** — audited 2026-08-07.
-> Tiers, streaming, retries and fallbacks shipped. The tier vocabulary differs from this doc, the cost meter only recently began reading real spend, and none of the budget caps or prompt caching described here exist. The doc correctly warned that the provider hosts no TTS/STT models — that warning was not heeded until the 2026-08 audit.
-> Full evidence: [`docs/audit/2026-08-comprehensive-audit.md`](../audit/2026-08-comprehensive-audit.md).
+> **IMPLEMENTATION STATUS (PARTIAL)** — re-audited 2026-08-09.
+> Tiers, streaming, retries, fallback chains and boot-time model healing
+> shipped (the model tables live in bag-of-holding-client, one owner). The
+> cost meter reads real per-call spend, including image calls. The tier
+> vocabulary still differs from this doc, and the budget caps / prompt-caching
+> controls described here remain unbuilt. The TTS/STT warning was heeded: the
+> tier table records that OpenRouter hosts no speech models.
+> Full evidence: [`docs/audit/2026-08-verification-audit.md`](../audit/2026-08-verification-audit.md).
+>
+> **Decision (2026-08-09): the free tier stays BYOK.** A browser bundle cannot
+> keep a secret, so the game will not ship a shared free-tier key. The only
+> sanctioned mechanism is the build-time `DD_DEMO_KEY` injection
+> (`src/ai/demo-key.js`, default `null`), and any key injected there is
+> treated as public: free-tier only, spend-capped at the provider, rotated
+> without ceremony. A key in a committed bundle got scraped once already —
+> that is the failure mode this decision closes.
 
 > **Status:** rough sketch.
 

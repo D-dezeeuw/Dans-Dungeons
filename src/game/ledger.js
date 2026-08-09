@@ -11,6 +11,7 @@
 import { appendPatch, makePatch, fold, foldAll, recentCauses, dirtyTargets, compact,
          makeId, isUnder } from 'bag-of-holding-client';
 import { appState, setValue } from '../core/state.js';
+import { t } from '../i18n/i18n.js';
 
 export { makeId, isUnder };
 
@@ -125,6 +126,37 @@ export function recentEvents(opts) {
 // Which digests are stale because of patches since a given turn.
 export function staleDigests(sinceTurn = 0) {
   return dirtyTargets(ledger().filter(p => p.turn >= sinceTurn));
+}
+
+// Refresh the stale ones. The region digest is the "stable, cacheable head" of
+// every scope packet, written once at worldgen — without this consumer it
+// stayed frozen at generation time while escalations and resolved threats
+// piled up in the ledger. Deterministic, no LLM: the generated prose is kept
+// as `digestBase` and the digest becomes base + a short tail of the newest
+// regional causes, so repeated refreshes replace the tail instead of growing it.
+export function refreshStaleDigests(sinceTurn = 0) {
+  const stale = new Set(staleDigests(sinceTurn));
+  if (!stale.size) return 0;
+
+  const regions = appState.world?.regions ?? {};
+  let refreshed = 0;
+  for (const [regionId, region] of Object.entries(regions)) {
+    const entityId = `region.${slug(regionId)}`;
+    if (!stale.has(entityId)) continue;
+    const news = ledger()
+      .filter(p => p.turn >= sinceTurn && (p.scope === 'regional' || p.scope === 'world')
+                && p.because && isUnder(p.target, entityId))
+      .map(p => p.because);
+    if (!news.length) continue;
+    const latest = [...new Set(news)].slice(-3).join('; ');
+    const base   = region.digestBase ?? region.digest ?? '';
+    setValue('world.regions', {
+      ...appState.world.regions,
+      [regionId]: { ...region, digestBase: base, digest: `${base} ${t('rumour.digestLately', { news: latest })}`.trim() },
+    });
+    refreshed++;
+  }
+  return refreshed;
 }
 
 // ─── Compaction ──────────────────────────────────────────────────────────────

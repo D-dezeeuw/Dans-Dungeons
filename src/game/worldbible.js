@@ -51,7 +51,11 @@ export function campaignWorld() {
     },
     factions:   Object.values(w.factions ?? {}),
     beats:      w.redThread?.beats ?? [],
-    acts:       w.acts?.acts ?? [],
+    // Acts live on the thread the acts runtime owns (world.thread), and
+    // beat-done flags are thread-level, not per-act — reading w.acts here
+    // produced an empty acts chapter for every live campaign.
+    acts:       w.thread?.acts ?? [],
+    actFlags:   w.thread?.flags ?? {},
     regions:    Object.values(w.regions ?? {}),
     settlements: Object.values(w.settlements ?? {}),
     dungeons:   Object.values(w.dungeons ?? {}),
@@ -212,7 +216,7 @@ async function polishChapters(rawChapters) {
 // ─── Chapter formatter ───────────────────────────────────────────────────────
 
 function formatChapters(world) {
-  const { seed, factions, beats, acts = [], chronicle = [] } = world;
+  const { seed, factions, beats, acts = [], actFlags = {}, chronicle = [] } = world;
   // A generated world has one of each; a live campaign has as many as the
   // player has been to. Normalising here is what lets both share every
   // chapter below.
@@ -370,8 +374,8 @@ function formatChapters(world) {
   // book, and it only exists after someone has played.
   if (acts.length) {
     const actText = acts.map((act, i) => {
-      const done = (act.beats ?? []).filter(b => act.flags?.[`beat-done-${b.id}`]);
-      const open = (act.beats ?? []).filter(b => !act.flags?.[`beat-done-${b.id}`]);
+      const done = (act.beats ?? []).filter(b => actFlags[`beat-done-${b.id}`]);
+      const open = (act.beats ?? []).filter(b => !actFlags[`beat-done-${b.id}`]);
       return [
         `Act ${i + 1}: ${act.title ?? act.id}`,
         act.premise ?? '',

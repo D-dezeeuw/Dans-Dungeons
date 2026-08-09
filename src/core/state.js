@@ -6,7 +6,7 @@
 
 import { DEFAULT_MODELS } from '../ai/tiers.js';
 import { wrapEnvelope, saveEnvelope, loadEnvelope, makeCommit, restoreBackup, LOAD_ERRORS,
-         openCold, appendSegment, readSegments, splitSave } from 'bag-of-holding-client';
+         openCold, appendSegment, readSegments, splitSave, coldKeys, coldDelete } from 'bag-of-holding-client';
 
 import { createSpektrum } from 'spektrum';
 import { isPrimaryTab } from './tabs.js';
@@ -270,14 +270,23 @@ export function saveToStorage() {
   // silently, and only visible on the next reload.
   if (!isPrimaryTab()) return false;
 
-  const { hot, cold } = splitSave(buildSaveSnapshot(), HOT_LIMITS);
+  // The watermark says how many leading entries are already durably archived.
+  // Without it, every save re-archived the entire overflow-so-far as a brand
+  // new segment: measured 88x duplication of the cold tier at 200 turns,
+  // quadratic beyond, and the journal read the duplicates back as history.
+  const marks = archiveMarks();
+  const { hot, cold } = splitSave(buildSaveSnapshot(), {
+    ...HOT_LIMITS,
+    archivedTranscript: marks.transcript,
+    archivedLedger:     marks.ledger,
+  });
   const ok = saveEnvelope(localStorage, SAVE_KEY, hot, SAVE_VERSION, {
     backups:  SAVE_BACKUPS,
     checksum: true,
   });
   if (!ok) console.warn('[state] localStorage save failed (quota?)');
   setSaveHealth(ok);
-  archiveCold(cold);          // fire-and-forget; never blocks a turn
+  archiveCold(cold, marks, hot.archived);   // fire-and-forget; never blocks a turn
   return ok;
 }
 
@@ -296,21 +305,85 @@ function coldDb() {
   return _coldReady;
 }
 
-function archiveCold(cold) {
+// The archive watermark rides `session.archived`, which is a PERSISTED and
+// RECORDED path: it travels in the save, and an undo scrub rewinds it with
+// everything else — so a rewound timeline re-archives at worst a small
+// overlap (which fullTranscript's dedupe folds away) and can never silently
+// skip entries a new branch wrote below a stale high-water mark.
+function archiveMarks() {
+  const a = appState.session?.archived;
+  return { transcript: a?.transcript ?? 0, ledger: a?.ledger ?? 0 };
+}
+
+function archiveCold(cold, baseMarks, nextMarks) {
   if (!cold?.transcript?.length && !cold?.ledger?.length) return;
-  coldDb().then((db) => {
+  coldDb().then(async (db) => {
     if (!db) return;
-    if (cold.transcript.length) appendSegment(db, 'transcript', 'run', cold.transcript);
-    if (cold.ledger.length)     appendSegment(db, 'ledger', 'run', cold.ledger);
+    let tOk = true, lOk = true;
+    if (cold.transcript.length) tOk = !!(await appendSegment(db, 'transcript', 'run', cold.transcript));
+    if (cold.ledger.length)     lOk = !!(await appendSegment(db, 'ledger', 'run', cold.ledger));
+    // Advance the mark only for batches that DURABLY landed (appendSegment
+    // reports real success now), and only if the mark hasn't moved since we
+    // sliced — an undo or a competing save in between means the next save
+    // re-slices from the truth rather than us clobbering it (compare-and-set).
+    const now = archiveMarks();
+    if (now.transcript !== baseMarks.transcript || now.ledger !== baseMarks.ledger) return;
+    const next = {
+      transcript: tOk ? nextMarks.transcript : now.transcript,
+      ledger:     lOk ? nextMarks.ledger : now.ledger,
+    };
+    if (next.transcript !== now.transcript || next.ledger !== now.ledger) {
+      setValue('session.archived', next);
+      tick();
+    }
   }).catch(() => { /* the cold tier is best-effort by design */ });
+}
+
+// Collapse duplicates from the merged history. Two sources: the pre-watermark
+// archive (which re-wrote overlapping prefixes every save) and post-undo
+// re-archives. Keyed by (turn, role, text) keep-first — divergent branches
+// that share a turn number but not text both survive, exact copies fold away.
+function dedupeHistory(entries) {
+  const seen = new Set();
+  const out = [];
+  for (const e of entries) {
+    const key = `${e?.turn ?? ''}|${e?.role ?? ''}|${e?.text ?? ''}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(e);
+  }
+  return out;
+}
+
+// One-time cleanup for saves written by the pre-watermark archiver: their cold
+// store holds each early entry dozens of times. Dedupe and rewrite as a single
+// segment so the stored garbage stops occupying quota; from then on the
+// watermark keeps it clean. Only runs when no watermark exists yet.
+export async function compactColdArchive() {
+  if (appState.session?.archived) return;
+  const db = await coldDb();
+  if (!db) return;
+  for (const store of ['transcript', 'ledger']) {
+    const keys = (await readSegmentKeys(db, store, 'run'));
+    if (keys.length <= 1) continue;
+    const merged = dedupeHistory(await readSegments(db, store, 'run'));
+    const ok = await appendSegment(db, store, 'compact', merged, { startIndex: 0 });
+    if (!ok) continue;                       // keep the originals if the rewrite failed
+    for (const key of keys) await coldDelete(db, store, key);
+  }
+}
+
+async function readSegmentKeys(db, store, prefix) {
+  return (await coldKeys(db, store)).filter(k => typeof k === 'string' && k.startsWith(`${prefix}:`));
 }
 
 // The full transcript, hot tail included — for the journal and the world bible,
 // which are the only things that need the whole campaign at once.
 export async function fullTranscript() {
   const db = await coldDb();
-  const archived = db ? await readSegments(db, 'transcript', 'run') : [];
-  return [...archived, ...(appState.transcript ?? [])];
+  const compacted = db ? await readSegments(db, 'transcript', 'compact') : [];
+  const archived  = db ? await readSegments(db, 'transcript', 'run') : [];
+  return dedupeHistory([...compacted, ...archived, ...(appState.transcript ?? [])]);
 }
 
 // Fraction of the storage quota in use (0–1), or null when the browser will not

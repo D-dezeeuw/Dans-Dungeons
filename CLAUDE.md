@@ -47,22 +47,35 @@ Every feature request follows this loop (no PRs — direct merge to `main`):
 
 ```
 src/
-├── main.js              Boot entry, settings wiring, locale init
+├── main.js              Boot entry, settings wiring, locale init, cold-archive migration
 ├── core/
-│   ├── state.js          Spektrum wrapper (setValue, tick, computed, etc.)
+│   ├── state.js          Spektrum wrapper (setValue, tick, computed) + hot/cold save split
+│   ├── slots.js          Named save slots over the storage envelope
+│   ├── tabs.js           Tab ownership: one writer, spectator banner for the rest
 │   └── utils.js          escHtml and other small helpers
 ├── game/
 │   ├── flow.js           Game lifecycle FSM: play loop, towns, travel, end states
 │   ├── session-setup.js  Key acquisition (OAuth/paste/demo), tier, model healing
 │   ├── views.js          Read-only screens: /story, region map, quests, inventory
 │   ├── loop.js           Turn engine: classify → resolve → narrate → commit
+│   ├── preclassify.js    Deterministic intent shortcuts before the LLM classifier
 │   ├── resolver.js       Pure D&D rules: attack, skill, move, take, unlock
+│   ├── spells.js         Casting UX over the engine's spellcasting module
 │   ├── character.js      Character creation wizard
+│   ├── progression.js    XP awards, milestones, level-up re-derivation
+│   ├── chapters.js       Chapter digests, rolling summary, boundaries, recap
+│   ├── ledger.js         World ledger bound to Spektrum + digest refresh
+│   ├── scope.js          Per-turn scope packet (here/nearby/region/memory/gmOnly)
+│   ├── scope-budget.js   Token budgets for the scope packet, pinned by tests
+│   ├── canon-commit.js   Validate + mint what the narrator invents
+│   ├── world-clocks.js   Threat clocks: tick, rumours, confront/resolve reads
+│   ├── acts-runtime.js   Acts thread: flags, beat completion, clue payoffs
+│   ├── atlas.js          Seeded region graph: stubs, hydration, frontier
 │   ├── world.js          Dungeon assembly (content injection over the client lib)
 │   ├── worldgen.js       Layered AI world generation pipeline (L00→L03)
 │   ├── worldseed.js      Seeded blueprint wrapper + domain treasures/keys
 │   ├── worldbible.js     World-bible EPUB generation
-│   ├── story.js          Red-thread beats, story flags, faction reputation
+│   ├── story.js          Story flags, faction reputation, GM story context
 │   ├── undo.js           Time travel: epochs, undo/redo, branches, persistence
 │   ├── rng.js            Epoch-seeded combat dice + verifiable roll log
 │   ├── bestiary.js       Stat-block provider over the engine's SRD monsters
@@ -75,18 +88,24 @@ src/
 │   ├── classify.js       Intent classifier + beat-fulfilment check (tiny tier)
 │   ├── narrate.js        GM narrator, travel beats, scene images (medium tier)
 │   ├── dialogue.js       Settlement classifier + NPC conversation (tiny/medium)
+│   ├── summarize.js      Rolling chapter summaries + chapter titles (tiny tier)
+│   ├── canon.js          Canon extractor: narration → proposed facts/mints
+│   ├── acts.js           Act generator (medium tier)
 │   ├── autoplay.js       LLM-driven autopilot (tiny tier)
 │   ├── journal.js        LLM story weaver for journal export (medium tier)
-│   ├── schemas.js        JSON schemas: CLASSIFIER, NARRATOR, AUTOPLAY, JOURNAL
+│   ├── schemas.js        JSON schemas: CLASSIFIER, NARRATOR, AUTOPLAY, JOURNAL, ACT…
+│   ├── validate.js       Schema-shape normalization for provider output
+│   ├── parse.js          Tolerant JSON extraction from model text
+│   ├── errors.js         AI error taxonomy: retryable vs terminal, user wording
 │   ├── tiers.js          Pricing tier → model set (tables live in the client lib)
 │   ├── demo-key.js       Optional build-injected demo credential (null by default)
 │   ├── auth.js           OpenRouter OAuth redirect + code exchange
 │   ├── spend.js          Real cumulative spend (outside replayable history)
-│   ├── tts.js            Text-to-speech
-│   └── stt.js            Speech-to-text
+│   ├── tts.js            Text-to-speech playback (provider call in the client lib)
+│   └── stt.js            Speech-to-text capture (provider call in the client lib)
 ├── i18n/
 │   ├── i18n.js           t(key, params), tRaw(key), locale(), setLocale()
-│   ├── en.json           English string table (~200 keys)
+│   ├── en.json           English string table
 │   └── nl.json           Dutch string table
 └── ui/
     ├── console.js        Re-export barrel for UI modules
@@ -157,7 +176,8 @@ LLM-driven autopilot (`src/ai/autoplay.js`):
 
 ### Journal export (EPUB)
 
-`src/ui/exports.js` + `src/ai/journal.js` + `src/ui/epub.js`:
+`src/ui/exports.js` + `src/ai/journal.js` + the client lib's EPUB builder
+(`vendor/bag-of-holding-client/src/output/epub.js`):
 
 - Sends all narrations to medium tier LLM to weave into coherent prose with chapters
 - Chapters cached in `localStorage` (`dg-journal-cache`) — fingerprinted, only new turns re-processed
@@ -207,17 +227,28 @@ Browser host toolkit at `../bag-of-holding-client/` (vendored at `vendor/bag-of-
 
 ### Persistence
 
-Saves in `localStorage` (key: `dans-dungeons`). Full state exported as `.dnd.json`. Journal cache in `dg-journal-cache`. Locale in `dg-locale`.
+Hot/cold split. The `localStorage` envelope (key: `dans-dungeons`) keeps a
+bounded hot slice — recent transcript and ledger — and everything older is
+archived to IndexedDB in append-only segments (`src/core/state.js` +
+`vendor/bag-of-holding-client/src/persistence/idb.js`). The archive watermark
+advances only after a cold write is CONFIRMED, and it is Spektrum-recorded so
+undo rewinds it with the rest of history; a one-time boot migration
+(`compactColdArchive`) dedupes archives written before that rule existed.
+Named save slots live beside the envelope (`src/core/slots.js`). Full state
+exports as `.dnd.json`. Journal cache in `dg-journal-cache`, locale in
+`dg-locale`.
 
 ### Tests
 
 Two layers.
 
-**Unit** — `tests/`, run with `node --test`, zero dependencies, 544 passing.
+**Unit** — `tests/`, run with `node --test`, zero dependencies, 555 passing.
 Deterministic logic: dice, checks, combat, XP, spells and slots, schema
-validation, encounter state, save growth, the ledger, save slots. Modules bound
-to Spektrum or i18n are either injectable (`preClassify` takes `{ t, locale }`)
-or mirror-tested against the vendored library.
+validation, encounter state, save growth, the ledger, the cold archive, save
+slots, and a wiring contract (`wiring.test.js`) that fails when a shipped
+capability loses its last consumer. Modules bound to Spektrum or i18n are
+either injectable (`preClassify` takes `{ t, locale }`) or mirror-tested
+against the vendored library.
 
 Three contract tests carry more weight than their size suggests:
 `dom-contract.test.js` asserts every `getElementById` target exists in

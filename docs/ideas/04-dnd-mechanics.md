@@ -1,8 +1,12 @@
 # 04 — D&D mechanics
 
-> **IMPLEMENTATION STATUS (PARTIAL)** — audited 2026-08-07.
-> Dice, checks, combat, conditions and death saves are real and enforced by the engine. XP and levelling are NOT wired (every character is permanently level 1), casters have no spells, and the trademark blocklist / safe-terminology machinery described here was never built.
-> Full evidence: [`docs/audit/2026-08-comprehensive-audit.md`](../audit/2026-08-comprehensive-audit.md).
+> **IMPLEMENTATION STATUS (IMPLEMENTED, one gap)** — re-audited 2026-08-09.
+> Dice, checks, combat, conditions and death saves are enforced by the engine.
+> XP and levelling ARE wired now (`src/game/progression.js`: kill XP by CR,
+> milestone awards, level-up re-derives the sheet and heals to the NEW max),
+> and casters cast real engine spells with slots and class-list gating. Still
+> unbuilt: the trademark blocklist / safe-terminology machinery.
+> Full evidence: [`docs/audit/2026-08-verification-audit.md`](../audit/2026-08-verification-audit.md).
 
 > **Status:** rough sketch.
 

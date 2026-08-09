@@ -23,19 +23,21 @@ keeping the AI honest.
   can be replayed and verified from the seed ("Verify" in Settings).
 - **Time travel.** Undo, redo, and jump to any earlier turn; diverging creates a
   branch you can switch between.
-- **Streaming narration**, optional scene sketches, text-to-speech and
-  speech-to-text, and an EPUB journal of your adventure.
+- **Streaming narration**, optional scene sketches, and an EPUB journal of
+  your adventure. Text-to-speech and speech-to-text are wired but need a
+  speech-capable provider behind your key — OpenRouter hosts no speech models.
 - **English and Dutch**, including AI prompts.
-- **Your save is yours.** Everything lives in `localStorage`; export or import
-  the whole run as a single `.dnd.json` file. No accounts, no servers, no
-  telemetry.
+- **Your save is yours.** Everything lives in your browser — recent play in
+  `localStorage`, older chapters archived to IndexedDB — and the whole run
+  exports and imports as a single `.dnd.json` file. No accounts, no servers,
+  no telemetry.
 
 ## Bring your own key
 
 The game talks to [OpenRouter](https://openrouter.ai) with a key you supply —
 connect your account in one click, or paste a key. Free models are available and
 the classifier/narrator defaults are chosen to work on them; a Deluxe tier
-switches to stronger paid models and unlocks images and speech.
+switches to stronger paid models and unlocks scene images.
 
 Builds ship **no credential of any kind**. (A shared demo key can be injected at
 build time via `DD_DEMO_KEY`, but a browser bundle cannot keep a secret, so any
@@ -52,7 +54,7 @@ such key must be treated as public and rate-limited behind a proxy.)
 ## Development
 
 ```bash
-npm install         # esbuild only — the one dev dependency
+npm install         # esbuild + Playwright — dev-only; `npm test` needs neither
 npm test            # node --test tests/  (zero-dep runner, Node 20+)
 node build.js       # bundle src/main.js -> vendor/app.bundle.js + version stamp
 npm run serve       # serve the repo root at http://localhost:3000

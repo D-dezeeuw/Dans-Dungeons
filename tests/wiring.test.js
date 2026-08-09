@@ -57,6 +57,13 @@ describe('every capability has a consumer', () => {
     ['adoptAct',          'src/game/acts-runtime.js',       'adding a generated act to the thread'],
     ['storyStalled',      'src/game/acts-runtime.js',       'escalating a frozen story'],
     ['generateAct',       'src/ai/acts.js',                 'act generation'],
+    ['unpaidSetups',      'src/game/acts-runtime.js',       'planted clues reaching the narrator'],
+    ['takePendingActClose','src/game/story.js',             'act closes surviving the mid-turn seam'],
+    ['refreshStaleDigests','src/game/ledger.js',            'region digests absorbing regional news'],
+    ['titleChapter',      'src/ai/summarize.js',            'chapters named for what happened in them'],
+    ['initAtlas',         'src/game/atlas.js',              'pre-atlas saves gaining a map on resume'],
+    ['activeThreatsAt',   'src/game/world-clocks.js',       'minted threats being findable'],
+    ['resolveThreat',     'src/game/world-clocks.js',       'a dealt-with threat staying dealt with'],
   ];
 
   for (const [symbol, definedIn, powers] of WIRED) {
@@ -102,5 +109,16 @@ describe('the world map is a graph, not a star', () => {
     assert.match(flow, /stubToward\(/);
     assert.match(flow, /stub\?\.seed \?\? Math\.floor/,
       'generation must prefer the pre-minted stub seed over a fresh random one');
+  });
+});
+
+describe('dungeons scale with the campaign', () => {
+  it('the act number reaches the dungeon generator', () => {
+    // The generator takes a size; the game computes one from the act. Both
+    // halves have to hold or every dungeon is the same six rooms for 80 hours.
+    assert.match(SOURCE['src/game/world.js'], /dungeonSizeForAct/,
+      'world.js no longer computes a size from the act');
+    assert.match(SOURCE['src/game/flow.js'], /act:\s*actNumber\(\)/,
+      'flow.js no longer passes the current act into createDungeonEntry');
   });
 });

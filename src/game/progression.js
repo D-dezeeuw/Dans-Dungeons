@@ -54,9 +54,12 @@ export function awardXp(amount, reason) {
     // Re-derive rather than patch: hit points, proficiency, and every
     // level-dependent feature come from the engine, never from local arithmetic.
     const pc = { ...appState.party.pc, record: { ...record, xp, level: after } };
-    setValue('party.pc', reconcilePc(pc));
-    // Heal the difference so a level-up is felt, not just recorded.
-    const max = appState.party?.pc?.sheet?.hp?.max;
+    const reconciled = reconcilePc(pc);
+    setValue('party.pc', reconciled);
+    // Heal to the NEW maximum, read off the freshly derived sheet — reading it
+    // back through appState here got the PREVIOUS level's max, because Spektrum
+    // defers writes until tick(): the level-up healed to the old ceiling.
+    const max = reconciled?.sheet?.hp?.max;
     if (max) setValue('party.pc.record.hpCurrent', max);
 
     recordMechanical(`${currentPlaceId()}.pc`, 'level', after, {

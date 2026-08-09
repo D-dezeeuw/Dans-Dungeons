@@ -183,7 +183,23 @@ export const ACT_SCHEMA = {
         additionalProperties: false,
       },
     },
+    // Foreshadowing this act plants deliberately: each clue is an obligation
+    // the payoff ledger tracks, paid when its beat completes or carried into
+    // the next act's generation. Without a producer here, the whole payoff
+    // channel ran on a permanently empty list.
+    setups: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          clue:     { type: 'string' },
+          paysInto: { type: ['string', 'null'] },
+        },
+        required: ['clue', 'paysInto'],
+        additionalProperties: false,
+      },
+    },
   },
-  required: ['title', 'premise', 'beats'],
+  required: ['title', 'premise', 'beats', 'setups'],
   additionalProperties: false,
 };

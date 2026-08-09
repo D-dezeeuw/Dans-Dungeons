@@ -157,8 +157,8 @@ export const CONDITION_EFFECTS = Object.freeze(_RAW_CONDITION_EFFECTS);
  */
 export function effectsFor(actor) {
   const flags = {};
-  for (const condition of actor.conditions ?? []) {
-    const effect = CONDITION_EFFECTS[condition];
+  for (const entry of actor.conditions ?? []) {
+    const effect = CONDITION_EFFECTS[nameOf(entry)];
     if (!effect) continue;
     for (const [k, v] of Object.entries(effect)) {
       if (typeof v === 'boolean') flags[k] = flags[k] || v;
@@ -225,7 +225,8 @@ export function attackStance({ attacker = {}, target = {}, attackerDistanceFt = 
  * bare actor record.
  */
 export function has(actor, condition) {
-  return Array.isArray(actor.conditions) && actor.conditions.includes(condition);
+  return Array.isArray(actor.conditions)
+    && actor.conditions.some((e) => nameOf(e) === nameOf(condition));
 }
 
 /**
@@ -244,17 +245,31 @@ export function has(actor, condition) {
  * for homebrew without forking this function.
  */
 export function apply(actor, condition, allowedConditions = CONDITIONS) {
-  if (!allowedConditions.includes(condition)) throw new Error(`Unknown condition: ${condition}`);
+  // Accept both a string ('poisoned') and a ConditionRecord
+  // ({ name: 'poisoned', dc: 11, saveAbility: 'con', endsOn: 'turnEnd' }).
+  // The record form (v1.6.1, restored in 2.5.0 after a merge dropped it —
+  // it had survived only as a type declaration) carries the save metadata
+  // that `conditionsRequiringSave` reads for save-at-turn-boundary flows.
+  const name = nameOf(condition);
+  if (!allowedConditions.includes(name)) throw new Error(`Unknown condition: ${name}`);
   // SRD § Monsters — Immunities (since 1.5.0): actors with the
   // condition listed in their `conditionImmunities` are unaffected.
   // We return the unchanged actor rather than throwing so the host
   // chip / UI can render "immune" gracefully without branch logic.
-  if ((actor.conditionImmunities ?? []).includes(condition)) {
+  if ((actor.conditionImmunities ?? []).includes(name)) {
     return actor;
   }
-  const current = new Set(actor.conditions ?? []);
-  current.add(condition);
-  return { ...actor, conditions: [...current] };
+  if (typeof condition === 'string') {
+    // String call: set semantics — idempotent, no duplicate entries,
+    // and the stored shape stays a plain string (what every existing
+    // consumer of `actor.conditions` already round-trips).
+    if ((actor.conditions ?? []).some((e) => nameOf(e) === name)) return actor;
+    return { ...actor, conditions: [...(actor.conditions ?? []), condition] };
+  }
+  // Record call: append semantics — two casters can each Hold Person
+  // the same target, and each application ends on its own save.
+  const entry = { ...condition, name };
+  return { ...actor, conditions: [...(actor.conditions ?? []), entry] };
 }
 
 /**
@@ -274,9 +289,41 @@ export function isImmuneTo(actor, condition) {
  * first would just push the boilerplate one level out.
  */
 export function remove(actor, condition) {
-  const current = new Set(actor.conditions ?? []);
-  current.delete(condition);
-  return { ...actor, conditions: [...current] };
+  // Removes ALL entries whose name matches, regardless of source —
+  // the right behaviour for "cure the condition" operations. Accepts
+  // a string name or a record (uses its `.name`), against a list that
+  // may hold either shape.
+  const name = nameOf(condition);
+  const next = (actor.conditions ?? []).filter((e) => nameOf(e) !== name);
+  return { ...actor, conditions: next };
+}
+
+/** @internal Extract the condition name from a string or record entry. */
+function nameOf(entry) {
+  return typeof entry === 'string' ? entry : entry?.name;
+}
+
+/**
+ * Public version of `nameOf` — extracts the condition name from a
+ * string or a `ConditionRecord`. Hosts iterating `actor.conditions`
+ * to build UI labels use this instead of re-implementing the shape
+ * check.
+ */
+export function conditionName(entry) {
+  return nameOf(entry);
+}
+
+/**
+ * Return the condition entries on an actor that require a saving
+ * throw at the given `timing` (`'turnEnd'` | `'turnStart'`). Only
+ * entries that carry BOTH `saveAbility` and `dc` are returned —
+ * entries applied without save metadata cannot be auto-cleared, and
+ * plain-string entries never carry any.
+ */
+export function conditionsRequiringSave(actor, timing) {
+  return (actor.conditions ?? [])
+    .map((e) => (typeof e === 'string' ? { name: e } : e))
+    .filter((e) => e.endsOn === timing && e.saveAbility !== undefined && e.dc !== undefined);
 }
 
 // SRD 5.2 Exhaustion: cumulative levels 0–6.

@@ -16,6 +16,8 @@
 import { recordCanon, recordMechanical, entitiesUnder, currentPlaceId, currentRoomId } from './ledger.js';
 import { makeId, slugSegment } from 'bag-of-holding-client';
 import { statBlockFor, KNOWN_CREATURE_IDS } from './bestiary.js';
+import { appState, setValue } from '../core/state.js';
+import { buildEnemy } from './world.js';
 
 // How many segments a threat clock has before it escalates on its own.
 const THREAT_CLOCK_SEGMENTS = 4;
@@ -68,6 +70,19 @@ function mintEntity(proposal) {
     if (creatureId) {
       recordMechanical(id, 'creatureId', creatureId, { because: 'bound to a stat block' });
       recordMechanical(id, 'alive', true);
+      recordCanon(id, 'attitude', proposal.threat ? 'hostile' : 'wary');
+      // Inside a dungeon, "fightable" means NOW: the resolver only fights
+      // world.npcs, so a minted creature that never spawned there was
+      // fightable in the ledger and nowhere else. Settlement/road mints stay
+      // ledger-side and are reached through the confront path instead.
+      if (appState.world?.location?.type === 'dungeon' && proposal.threat) {
+        const roomId = currentRoomId();
+        const npcId  = `minted-${slugSegment(name)}`;
+        if (roomId && !appState.world?.npcs?.[npcId]) {
+          const enemy = buildEnemy(creatureId, { npcId, roomId });
+          setValue(`world.npcs.${npcId}`, { ...enemy, name, mintedId: id });
+        }
+      }
     }
   }
 
