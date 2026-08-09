@@ -75,8 +75,12 @@ function mintEntity(proposal) {
       // world.npcs, so a minted creature that never spawned there was
       // fightable in the ledger and nowhere else. Settlement/road mints stay
       // ledger-side and are reached through the confront path instead.
+      // The npc's roomId must be the WORLD-form id (`room-3`) — the scene
+      // filter, retaliation, and the vault gate all compare against
+      // world.currentRoom. The ledger-form id (`region.x…room.room-3`) made
+      // the spawn invisible: present in world.npcs, matching nothing (F4).
       if (appState.world?.location?.type === 'dungeon' && proposal.threat) {
-        const roomId = currentRoomId();
+        const roomId = appState.world?.currentRoom;
         const npcId  = `minted-${slugSegment(name)}`;
         if (roomId && !appState.world?.npcs?.[npcId]) {
           const enemy = buildEnemy(creatureId, { npcId, roomId });

@@ -38,7 +38,7 @@ export const SETTLEMENT_CLASSIFIER_SCHEMA = {
   properties: {
     intent: {
       type: 'string',
-      enum: ['talk', 'buy', 'travel', 'rest', 'look', 'quest', 'inventory', 'meta'],
+      enum: ['talk', 'buy', 'travel', 'rest', 'look', 'quest', 'inventory', 'confront', 'meta'],
     },
     target: { type: ['string', 'null'] },
     reason: { type: 'string' },

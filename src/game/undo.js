@@ -394,7 +394,14 @@ function buildTimeTravelBlob() {
 export function importTimeTravel(tt, expected) {
   try {
     if (!tt || !Array.isArray(tt.spine) || tt.root == null) return false;
+    // The root is a full snapshot including a (credential-stripped) `ai` —
+    // restoring it wholesale would wipe the importer's own key, and before
+    // roots were stripped it would have APPLIED the file's key and baseUrl.
+    // Preserve this browser's credentials across the root restore.
+    const { key, baseUrl } = appState.ai ?? {};
     restoreState(tt.root);
+    if (key)     setValue('ai.key', key);
+    if (baseUrl) setValue('ai.baseUrl', baseUrl);
     tick();
     const root = spektrumHistory.length;
     reapplyEntries(tt.spine);

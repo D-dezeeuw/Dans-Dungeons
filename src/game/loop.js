@@ -15,7 +15,7 @@ import { checkKey }                          from '../ai/client.js';
 import { resolveRules, goblinRetaliates, commitAll, appendTranscript,
          isPcDown, resolveDownTurn, commitDownTurn } from './resolver.js';
 import { beginRoller, commitRoller }          from './rng.js';
-import { buildStoryContext, setStoryFlag, activeBeat, completeBeatNow, takePendingActClose } from './story.js';
+import { buildStoryContext, setStoryFlag, activeBeat, completeBeatNow, takePendingActClose, requeueActClose } from './story.js';
 import { beginTurn, finalizeTurn }          from './undo.js';
 import { recordMechanical, currentPlaceId, currentRoomId, entitiesUnder,
          recentEvents, encounterKey } from './ledger.js';
@@ -264,7 +264,7 @@ export async function processTurn(playerInput, onNarrationChunk) {
   // closure is queued synchronously and drained here, at the turn's async
   // seam; before this drain existed, the next act was simply never generated
   // and the campaign's story stopped without a word.
-  if (takePendingActClose()) { await onActClosed(); _actJustClosed = true; }
+  if (takePendingActClose()) { await settleActClose(); _actJustClosed = true; }
 
   // 7. Turn fully committed (mechanics + flags) — register the undo boundary (a
   //    throw above never reaches here) and autosave once.
@@ -378,7 +378,7 @@ async function maybeAdvanceBeat(narration) {
     const byFlags = beatSatisfiedByFlags();
     if (byFlags) {
       const { completed, actClosed } = completeBeatNow(byFlags);
-      if (actClosed) { await onActClosed(); _actJustClosed = true; }
+      if (actClosed) { await settleActClose(); _actJustClosed = true; }
       return completed;
     }
 
@@ -388,7 +388,7 @@ async function maybeAdvanceBeat(narration) {
     // An act closing is the campaign's biggest structural moment: the next act
     // is written from what actually happened, so the story bends toward the
     // campaign the player is really having.
-    if (actClosed) { await onActClosed(); _actJustClosed = true; }
+    if (actClosed) { await settleActClose(); _actJustClosed = true; }
     return completed;
   } catch { /* narration check is best-effort */ }
   return false;
@@ -404,6 +404,28 @@ export async function onActClosed() {
   const generated = await generateAct(ctx);
   if (!generated) return null;
   return adoptAct(generated);
+}
+
+// One drained close, made durable: `actIndex` advanced when the beat
+// completed, so a failed generation here used to strand the thread actless
+// forever (audit F3). A null result re-queues the close and the next turn —
+// or the next settlement action — retries.
+async function settleActClose() {
+  const result = await onActClosed();
+  if (result === null && !appState.session?.campaignComplete) requeueActClose();
+  return result;
+}
+
+// The settlement loop's seam. Towns never run processTurn, so a close raised
+// by a settlement flag (settlement-reached, region-reached, visited-*) was
+// queued and never drained while the player stayed in town — and lost on
+// reload. Returns what the flow layer needs to hold the ceremony:
+// { closed, epilogueLines } or null when nothing was pending.
+export async function drainActClose() {
+  if (!takePendingActClose()) return null;
+  const result = await settleActClose();
+  if (result === null) return null;   // generation failed — re-queued, retry later
+  return { closed: true, epilogueLines: takeEpilogue() };
 }
 
 // The campaign's ending, rendered from the ledger — the world's own record of

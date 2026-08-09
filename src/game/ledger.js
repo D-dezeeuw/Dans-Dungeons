@@ -11,6 +11,7 @@
 import { appendPatch, makePatch, fold, foldAll, recentCauses, dirtyTargets, compact,
          makeId, isUnder } from 'bag-of-holding-client';
 import { appState, setValue } from '../core/state.js';
+import { makeAppendCursor } from '../core/utils.js';
 import { t } from '../i18n/i18n.js';
 
 export { makeId, isUnder };
@@ -51,6 +52,13 @@ function slug(x) {
 // array every turn is exactly the quadratic-growth mistake the transcript made.
 // Returns true when the patch was recorded, false when the precedence gate
 // rejected it (a canon claim contradicting mechanical truth).
+// Spektrum defers setValue until tick(), so `ledger().length` is frozen
+// across a synchronous multi-write window: deriving the index from it wrote a
+// whole canon extraction — or a clock tick's three patches — to one slot,
+// last-write-wins. The cursor counts pending appends past the visible length
+// and resyncs when the length visibly changes (tick landed / undo rewound).
+const nextLedgerIndex = makeAppendCursor();
+
 export function recordPatch(fields) {
   const patch = makePatch({
     turn:    appState.session?.turnCount ?? 0,
@@ -58,12 +66,14 @@ export function recordPatch(fields) {
     ...fields,
   });
   const current = ledger();
-  const res = appendPatch(current, patch);
+  // Bases carry mechanical ownership for facts folded out by compaction —
+  // without them the precedence gate forgot every fact it had compacted.
+  const res = appendPatch(current, patch, ledgerBases());
   if (!res.ok) {
     bumpRejected();
     return false;
   }
-  setValue(`world.ledger.${current.length}`, patch);
+  setValue(`world.ledger.${nextLedgerIndex(current.length)}`, patch);
   return true;
 }
 
@@ -138,9 +148,12 @@ export function refreshStaleDigests(sinceTurn = 0) {
   const stale = new Set(staleDigests(sinceTurn));
   if (!stale.size) return 0;
 
-  const regions = appState.world?.regions ?? {};
+  // Accumulate into one map and write once: spreading appState per region
+  // re-read the PRE-tick map every iteration, so with two stale regions the
+  // second refresh silently discarded the first (deferred-write clobber).
+  const next = { ...(appState.world?.regions ?? {}) };
   let refreshed = 0;
-  for (const [regionId, region] of Object.entries(regions)) {
+  for (const [regionId, region] of Object.entries(next)) {
     const entityId = `region.${slug(regionId)}`;
     if (!stale.has(entityId)) continue;
     const news = ledger()
@@ -150,12 +163,10 @@ export function refreshStaleDigests(sinceTurn = 0) {
     if (!news.length) continue;
     const latest = [...new Set(news)].slice(-3).join('; ');
     const base   = region.digestBase ?? region.digest ?? '';
-    setValue('world.regions', {
-      ...appState.world.regions,
-      [regionId]: { ...region, digestBase: base, digest: `${base} ${t('rumour.digestLately', { news: latest })}`.trim() },
-    });
+    next[regionId] = { ...region, digestBase: base, digest: `${base} ${t('rumour.digestLately', { news: latest })}`.trim() };
     refreshed++;
   }
+  if (refreshed) setValue('world.regions', next);
   return refreshed;
 }
 
