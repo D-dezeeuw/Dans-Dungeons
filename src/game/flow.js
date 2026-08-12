@@ -40,7 +40,8 @@ import {
 } from 'bag-of-holding-client';
 import { setStoryFlag, awardReputation, reputationStanding, requeueActClose } from './story.js';
 import { recordCanon, markEncountered, currentPlaceId } from './ledger.js';
-import { activePack, applyPackOverlay, packIds, packCard, packTagline, pickPack, resolvePack } from '../settings/index.js';
+import { activePack, applyPackOverlay, packIds, packCard, packTagline, pickPack, resolvePack,
+         settingSlice } from '../settings/index.js';
 import * as UI from '../ui/console.js';
 import { t, tRaw, locale } from '../i18n/i18n.js';
 import { getSkills } from '../ui/chips.js';
@@ -322,6 +323,7 @@ async function startCampaign(worldSeed = null, pack = activePack()) {
   // this the campaign got generic, unconstrained AI output — see worldbible.js,
   // which already does this correctly.
   const blueprintSeed = worldSeed ?? Math.floor(Math.random() * 2147483647);
+  const setting = settingSlice(pack);
   const blueprint = buildWorldBlueprint(blueprintSeed, pack);
   progress('detail', `Blueprint: ${blueprint.tone} ${blueprint.worldArchetype}, ${blueprint.threatType}, ${blueprint.climate}.`);
 

@@ -76,6 +76,9 @@ describe('every capability has a consumer', () => {
     ['renderLexiconAnswer','src/game/views.js',             'the /what command'],
     ['allEntities',       'src/game/ledger.js',             'the dictionary spanning the whole ledger'],
     ['markEncountered',   'src/game/ledger.js',             'knowledge gates opening when the player learns something'],
+    ['settingSlice',      'src/settings/index.js',          'one pack→library mapping for live genesis and baked worlds alike'],
+    ['packAuthors',       'src/settings/index.js',          'a pack that writes its own treasures owning its vault'],
+    ['packTagline',       'src/settings/packs.js',          'the wizard naming what each world is'],
   ];
 
   for (const [symbol, definedIn, powers] of WIRED) {

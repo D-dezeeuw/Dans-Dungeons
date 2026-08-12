@@ -61,6 +61,23 @@ export function packAuthors(path) {
   });
 }
 
+// The active pack as the library's `setting` object — one mapping, used by
+// every library entry point that decides a world's vocabulary. The game's live
+// genesis calls the pieces individually (the skeleton takes syllables + hooks,
+// the blueprint takes tables); anything that bakes a PRE-generated world
+// passes this whole object to bakeCartridge, which records the id so a catalog
+// can say which world is which. Without one mapping the two paths drift, and a
+// mounted cartridge disagrees with the live game about its own genre.
+export function settingSlice(pack = activePack()) {
+  if (!pack || pack.id === DEFAULT_PACK_ID) return null;   // classic = library defaults
+  return {
+    id:        pack.id,
+    tables:    pack.tables    ?? null,
+    syllables: pack.syllables ?? null,
+    hooks:     pack.stubHooks ?? null,
+  };
+}
+
 // Class and species labels, skinned. The mechanics never move: `classId` stays
 // 'wizard' in the record, the sheet derives from the same SRD data, and only
 // the word on the button changes. A netrunner is a wizard's numbers wearing
