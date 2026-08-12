@@ -69,6 +69,13 @@ describe('every capability has a consumer', () => {
     ['applyContinentOutlines',    'src/game/atlas.js',      'outlines landing on the skeleton'],
     ['seaLaneFrom',       'src/game/atlas.js',              'continents reachable by sea'],
     ['provinceOf',        'src/game/atlas.js',              'regions knowing their province'],
+    ['buildLexiconIndex', 'src/game/lexicon.js',            'the player being able to ask what a word means'],
+    ['matchLexiconQuestion', 'src/game/lexicon.js',         '"what is X?" answered without a turn'],
+    ['lexiconTopics',     'src/game/lexicon.js',            'bare /what suggesting what to ask'],
+    ['tryLexicon',        'src/game/views.js',              'the free lookup reaching every play loop'],
+    ['renderLexiconAnswer','src/game/views.js',             'the /what command'],
+    ['allEntities',       'src/game/ledger.js',             'the dictionary spanning the whole ledger'],
+    ['markEncountered',   'src/game/ledger.js',             'knowledge gates opening when the player learns something'],
   ];
 
   for (const [symbol, definedIn, powers] of WIRED) {

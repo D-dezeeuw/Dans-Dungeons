@@ -18,7 +18,8 @@ import { describeAiError } from '../ai/errors.js';
 // The read-only screens (/story, the map, quests, inventory) live in views.js:
 // they read state and print, and share nothing with the loop that mutates it.
 import { renderStoryView, renderRegionMap, showQuests, showInventory,
-         resolveDungeonQuests } from './views.js';
+         resolveDungeonQuests, renderLexiconAnswer, renderLexiconTopics,
+         tryLexicon } from './views.js';
 import { clearTurnMarks, setScrubHandler } from './undo.js';
 import { enterEncounterState, exitEncounterState } from './encounter-state.js';
 import { cutChapter, shouldCutChapter, recap, chapterIndex } from './chapters.js';
@@ -38,6 +39,7 @@ import {
   beginTravel, stepTravel, isTravelDone, pickEncounter,
 } from 'bag-of-holding-client';
 import { setStoryFlag, awardReputation, reputationStanding, requeueActClose } from './story.js';
+import { recordCanon, markEncountered, currentPlaceId } from './ledger.js';
 import * as UI from '../ui/console.js';
 import { t, tRaw } from '../i18n/i18n.js';
 import { getSkills } from '../ui/chips.js';
@@ -184,6 +186,14 @@ async function handleMeta(raw) {
   if (cmd === 'settings') { UI.appendEntry('system', t('setup.reRunSetup')); await setupKey(); return; }
   if (cmd === 'map')   { renderRegionMap(); return; }
   if (cmd === 'story') { renderStoryView(); return; }
+  // The dictionary. Free, like every other meta command: the Game Master knows
+  // the world and the player met it yesterday, and asking which is which should
+  // not cost a turn (doc 19, Part II).
+  if (cmd === 'what' || cmd.startsWith('what ')) {
+    const q = cmd.replace(/^what\s*/, '').trim();
+    if (q) renderLexiconAnswer(q); else renderLexiconTopics();
+    return;
+  }
   if (cmd === 'help') { UI.appendEntry('system', t('meta.helpList')); return; }
   UI.appendEntry('system', t('meta.unknownCmd', { cmd: raw }));
 }
@@ -511,6 +521,10 @@ async function settlementLoop(settlementId) {
     const raw = await UI.prompt('');
     if (!raw.trim()) continue;
     if (raw.startsWith('/')) { await handleMeta(raw); continue; }
+    // A question the player already knows the answer to is answered from
+    // stored knowledge, for free (doc 19). A miss returns false and falls
+    // through to a normal turn — the Game Master owns what the index cannot.
+    if (tryLexicon(raw)) continue;
 
     // Fast travel to an already-discovered settlement (chip value).
     const ft = raw.match(/^fasttravel:(.+)$/);
@@ -775,6 +789,14 @@ async function converseWithNpc(settlementId, npcId) {
     if (revealed) {
       UI.appendEntry('system', t('settlement.secretRevealed', { name: npc.name, secret: npc.secret }));
       setStoryFlag(`secret-${slug(npc.id ?? npc.name)}-revealed`);
+      // What the player has been told is now part of the world, not just a line
+      // that scrolls away: recording it as canon puts it in the ledger, which is
+      // where the scope packet's `known` tier and the lexicon both read from —
+      // and it means undo rewinds the KNOWLEDGE along with the reveal.
+      const npcEntity = `${currentPlaceId()}.npc.${slug(npc.id ?? npc.name)}`;
+      markEncountered(npcEntity);
+      recordCanon(npcEntity, 'name', npc.name, { because: t('settlement.secretBecause', { name: npc.name }) });
+      recordCanon(npcEntity, 'note', npc.secret, { because: t('settlement.secretBecause', { name: npc.name }) });
       tick();
     }
     saveToStorage();
@@ -1042,6 +1064,10 @@ async function runEncounterLoop() {
     const raw = await UI.prompt('');
     if (!raw.trim()) continue;
     if (raw.startsWith('/')) { await handleMeta(raw); continue; }
+    // A question the player already knows the answer to is answered from
+    // stored knowledge, for free (doc 19). A miss returns false and falls
+    // through to a normal turn — the Game Master owns what the index cannot.
+    if (tryLexicon(raw)) continue;
     if (/^\s*(flee|run|escape|vlucht|ren)\b/i.test(raw) || raw === t('travel.fleeCmd')) {
       UI.appendEntry('player', `> ${raw}`);
       outcome = 'flee';
@@ -1576,6 +1602,10 @@ async function playLoop() {
 
     if (!raw?.trim()) continue;
     if (raw.startsWith('/')) { await handleMeta(raw); continue; }
+    // A question the player already knows the answer to is answered from
+    // stored knowledge, for free (doc 19). A miss returns false and falls
+    // through to a normal turn — the Game Master owns what the index cannot.
+    if (tryLexicon(raw)) continue;
 
     UI.appendEntry('player', `> ${raw}`);
     UI.clearChips();

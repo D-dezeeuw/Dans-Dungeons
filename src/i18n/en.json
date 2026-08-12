@@ -157,7 +157,7 @@
     "saved": "Game saved to localStorage.",
     "saveFailed": "Save FAILED — browser storage is full. Export your game (Settings → Save) before closing this tab.",
     "status": "{{name}} — HP {{hp}}/{{max}}, AC {{ac}}",
-    "helpList": "/save · /status · /settings · /restart · /help",
+    "helpList": "/what · /map · /story · /save · /status · /settings · /restart · /help",
     "unknownCmd": "Unknown command: {{cmd}}  (try /help)"
   },
   "newgame": {
@@ -240,7 +240,8 @@
     "confrontIntro": "You go looking for trouble — and find it. {{name}} turns to face you.",
     "threatResolved": "{{name}} is dealt with. The place breathes easier.",
     "noThreatHere": "There is nothing here to confront.",
-    "sailChip": "Set sail for {{name}}"
+    "sailChip": "Set sail for {{name}}",
+    "secretBecause": "{{name}} confided it."
   },
   "adventure": {
     "banner": "── THE ADVENTURE BEGINS ──────────────────────",
@@ -1087,6 +1088,65 @@
       "nemesis": "nemesis"
     },
     "stallNudge": "The thread you have been ignoring finds you anyway — a messenger, a rumour, a face you were not expecting. Whatever you have been avoiding is no longer content to wait."
+  },
+  "lexicon": {
+    "entryHeader": "{{name}} — {{kind}}",
+    "unknown": "That name means nothing to you yet.",
+    "heardOfPrefix": "You only know it from talk: ",
+    "hiddenMore": "You sense there is more to it than you can tell.",
+    "ambiguous": "Which one? {{names}}",
+    "topicsHeader": "Things you could ask about:",
+    "topicLine": "  {{name}} — {{kind}}",
+    "noTopics": "Nothing comes to mind. Play on.",
+    "lineage": "Lies in: {{chain}}",
+    "climate": "Climate: {{climate}}",
+    "npcRole": "{{role}} in {{place}}",
+    "npcFaction": "Of {{faction}}",
+    "factionStanding": "Your standing: {{standing}}",
+    "questGiver": "Given by {{npc}}",
+    "questFor": "A task you took on.",
+    "itemPlain": "Nothing about it stands out.",
+    "creatureAlive": "Still standing.",
+    "creatureDead": "Dead.",
+    "actBody": "Act {{act}} of {{acts}} — {{done}} of {{total}} beats behind you.",
+    "kind": {
+      "place": "place",
+      "region": "region",
+      "province": "province",
+      "continent": "continent",
+      "settlement": "settlement",
+      "npc": "person",
+      "creature": "creature",
+      "detail": "detail",
+      "faction": "faction",
+      "item": "item",
+      "quest": "task",
+      "chapter": "chapter",
+      "story": "story",
+      "rumour": "rumour",
+      "era": "era",
+      "legend": "legend",
+      "thing": "thing"
+    },
+    "patterns": [
+      "what is",
+      "what's",
+      "whats",
+      "what are",
+      "who is",
+      "who's",
+      "whos",
+      "who are",
+      "where is",
+      "where's",
+      "tell me about",
+      "explain"
+    ],
+    "articles": [
+      "the",
+      "a",
+      "an"
+    ]
   },
   "common": {
     "yes": "Yes",

@@ -157,7 +157,7 @@
     "saved": "Spel opgeslagen in localStorage.",
     "saveFailed": "Opslaan MISLUKT — de browseropslag is vol. Exporteer je spel (Instellingen → Opslaan) voordat je dit tabblad sluit.",
     "status": "{{name}} — HP {{hp}}/{{max}}, AC {{ac}}",
-    "helpList": "/save · /status · /settings · /restart · /help",
+    "helpList": "/what · /map · /story · /save · /status · /settings · /restart · /help",
     "unknownCmd": "Onbekend commando: {{cmd}}  (probeer /help)"
   },
   "newgame": {
@@ -240,7 +240,8 @@
     "confrontIntro": "Je zoekt de dreiging op — en vindt haar. {{name}} draait zich naar je toe.",
     "threatResolved": "{{name}} is verslagen. De plek haalt opgelucht adem.",
     "noThreatHere": "Er valt hier niets te bestrijden.",
-    "sailChip": "Zeil naar {{name}}"
+    "sailChip": "Zeil naar {{name}}",
+    "secretBecause": "{{name}} vertrouwde het je toe."
   },
   "adventure": {
     "banner": "── HET AVONTUUR BEGINT ───────────────────────",
@@ -1087,6 +1088,62 @@
       "nemesis": "aartsvijand"
     },
     "stallNudge": "De draad die je hebt genegeerd vindt je alsnog — een boodschapper, een gerucht, een gezicht dat je niet verwachtte. Waar je ook voor wegliep, het wacht niet langer."
+  },
+  "lexicon": {
+    "entryHeader": "{{name}} — {{kind}}",
+    "unknown": "Die naam zegt je nog niets.",
+    "heardOfPrefix": "Je kent het alleen van horen zeggen: ",
+    "hiddenMore": "Je voelt dat er meer aan de hand is dan je kunt zien.",
+    "ambiguous": "Welke bedoel je? {{names}}",
+    "topicsHeader": "Dingen waar je naar kunt vragen:",
+    "topicLine": "  {{name}} — {{kind}}",
+    "noTopics": "Er schiet je niets te binnen. Speel verder.",
+    "lineage": "Ligt in: {{chain}}",
+    "climate": "Klimaat: {{climate}}",
+    "npcRole": "{{role}} in {{place}}",
+    "npcFaction": "Hoort bij {{faction}}",
+    "factionStanding": "Jouw aanzien: {{standing}}",
+    "questGiver": "Gegeven door {{npc}}",
+    "questFor": "Een opdracht die je hebt aangenomen.",
+    "itemPlain": "Er valt je niets bijzonders aan op.",
+    "creatureAlive": "Nog overeind.",
+    "creatureDead": "Dood.",
+    "actBody": "Bedrijf {{act}} van {{acts}} — {{done}} van {{total}} momenten achter de rug.",
+    "kind": {
+      "place": "plaats",
+      "region": "streek",
+      "province": "provincie",
+      "continent": "continent",
+      "settlement": "nederzetting",
+      "npc": "persoon",
+      "creature": "wezen",
+      "detail": "detail",
+      "faction": "factie",
+      "item": "voorwerp",
+      "quest": "opdracht",
+      "chapter": "hoofdstuk",
+      "story": "verhaal",
+      "rumour": "gerucht",
+      "era": "tijdperk",
+      "legend": "legende",
+      "thing": "ding"
+    },
+    "patterns": [
+      "wat is",
+      "wat zijn",
+      "wie is",
+      "wie zijn",
+      "waar is",
+      "waar ligt",
+      "vertel me over",
+      "vertel eens over",
+      "leg uit"
+    ],
+    "articles": [
+      "de",
+      "het",
+      "een"
+    ]
   },
   "common": {
     "yes": "Ja",

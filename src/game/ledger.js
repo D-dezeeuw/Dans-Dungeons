@@ -101,6 +101,20 @@ export function hasEncountered(id) {
   return !!appState.world?.encountered?.[encounterKey(id)];
 }
 
+// Record that the player has now seen these entities. The scope assembler's
+// `known` tier and the lexicon both filter on this, which is what stops the GM
+// referring to — and the dictionary explaining — things this character has
+// never encountered. Accepts one id or many.
+export function markEncountered(ids) {
+  const list = Array.isArray(ids) ? ids : [ids];
+  const seen = appState.world?.encountered ?? {};
+  for (const id of list) {
+    if (!id) continue;
+    const key = encounterKey(id);
+    if (!seen[key]) setValue(`world.encountered.${key}`, true);
+  }
+}
+
 // ─── Reading ─────────────────────────────────────────────────────────────────
 
 export function entity(id) {
@@ -109,6 +123,18 @@ export function entity(id) {
 
 export function entitiesUnder(prefix) {
   return foldAll(ledgerBases(), ledger(), prefix);
+}
+
+// Every entity the ledger knows, folded — no prefix filter. `foldAll` requires
+// one (an empty prefix matches nothing by design), and the lexicon's index has
+// to span the whole world rather than the place the player happens to stand in.
+export function allEntities() {
+  const bases   = ledgerBases();
+  const patches = ledger();
+  const ids = new Set([...Object.keys(bases), ...patches.map(p => p.target)]);
+  const out = {};
+  for (const id of ids) if (id) out[id] = fold(bases[id], patches, id);
+  return out;
 }
 
 // Details the player can notice here — the moldy curtains, the scratched
