@@ -196,13 +196,32 @@ export function lintPack(pack, { knownCreatureIds = null, baseKeys = null, clima
   }
 
   // Naming banks come as a complete set or not at all — half a set produces
-  // names that are half the pack's culture and half the library's.
+  // names that are half the pack's culture and half the library's. The floors
+  // match doc 19 §2 rather than the token minimum they used to: the skeleton
+  // deals five prefixes and five suffixes per continent, so four-entry banks
+  // are legal and threadbare — sixteen possible province names for a whole
+  // landmass.
+  const BANK_FLOOR = { continentPrefixes: 8, continentSuffixes: 8, provincePrefixes: 10, provinceSuffixes: 10 };
   if (pack.syllables) {
-    for (const k of ['continentPrefixes', 'continentSuffixes', 'provincePrefixes', 'provinceSuffixes']) {
-      if (!Array.isArray(pack.syllables[k]) || pack.syllables[k].length < 4) {
-        say(`syllables.${k} needs at least four entries`);
+    for (const [k, floor] of Object.entries(BANK_FLOOR)) {
+      if (!Array.isArray(pack.syllables[k]) || pack.syllables[k].length < floor) {
+        say(`syllables.${k} needs at least ${floor} entries`);
       }
     }
+  }
+
+  // A house style is substituted into three different frames — "the entrance
+  // hall of a {{style}}", "The foyer of this {{style}} greets you", "the
+  // threshold of the {{style}}" — so it has to read as a bare noun phrase in
+  // all three. The base's own six are 2–3 word phrases, which hides the
+  // constraint completely; the natural instinct when writing evocative content
+  // is a clause, and "a garden that outlived its gardeners" renders as "the
+  // entrance hall of a a garden that outlived its gardeners".
+  for (const style of pack.i18n?.en?.world?.houseStyles ?? []) {
+    const s = String(style).trim();
+    if (/^(a|an|the)\s/i.test(s))     say(`houseStyle '${s}' starts with an article — the frames supply their own`);
+    if (/\b(that|which|who|where)\b/i.test(s)) say(`houseStyle '${s}' is a clause; the frames need a bare noun phrase`);
+    if (s.split(/\s+/).length > 5)    say(`houseStyle '${s}' is too long to sit inside "the entrance hall of a …"`);
   }
 
   // The voice block rides in every narrator and dialogue prompt of the

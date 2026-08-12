@@ -56,6 +56,14 @@ function dungeonContent() {
   };
 }
 
+// A stable index from a string — the encounter builder has no seed to draw on
+// and must not reach for Math.random (it would break replay).
+function hashIndex(str, len) {
+  let h = 0;
+  for (let i = 0; i < String(str).length; i++) h = ((h << 5) - h + String(str).charCodeAt(i)) | 0;
+  return Math.abs(h) % Math.max(1, len);
+}
+
 // ─── Dungeon generator ────────────────────────────────────────────────────────
 // Returns { rooms, npcs, currentRoom, exitRoomId } for embedding in world.dungeons.
 
@@ -98,7 +106,13 @@ export function generateDungeon(seed, blueprint, { partyLevel = 1, act = 1 } = {
 
 // Build a standalone combat NPC for a literal roomId (overworld travel encounters).
 export function buildEnemy(creatureId, { npcId = 'enc-1', roomId = 'encounter', style } = {}) {
-  const s    = style ?? (tRaw('world.houseStyles')?.[0] ?? 'ancient hold');
+  // Which house style the creature's intro line mentions. This took the FIRST
+  // entry, so every road ambush in a campaign named the same place — six
+  // authored styles and the player only ever heard one. Keyed off the creature
+  // id: deterministic (the same wolf reads the same way twice) and varied
+  // across a pool, with no rng to thread through a pure builder.
+  const styles = tRaw('world.houseStyles') ?? [];
+  const s = style ?? (styles.length ? styles[hashIndex(creatureId, styles.length)] : 'ancient hold');
   const name = enemyName(creatureId);
   return {
     id:         npcId,

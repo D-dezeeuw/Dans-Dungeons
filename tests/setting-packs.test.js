@@ -97,9 +97,27 @@ describe('the lint actually catches what it claims to', () => {
     assert.match(lint({ i18n: { en: {}, nl: { world: { houseStyles: ['x'] } } } }), /has no English original/);
   });
 
-  it('rejects half a naming culture', () => {
-    assert.match(lint({ syllables: { continentPrefixes: ['Ka', 'Vo', 'Se', 'Tu'] } }),
-      /syllables.continentSuffixes needs at least four/);
+  it('rejects half a naming culture, and a bank too thin to name a world', () => {
+    const half = lint({ syllables: { continentPrefixes: ['Ka', 'Vo', 'Se', 'Tu', 'Mi', 'No', 'Ra', 'Zu'] } });
+    assert.match(half, /syllables.continentSuffixes needs at least 8/);
+    // Four entries used to pass. The skeleton deals five prefixes and five
+    // suffixes per continent, so a four-entry bank yields sixteen possible
+    // province names for a whole landmass — legal, and threadbare in play.
+    assert.match(lint({ syllables: {
+      continentPrefixes: ['Ka', 'Vo', 'Se', 'Tu'], continentSuffixes: ['ra', 'no', 'mi', 'du'],
+      provincePrefixes: ['Lo', 'Fa', 'Mu', 'Si'], provinceSuffixes: ['gate', 'row', 'end', 'run'],
+    } }), /needs at least 10 entries/);
+  });
+
+  it('rejects a house style the {{style}} frames cannot hold', () => {
+    // The frames read "the entrance hall of a {{style}}" and "The foyer of
+    // this {{style}} greets you", so an article or a clause renders as
+    // "of a a garden that outlived its gardeners".
+    const styles = (list) => ({ i18n: { en: { world: { houseStyles: list } } } });
+    assert.match(lint(styles(['a crumbling manor'])), /starts with an article/);
+    assert.match(lint(styles(['garden that outlived its gardeners'])), /is a clause/);
+    assert.match(lint(styles(['a very long name for a place nobody would ever say'])), /too long/);
+    assert.equal(lint(styles(['crumbling manor', 'sealed archive'])), '');
   });
 
   it('rejects a voice block that would tax every turn', () => {

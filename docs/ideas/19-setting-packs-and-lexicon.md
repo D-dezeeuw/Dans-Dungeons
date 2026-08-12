@@ -977,6 +977,24 @@ when it replaced named deities with epithets to keep Product Identity out of
 prompts. Worth a standing habit: re-vendor when the library moves, not when a
 feature needs it.
 
+### Two contracts the base bundle hides
+
+Both were found by writing packs against it, and both are now linted.
+
+**`world.houseStyles` entries must be bare noun phrases.** The style is
+substituted into three different frames — *"the entrance hall of a {{style}}"*,
+*"The foyer of this {{style}} greets you"*, *"the threshold of the {{style}}"* —
+so it supplies no article of its own and cannot be a clause. The base's six
+entries are all 2–3 word phrases, which hides the constraint entirely; the
+instinct when writing evocative content is `a garden that outlived its
+gardeners`, which renders as *"the entrance hall of a a garden that outlived
+its gardeners"*.
+
+**Syllable banks need real depth.** The skeleton deals five prefixes and five
+suffixes per continent, so a four-entry bank yields sixteen possible province
+names for a whole landmass. §2's floors (8 / 8 / 10 / 10) are now what the lint
+enforces; it used to accept four.
+
 ### Where things live
 
 | Concern | File |
