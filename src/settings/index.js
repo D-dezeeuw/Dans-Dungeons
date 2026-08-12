@@ -23,7 +23,7 @@ import { locale } from '../i18n/i18n.js';
 
 export {
   SETTING_PACKS, DEFAULT_PACK_ID, packIds, resolvePack, isKnownPack,
-  packCard, pickPack, mergeTables, lintPack,
+  packCard, pickPack, lintPack,
 } from './packs.js';
 
 // The pack the current world was generated with. Falls back to classic, which

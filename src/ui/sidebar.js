@@ -2,6 +2,7 @@
 
 import { escHtml } from '../core/utils.js';
 import { t } from '../i18n/i18n.js';
+import { activePackCard } from '../settings/index.js';
 import { icon } from './icons.js';
 
 const MOBILE_BREAKPOINT = 768;
@@ -97,6 +98,13 @@ export function updateDebugPanel(debug) {
     if (val === 20) return `d20  <strong class="nat-20">${val}</strong>`;
     return escHtml(`d20  ${val}`);
   }
+
+  // ── Setting ───────────────────────────────────────────────────────────────
+  // Which pack this world was generated with. Read-only by design: the pack is
+  // genesis-bound (names, overlays and canon are already minted in its
+  // vocabulary), so there is nothing to switch mid-campaign.
+  const setting = sec(t('sidebar.settingLabel'));
+  setting.rows.push({ text: activePackCard().name });
 
   // ── Classifier ────────────────────────────────────────────────────────────
   const cs = sec(t('debug.intent'));

@@ -9,6 +9,7 @@ import { NARRATOR_SCHEMA } from './schemas.js';
 import { salvageJson } from './parse.js';
 import { validateNarration } from './validate.js';
 import { t, locale } from '../i18n/i18n.js';
+import { voiceBlock, imageStyle } from '../settings/voice.js';
 import { transcriptWindow } from '../game/chapters.js';
 
 // ─── Travel narration (Phase 3) ───────────────────────────────────────────────
@@ -24,7 +25,7 @@ export async function narrateTravel(context) {
       tier: 'medium',
       maxTokens: 220,
       messages: [
-        { role: 'system', content: t('ai.travelPrompt', { language: lang, context: JSON.stringify(context) }) },
+        { role: 'system', content: t('ai.travelPrompt', { language: lang, context: JSON.stringify(context), voice: voiceBlock('narrator') }) },
         { role: 'user',   content: t('ai.travelUserMsg') },
       ],
     });
@@ -58,6 +59,10 @@ export async function narrate(resolvedFacts, sceneContext, recentTranscript, onC
     // GM-private: the beat directive and unrevealed secrets. Injected here, in
     // the system prompt, and nowhere the player or the save can see.
     gm:         gmOnly ? JSON.stringify(gmOnly) : '(nothing private this turn)',
+    // How this world talks. Empty for the classic pack, so the prompt reads
+    // exactly as it always has; a pack fills it with register, address terms
+    // ('choom', 'matey') and the words that belong to a different world.
+    voice:      voiceBlock('narrator'),
   });
 
   const messages = [
@@ -97,12 +102,10 @@ function narration(out) {
 // Never throws — image generation is decorative; errors are silent.
 
 export async function generateSceneImage(sceneDescription) {
-  const prompt =
-    'Old hand-drawn journal sketch of a medieval fantasy scene. ' +
-    'Black ink lines on sepia parchment paper. Rough, scratchy linework. ' +
-    'No colour — only shades of sepia and black ink. Like an adventurer\'s field journal. ' +
-    'No text, no labels, no writing of any kind. No borders, no frames, no decorative edges. ' +
-    'Scene: ' + sceneDescription;
+  // The style is the setting's, not the engine's: this used to be a literal
+  // 'medieval fantasy scene', so a cyberpunk campaign sketched castles. The
+  // classic pack carries the original string verbatim.
+  const prompt = `${imageStyle()} Scene: ${sceneDescription}`;
 
   // The library owns the transport + the multi-shape provider response parsing;
   // it resolves the image-tier model from config and returns null on any failure.

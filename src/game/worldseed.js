@@ -31,13 +31,18 @@ export function buildWorldBlueprint(seed, pack = null) {
   };
 }
 
-// The library's constraint block plus the pack's setting statement. One symbol
-// for all seven generators in worldgen.js: without it, a pack could re-skin
-// every table the blueprint draws from and still have the model narrate a
-// medieval tavern, because nothing ever told it what world it was writing.
+// The pack's one-line statement of what world this is, as a prompt suffix.
+// Re-skinned tables alone are not enough: a generator handed 'server-crypt'
+// and no other context will happily write a wizard's tower with servers in it.
+// Empty for the classic pack, so every prompt is unchanged.
+export function settingLine(bp) {
+  return bp?.promptLine ? `\n\nSetting: ${bp.promptLine}` : '';
+}
+
+// The library's constraint block plus that statement. Used by the world-seed
+// generator, which builds its constraints from the blueprint alone.
 export function appConstraints(bp) {
-  const base = worldSeedConstraints(bp);
-  return bp?.promptLine ? `${base}\nSetting: ${bp.promptLine}` : base;
+  return `${worldSeedConstraints(bp)}${settingLine(bp)}`;
 }
 
 // ─── Domain-themed treasures (20 domains) ────────────────────────────────────

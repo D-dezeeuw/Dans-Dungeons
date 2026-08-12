@@ -40,8 +40,9 @@ import {
 } from 'bag-of-holding-client';
 import { setStoryFlag, awardReputation, reputationStanding, requeueActClose } from './story.js';
 import { recordCanon, markEncountered, currentPlaceId } from './ledger.js';
+import { activePack, applyPackOverlay, packIds, packCard, pickPack, resolvePack } from '../settings/index.js';
 import * as UI from '../ui/console.js';
-import { t, tRaw } from '../i18n/i18n.js';
+import { t, tRaw, locale } from '../i18n/i18n.js';
 import { getSkills } from '../ui/chips.js';
 
 // TTS helpers — imported lazily so the audio module is a no-op when TTS is off.
@@ -214,12 +215,35 @@ export async function startNewGame() {
     );
   }
 
+  // The setting, chosen before anything else — including the character, whose
+  // class labels the pack skins. 'surprise' defers to the campaign seed, which
+  // draws the THEME first and then rolls every content choice inside it: a
+  // world cannot be cyberpunk with a mushroom farm if the mushroom farm was
+  // never in the deck being drawn from (doc 19 §3).
+  const settingChoice = await UI.pickFrom(
+    t('newgame.settingQuestion'),
+    ['surprise', ...packIds()],
+    (id) => id === 'surprise' ? t('newgame.settingSurprise') : packCard(resolvePack(id), locale()).name,
+    0,
+  );
+
   clearTurnMarks();   // a fresh game must not be undoable into the prior game's history
   setValue('party',  { pc: null, inventory: [] });
   setValue('flags',       {});
   setValue('transcript',  []);
   setValue('session.turnCount', 0);
   setValue('session.phase', 'char-create');
+
+  // The seed both the pack draw and the world roll come from. Minted here so
+  // the pack is known before character creation and before any generator runs.
+  const worldSeed = Math.floor(Math.random() * 2147483647);
+  const settingId = settingChoice === 'surprise' ? pickPack(worldSeed) : settingChoice;
+  setValue('world.settingId', settingId);
+  const pack = applyPackOverlay(resolvePack(settingId));
+  tick();
+  UI.appendEntry('system', t('newgame.settingChosen', { name: packCard(pack, locale()).name }));
+  UI.appendEntry('system', packCard(pack, locale()).blurb);
+  UI.appendEntry('system', '');
 
   const { magic, ...pc } = (await createCharacter(UI)) ?? {};
   if (!pc.record) { UI.appendEntry('error', t('setup.createCancelled')); return; }
@@ -245,25 +269,26 @@ export async function startNewGame() {
   }
 
   if (mode === 'campaign') {
-    await startCampaign();
+    await startCampaign(worldSeed, pack);
   } else {
-    await startQuickDungeon();
+    await startQuickDungeon(worldSeed, pack);
   }
 }
 
 // ─── Quick Dungeon (legacy flow) ─────────────────────────────────────────────
 
-async function startQuickDungeon() {
-  const seed = Math.floor(Math.random() * 2147483647);
-  const blueprint = buildWorldBlueprint(seed);
+async function startQuickDungeon(seed = Math.floor(Math.random() * 2147483647), pack = activePack()) {
+  const blueprint = buildWorldBlueprint(seed, pack);
   const world = generateDungeon(seed, blueprint, { partyLevel: appState.party?.pc?.record?.level ?? 1 });
-  setValue('world', world);
+  // settingId rides in `world`, so it survives export/import, slots and every
+  // time-travel branch — and a whole-world write must not drop it.
+  setValue('world', { ...world, settingId: pack?.id ?? appState.world?.settingId ?? null });
   setValue('session.phase', 'play');
   seedCombat(seed);   // epoch-seeded combat dice — replayable + auditable (rng.js)
   commit();
 
   // Show the dungeon theme in transcript for flavor.
-  UI.appendEntry('system', `Theme: ${blueprint.dungeonTheme}. Tone: ${blueprint.tone}.`);
+  UI.appendEntry('system', t('newgame.themeLine', { theme: blueprint.dungeonTheme, tone: blueprint.tone }));
   UI.appendEntry('system', '');
 
   await beginAdventure();
@@ -271,7 +296,7 @@ async function startQuickDungeon() {
 
 // ─── Campaign flow (worldgen → settlement → dungeon) ─────────────────────────
 
-async function startCampaign() {
+async function startCampaign(worldSeed = null, pack = activePack()) {
   UI.appendEntry('system', '');
 
   const progress = (key, detail) => {
@@ -283,8 +308,8 @@ async function startCampaign() {
   // creative constraints (tone, climate, threat, factions, dungeon theme). Without
   // this the campaign got generic, unconstrained AI output — see worldbible.js,
   // which already does this correctly.
-  const blueprintSeed = Math.floor(Math.random() * 2147483647);
-  const blueprint = buildWorldBlueprint(blueprintSeed);
+  const blueprintSeed = worldSeed ?? Math.floor(Math.random() * 2147483647);
+  const blueprint = buildWorldBlueprint(blueprintSeed, pack);
   progress('detail', `Blueprint: ${blueprint.tone} ${blueprint.worldArchetype}, ${blueprint.threatType}, ${blueprint.climate}.`);
 
   let seed, factions, beats, region, settlement;
@@ -313,6 +338,7 @@ async function startCampaign() {
   // Store world state
   const worldState = {
     ...appState.world,
+    settingId: pack?.id ?? appState.world?.settingId ?? null,
     blueprint,
     seed:   seed.name,
     name:   seed.name,
@@ -330,7 +356,7 @@ async function startCampaign() {
     // three neighbour stubs. Costs nothing until visited. Seeded from the
     // NUMERIC blueprint seed — world.seed holds the world's NAME, and the
     // old read degenerated every skeleton to seed 0.
-    geography: initialAtlas(region.id, region.name, blueprintSeed),
+    geography: initialAtlas(region.id, region.name, blueprintSeed, { syllables: pack?.syllables ?? null }),
   };
 
   // The global outline (doc 17, detail 0 → 1 for every continent, one call):

@@ -8,6 +8,7 @@
 import { chatCompletion } from './client.js';
 import { SETTLEMENT_CLASSIFIER_SCHEMA, DIALOGUE_SCHEMA } from './schemas.js';
 import { t, locale } from '../i18n/i18n.js';
+import { voiceBlock, settingNoun } from '../settings/voice.js';
 
 // ─── Settlement intent classifier ────────────────────────────────────────────
 
@@ -47,6 +48,8 @@ export async function npcReply(npc, playerLine, history, opts = {}) {
     reputation:  Number.isFinite(opts.reputation) ? String(opts.reputation) : 'neutral',
     language:    lang,
     transcript:  transcript || '(no prior conversation)',
+    voice:       voiceBlock('npc'),
+    settingNoun: settingNoun(locale(), t('ai.defaultSettingNoun')),
   });
 
   return chatCompletion({
