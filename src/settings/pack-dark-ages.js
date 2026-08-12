@@ -108,6 +108,17 @@ export const PACK = Object.freeze({
   themeClimates: null,
   bandSettlements: null,
   syllables: null,
+
+  // The library's frontier hooks already suit this century; these are the ones
+  // it does not have — rumour in the register of people who walk everywhere.
+  frontierHooks: [
+    'smoke on the horizon',
+    'a road nobody maintains',
+    'bells heard at odd hours',
+    'a ford that has drowned two carts this year',
+    'a boundary stone somebody moved',
+    'strangers wintering where nobody winters',
+  ],
   overlays: null,
   domainTreasures: null,
   domainKeys: null,

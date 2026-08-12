@@ -16,14 +16,15 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { lintPack, flattenKeys, SETTING_PACKS } from '../src/settings/packs.js';
-import { CUSTOM_MONSTERS } from '../src/game/creatures.js';
+import { CUSTOM_MONSTERS, OVERWORLD_ENEMY_IDS, DEFAULT_ENEMY_IDS } from '../src/game/creatures.js';
 import { CLIMATE_BANDS } from '../vendor/bag-of-holding-client/index.js';
 import { SRD } from '../vendor/bag-of-holding/index.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const baseKeys = new Set(flattenKeys(JSON.parse(fs.readFileSync(path.join(ROOT, 'src/i18n/en.json'), 'utf8'))));
 const knownCreatureIds = new Set(Object.keys({ ...SRD.monsters, ...CUSTOM_MONSTERS }));
-const opts = { knownCreatureIds, baseKeys, climateBands: CLIMATE_BANDS };
+const reachableCreatureIds = [...new Set([...OVERWORLD_ENEMY_IDS, ...DEFAULT_ENEMY_IDS])];
+const opts = { knownCreatureIds, baseKeys, climateBands: CLIMATE_BANDS, reachableCreatureIds };
 
 const targets = [];
 const arg = process.argv[2];

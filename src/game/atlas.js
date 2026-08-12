@@ -15,6 +15,7 @@ import {
   ancestorsOf, childrenOf, promoteNode,
 } from 'bag-of-holding-client';
 import { appState, setValue, tick } from '../core/state.js';
+import { activePack } from '../settings/index.js';
 
 export function geography() { return appState.world?.geography ?? emptyGeography(); }
 
@@ -53,14 +54,26 @@ export function initAtlas(regionId, regionName, seed) {
 // Stub names and hooks are deterministic from the seed, so the same world always
 // promises the same places. They are placeholders until the region is generated,
 // at which point the real name replaces them.
+//
+// The word banks come from the setting pack when it has one. The layers ABOVE
+// the region were skinned first (the library's skeleton takes the pack's
+// syllables), which left the frontier as the one layer still minting Saltfen
+// and Elderdowns into a world of ferry gates — and the frontier is the layer a
+// player reads most, because it is what the map calls the places they have not
+// been yet.
+const DEFAULT_REGION_A = ['Salt', 'Ash', 'Iron', 'Grey', 'Thorn', 'Ember', 'Mire', 'Bone', 'Storm', 'Elder'];
+const DEFAULT_REGION_B = ['Reach', 'March', 'Hollow', 'Fen', 'Downs', 'Barrows', 'Waste', 'Shore', 'Vale', 'Wold'];
+const DEFAULT_HOOKS = ['smoke on the horizon', 'a road nobody maintains', 'bells heard at odd hours',
+                       'a border nobody polices', 'water that tastes of iron', 'birds that will not settle'];
+
 function neighbourName(seed, direction) {
-  const words = ['Reach', 'March', 'Hollow', 'Fen', 'Downs', 'Barrows', 'Waste', 'Shore', 'Vale', 'Wold'];
-  const qual  = ['Salt', 'Ash', 'Iron', 'Grey', 'Thorn', 'Ember', 'Mire', 'Bone', 'Storm', 'Elder'];
-  return `${qual[seed % qual.length]}${words[(seed >> 5) % words.length].toLowerCase()}`;
+  const syl  = activePack().syllables;
+  const qual = syl?.provincePrefixes ?? DEFAULT_REGION_A;
+  const word = syl?.provinceSuffixes ?? DEFAULT_REGION_B;
+  return `${qual[seed % qual.length]}${word[(seed >> 5) % word.length].toLowerCase()}`;
 }
 function neighbourHook(seed, direction) {
-  const hooks = ['smoke on the horizon', 'a road nobody maintains', 'bells heard at odd hours',
-                 'a border nobody polices', 'water that tastes of iron', 'birds that will not settle'];
+  const hooks = activePack().frontierHooks ?? DEFAULT_HOOKS;
   return hooks[seed % hooks.length];
 }
 

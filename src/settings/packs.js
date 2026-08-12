@@ -15,15 +15,17 @@
 // pack — a pack whose enemy pool names a creature with no stat block would
 // otherwise crash a dungeon four hours into a campaign.
 
-import { PACK as classic }  from './pack-classic.js';
-import { PACK as darkAges } from './pack-dark-ages.js';
-import { estimateTokens }   from '../game/scope-budget.js';
+import { PACK as classic }    from './pack-classic.js';
+import { PACK as darkAges }   from './pack-dark-ages.js';
+import { PACK as neonStacks } from './pack-neon-stacks.js';
+import { estimateTokens }     from '../game/scope-budget.js';
 
 export const DEFAULT_PACK_ID = 'classic';
 
 export const SETTING_PACKS = Object.freeze({
   classic,
   'dark-ages': darkAges,
+  'neon-stacks': neonStacks,
 });
 
 // Sorted, so registry insertion order can never silently reshuffle which pack
@@ -83,7 +85,8 @@ export const VOICE_TOKEN_BUDGET = 120;   // a per-turn tax; keep it small
 const VOICE_EXAMPLE_MAX = 3;
 const VOICE_EXAMPLE_CHARS = 120;
 
-export function lintPack(pack, { knownCreatureIds = null, baseKeys = null, climateBands = null } = {}) {
+export function lintPack(pack, { knownCreatureIds = null, baseKeys = null, climateBands = null,
+                                 reachableCreatureIds = null } = {}) {
   const problems = [];
   const say = (msg) => problems.push(`${pack?.id ?? '(unnamed)'}: ${msg}`);
 
@@ -129,6 +132,19 @@ export function lintPack(pack, { knownCreatureIds = null, baseKeys = null, clima
       for (const band of bands ?? []) {
         if (!climateBands.includes(band)) say(`theme '${theme}' names unknown climate band '${band}'`);
       }
+    }
+  }
+
+  // A pack that renames creatures has to rename ALL the ones the game can
+  // reach, not only the ones its own themes name. Travel encounters and the
+  // no-overlay fallback draw from fixed pools, so a pack whose skeletons are
+  // derelict chassis still meets a "Wolf" on the road unless it says otherwise.
+  const skinned = pack.i18n?.en?.world?.enemyNames ?? null;
+  if (skinned && reachableCreatureIds) {
+    const named = new Set([...Object.keys(skinned), ...Object.values(overlays).flatMap(o => o?.enemies ?? [])]);
+    for (const id of reachableCreatureIds) {
+      if (!named.has(id)) say(`renames creatures but leaves '${id}' unskinned — it can still appear in travel or a themeless dungeon`);
+      else if (!skinned[id]) say(`creature '${id}' can appear but has no display name in this pack`);
     }
   }
 

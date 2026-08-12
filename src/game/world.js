@@ -78,7 +78,10 @@ export function generateDungeon(seed, blueprint, { partyLevel = 1, act = 1 } = {
   // than just a bigger hit-point pool. The generator asks for the boss block by
   // passing isBoss, so ordinary enemies are untouched.
   const blockFor = (id, opts = {}) => (opts.isBoss
-    ? bossBlockFor(id, { tier: bossTierForLevel(partyLevel) })
+    // The boss keeps the locale's display name (and so the pack's skin) — the
+    // template turns "Downdraught" into "Elite Downdraught" rather than
+    // reaching past it to the SRD's own "Air Elemental".
+    ? bossBlockFor(id, { tier: bossTierForLevel(partyLevel), name: enemyName(id) })
     : statBlockFor(id));
 
   return libGenerateDungeon(seed, {

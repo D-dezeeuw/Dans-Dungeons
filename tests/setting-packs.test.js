@@ -24,12 +24,12 @@ import {
   pickPack, lintPack, flattenKeys, renderVoiceFields, VOICE_TOKEN_BUDGET,
 } from '../src/settings/packs.js';
 import { PACK as classic } from '../src/settings/pack-classic.js';
-import { CUSTOM_MONSTERS } from '../src/game/creatures.js';
+import { CUSTOM_MONSTERS, OVERWORLD_ENEMY_IDS, DEFAULT_ENEMY_IDS } from '../src/game/creatures.js';
 import { estimateTokens } from '../src/game/scope-budget.js';
 import {
   buildBlueprint, deriveBlueprint, generateDungeon, DUNGEON_OVERLAYS, CLIMATE_BANDS,
 } from '../vendor/bag-of-holding-client/index.js';
-import { SRD } from '../vendor/bag-of-holding/index.js';
+import { SRD, elevate } from '../vendor/bag-of-holding/index.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const bundle = (code) => JSON.parse(fs.readFileSync(path.join(ROOT, `src/i18n/${code}.json`), 'utf8'));
@@ -39,6 +39,9 @@ const BASE_KEYS = new Set(flattenKeys(bundle('en')));
 // composes the same set, but it imports the `bag-of-holding` bare specifier, so
 // tests reach the engine the way tests/spells.test.js does.
 const KNOWN_IDS = new Set(Object.keys({ ...SRD.monsters, ...CUSTOM_MONSTERS }));
+// Creatures the game reaches WITHOUT consulting a dungeon overlay: road
+// encounters and the pool a themeless dungeon falls back to.
+const REACHABLE = [...new Set([...OVERWORLD_ENEMY_IDS, ...DEFAULT_ENEMY_IDS])];
 
 describe('every shipped pack passes the lint', () => {
   for (const [id, pack] of Object.entries(SETTING_PACKS)) {
@@ -47,6 +50,7 @@ describe('every shipped pack passes the lint', () => {
         knownCreatureIds: KNOWN_IDS,
         baseKeys: BASE_KEYS,
         climateBands: CLIMATE_BANDS,
+        reachableCreatureIds: REACHABLE,
       });
       assert.deepEqual(problems, [], problems.join('\n'));
     });
@@ -63,6 +67,7 @@ describe('the lint actually catches what it claims to', () => {
   const base = { id: 'test', packVersion: 1, card: { en: { name: 'T', blurb: 'b' } } };
   const lint = (over) => lintPack({ ...base, ...over }, {
     knownCreatureIds: KNOWN_IDS, baseKeys: BASE_KEYS, climateBands: CLIMATE_BANDS,
+    reachableCreatureIds: REACHABLE,
   }).join(' | ');
 
   it('rejects an enemy with no stat block', () => {
@@ -83,7 +88,9 @@ describe('the lint actually catches what it claims to', () => {
 
   it('rejects a typo\'d i18n key, but allows tables packs mint ids in', () => {
     assert.match(lint({ i18n: { en: { world: { hosueStyles: ['x'] } } } }), /does not exist in the base bundle/);
-    assert.equal(lint({ i18n: { en: { world: { dressing: { 'server-crypt': ['a'] }, enemyNames: { skeleton: 'Chassis' } } } } }), '');
+    // `world.dressing.<theme>` is a table packs mint their own ids in, so an
+    // id the base bundle never heard of is an addition, not a typo.
+    assert.equal(lint({ i18n: { en: { world: { dressing: { 'server-crypt': ['a'] } } } } }), '');
   });
 
   it('rejects a translation with no original', () => {
@@ -104,6 +111,11 @@ describe('the lint actually catches what it claims to', () => {
     assert.match(lint({ voice: fat }), /over the 120 budget/);
     assert.match(lint({ voice: { address: [], register: 'terse' } }), /at least one address term/);
     assert.match(lint({ voice: { address: ['x'], examples: { npc: ['a', 'b', 'c', 'd'] } } }), /more than 3 lines/);
+  });
+
+  it('rejects a creature rename that leaves the travel pools in fantasy clothes', () => {
+    const out = lint({ i18n: { en: { world: { enemyNames: { skeleton: 'Chassis' } } } } });
+    assert.match(out, /unskinned/, 'a pack that renames one creature must account for the ones it cannot see');
   });
 
   it('refuses functions and rules material', () => {
@@ -237,5 +249,21 @@ describe('the voice block is measured the way it is rendered', () => {
 
   it('renders nothing for a pack with no voice', () => {
     assert.equal(renderVoiceFields(null), '');
+  });
+});
+
+describe('the vault boss wears the same wardrobe as everything else', () => {
+  // The finale is the one fight a player is guaranteed to read closely, and it
+  // was the one creature the locale table could not rename: bossBlockFor built
+  // its name from the SRD block, and the dungeon generator applies a block's
+  // `name` OVER the content provider's. Four rooms of "Sump Rat" and then
+  // "Elite Giant Rat" is exactly the genre leak a pack exists to prevent.
+  it('a skinned name survives the elite template', () => {
+    const raised = elevate({ ...SRD.monsters.zombie, id: 'zombie', name: 'Ward Leftover' }, 'elite');
+    assert.equal(raised.name, 'Elite Ward Leftover');
+  });
+
+  it('the unskinned path is unchanged', () => {
+    assert.equal(elevate({ ...SRD.monsters.zombie, id: 'zombie' }, 'elite').name, 'Elite Zombie');
   });
 });
