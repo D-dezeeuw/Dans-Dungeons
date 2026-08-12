@@ -111,8 +111,19 @@ export const PACK = Object.freeze({
   overlays: null,
   domainTreasures: null,
   domainKeys: null,
-  classSkins: null,
   speciesSkins: null,
+
+  // The one place this pack cannot leave the base alone. A party led by a
+  // "Wizard" is the high-fantasy note the whole register is trying not to
+  // strike, and the mechanics do not care what the button says: the id stays
+  // `wizard`, the sheet derives from the same SRD data, the spells are the
+  // same spells. Only the word changes.
+  classSkins: {
+    fighter: { en: 'Oathman',    nl: 'Eedman' },
+    rogue:   { en: 'Poacher',    nl: 'Stroper' },
+    cleric:  { en: 'Cleric',     nl: 'Geestelijke' },
+    wizard:  { en: 'Charm-Worker', nl: 'Bezweerder' },
+  },
 
   // The whole pack, really. Everything above changes what the world contains;
   // this changes what it sounds like, and it rides in every narrator, NPC and
@@ -125,7 +136,12 @@ export const PACK = Object.freeze({
     register: 'plain, weary and concrete; few adjectives; the speech of people who count winters',
     honorifics: ['Brother or Sister for anyone in orders'],
     exclamations: ['God keep you', 'by the saints', 'Lord above'],
-    forbid: ['choom', 'neon', 'wizard', 'mage-tower', 'mana', 'elf', 'rune'],
+    // Only words this world can never produce. It is tempting to forbid
+    // 'wizard', 'elf' and 'rune' as well, but the pack inherits the base
+    // creature pools, the SRD species list and the library's dungeon themes —
+    // an arcane ruin's own dressing says runes. Forbidding a word the scene
+    // hands the narrator two lines later teaches it to describe badly.
+    forbid: ['choom', 'neon', 'mana', 'mage-tower', 'hit points'],
     examples: {
       narrator: ['The rain has been at the thatch three days. The ford is over the horse\'s knees.'],
       npc: ['We buried four since the thaw. Take the far bed, it is drier.'],

@@ -112,13 +112,29 @@ async function bootWithKey(page) {
 // Answer the character-creation wizard and land in a playable dungeon. Driven
 // through the real UI rather than by seeding a finished save, because the
 // wizard is exactly the surface the chip layer used to no-op in.
+// The wizard's first question is the SETTING (doc 19 — packs), asked before
+// character creation because the pack skins the class labels. Answered by name
+// rather than by number: pickFrom matches an option's id, and pinning by index
+// would couple these tests to the order packs happen to be registered in.
+// 'classic' inherits everything, so the smoke suite keeps testing the game
+// rather than a pack.
+async function answerSetting(page, settingId = 'classic') {
+  const cmd = page.locator('#cmd');
+  await expect(cmd).toBeEnabled({ timeout: 20_000 });
+  await cmd.fill(settingId);
+  await cmd.press('Enter');
+}
+
 async function startCampaign(page) {
   await bootWithKey(page);
   const cmd = page.locator('#cmd');
   await expect(cmd).toBeEnabled({ timeout: 20_000 });
 
-  // Name → then a series of numbered picks (class, species, background, mode).
-  // Each is answered with the default, which is what pressing Enter means.
+  // Setting → name → then a series of numbered picks (class, species,
+  // background). Each is answered with the default, which is what pressing
+  // Enter means.
+  await answerSetting(page);
+  await expect(cmd).toBeEnabled({ timeout: 20_000 });
   await cmd.fill('Tester');
   await cmd.press('Enter');
 
@@ -166,6 +182,8 @@ test('the click-to-play containers exist and are reachable', async ({ page }) =>
 test('choices are clickable, not just typeable', async ({ page }) => {
   await bootWithKey(page);
   const cmd = page.locator('#cmd');
+  await expect(cmd).toBeEnabled({ timeout: 20_000 });
+  await answerSetting(page);
   await expect(cmd).toBeEnabled({ timeout: 20_000 });
   await cmd.fill('Tester');
   await cmd.press('Enter');

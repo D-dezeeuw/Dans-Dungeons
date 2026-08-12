@@ -185,6 +185,9 @@ async function mockOpenRouter(page) {
   const answer = makeCampaignMock();
   await page.route('**/api/v1/chat/completions', async (route) => {
     const body = route.request().postDataJSON() ?? {};
+    // Ground truth for 'this action was free': every completion the app asks
+    // for is counted in the page, where the test can read it.
+    await page.evaluate(() => { window.__ddCalls = (window.__ddCalls ?? 0) + 1; }).catch(() => {});
     const content = answer(body);
     if (body.stream) {
       const chunk = JSON.stringify({ choices: [{ delta: { content } }] });
@@ -215,13 +218,23 @@ async function bootDeluxe(page) {
   await expect(page.locator('#transcript')).toBeVisible();
 }
 
-// Answer the wizard. Deluxe asks the MODE first ("1" = campaign), THEN the
-// character wizard (name, then numbered picks). The first driver typed the
-// name into the mode prompt and the hero ended up christened "1".
-async function driveWizardIntoCampaign(page) {
+// Answer the wizard. Deluxe asks the MODE first ("1" = campaign), then the
+// SETTING (doc 19 — packs), then the character wizard (name, then numbered
+// picks). The first driver typed the name into the mode prompt and the hero
+// ended up christened "1"; the setting question is inserted at the same seam,
+// so it gets the same care.
+//
+// The setting is answered BY NAME rather than by number: pickFrom matches an
+// option's id or label, and pinning 'classic' by index would couple this test
+// to the order packs happen to be registered in. Classic inherits everything,
+// so this scenario keeps testing the campaign rather than a pack.
+async function driveWizardIntoCampaign(page, settingId = 'classic') {
   const cmd = page.locator('#cmd');
   await expect(cmd).toBeEnabled({ timeout: 30_000 });
   await cmd.fill('1');            // campaign mode
+  await cmd.press('Enter');
+  await expect(cmd).toBeEnabled({ timeout: 30_000 });
+  await cmd.fill(settingId);      // the setting pack
   await cmd.press('Enter');
   await expect(cmd).toBeEnabled({ timeout: 30_000 });
   await cmd.fill('Tessa');        // the character's name
@@ -265,6 +278,37 @@ test('a campaign crosses the sea: city, factions, far continent, dungeon', async
   // Factions and story exist before we leave.
   await type('/story');
   await expect(transcript).toContainText('── Story ──');
+
+  // ── The dictionary is free (doc 19, Part II) ────────────────────────────
+  // The player asks about a name the narrator has been using. It is answered
+  // from stored knowledge: no thinking indicator, no model call, no turn.
+  const turnCount = () => page.evaluate(() => {
+    try { return JSON.parse(localStorage.getItem('dans-dungeons')).data.session.turnCount ?? null; }
+    catch { return null; }
+  });
+  const turnsBefore = await turnCount();
+  const callsBefore = await page.evaluate(() => window.__ddCalls ?? 0);
+  await type('what is Brinemarket?');
+  await expect(transcript).toContainText('Brinemarket —', { timeout: 10_000 });
+  expect(await page.evaluate(() => window.__ddCalls ?? 0), 'a dictionary lookup must not call the model').toBe(callsBefore);
+  if (turnsBefore !== null) {
+    expect(await turnCount(), 'a dictionary lookup must not cost a turn').toBe(turnsBefore);
+  }
+
+  // Bare /what suggests what is worth asking about, and an unknown name is
+  // refused rather than invented.
+  await type('/what');
+  await expect(transcript).toContainText('Things you could ask about:');
+  await type('/what the Obsidian Parliament');
+  await expect(transcript).toContainText('means nothing to you yet');
+
+  // A question the index CANNOT answer is not swallowed: it flows on to the
+  // Game Master as an ordinary turn, which is what keeps false positives at
+  // zero for questions about the live scene.
+  const callsBeforeMiss = await page.evaluate(() => window.__ddCalls ?? 0);
+  await type('what is that sound?');
+  await expect.poll(() => page.evaluate(() => window.__ddCalls ?? 0), { timeout: 20_000 })
+    .toBeGreaterThan(callsBeforeMiss);
 
   // Talk to a citizen — the conversation points across the sea.
   await type('talk to Mara');

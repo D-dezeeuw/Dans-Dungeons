@@ -15,13 +15,15 @@
 // pack — a pack whose enemy pool names a creature with no stat block would
 // otherwise crash a dungeon four hours into a campaign.
 
-import { PACK as classic } from './pack-classic.js';
-import { estimateTokens }  from '../game/scope-budget.js';
+import { PACK as classic }  from './pack-classic.js';
+import { PACK as darkAges } from './pack-dark-ages.js';
+import { estimateTokens }   from '../game/scope-budget.js';
 
 export const DEFAULT_PACK_ID = 'classic';
 
 export const SETTING_PACKS = Object.freeze({
   classic,
+  'dark-ages': darkAges,
 });
 
 // Sorted, so registry insertion order can never silently reshuffle which pack
