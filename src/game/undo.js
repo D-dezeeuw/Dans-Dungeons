@@ -47,6 +47,7 @@ import { appState, setValue, addValue, tick, replay, checkpoint, onFork,
          spektrumHistory, saveToStorage, restoreState, pickPersisted,
          setTimeTravelProvider } from '../core/state.js';
 import { rebuildTranscript } from '../ui/transcript.js';
+import { applyPackOverlay } from '../settings/index.js';
 import { updateActionBar }   from '../ui/actionbar.js';
 
 // Turn-boundary history indices for the current epoch (ascending). `_pos` is the
@@ -403,6 +404,8 @@ export function importTimeTravel(tt, expected) {
     if (key)     setValue('ai.key', key);
     if (baseUrl) setValue('ai.baseUrl', baseUrl);
     tick();
+    applyPackOverlay();   // the restored world may name a different pack
+
     const root = spektrumHistory.length;
     reapplyEntries(tt.spine);
     tick();

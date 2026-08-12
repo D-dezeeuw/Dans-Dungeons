@@ -5,8 +5,9 @@
 
 import { chatCompletion } from '../ai/client.js';
 import { t } from '../i18n/i18n.js';
+import { appConstraints, settingLine } from './worldseed.js';
 import {
-  worldSeedConstraints, beatsHints, factionsHints, regionHints, settlementHints, runPipeline,
+  beatsHints, factionsHints, regionHints, settlementHints, runPipeline,
   WORLD_SEED_SCHEMA, REGION_SCHEMA, SETTLEMENT_SCHEMA, FACTIONS_SCHEMA, RED_THREAD_SCHEMA,
   CONTINENTS_OUTLINE_SCHEMA, PROVINCE_OUTLINE_SCHEMA,
 } from 'bag-of-holding-client';
@@ -14,7 +15,7 @@ import {
 // ─── World seed (L00) ────────────────────────────────────────────────────────
 
 async function generateWorldSeed(blueprint) {
-  const constraints = worldSeedConstraints(blueprint);
+  const constraints = appConstraints(blueprint);
   return chatCompletion({
     tier: 'medium',
     maxTokens: 1000,
@@ -33,7 +34,7 @@ async function generateBeats(worldDigest, blueprint) {
     tier: 'medium',
     maxTokens: 2000,
     messages: [
-      { role: 'system', content: t('ai.beatsPrompt', { parentDigest: worldDigest }) + beatsHints(blueprint) },
+      { role: 'system', content: t('ai.beatsPrompt', { parentDigest: worldDigest }) + beatsHints(blueprint) + settingLine(blueprint) },
       { role: 'user',   content: t('ai.beatsUserMsg') },
     ],
     schema: RED_THREAD_SCHEMA,
@@ -47,7 +48,7 @@ async function generateFactions(worldDigest, blueprint) {
     tier: 'medium',
     maxTokens: 1200,
     messages: [
-      { role: 'system', content: t('ai.factionsPrompt', { parentDigest: worldDigest }) + factionsHints(blueprint) },
+      { role: 'system', content: t('ai.factionsPrompt', { parentDigest: worldDigest }) + factionsHints(blueprint) + settingLine(blueprint) },
       { role: 'user',   content: t('ai.factionsUserMsg') },
     ],
     schema: FACTIONS_SCHEMA,
@@ -67,7 +68,7 @@ export async function generateContinentOutlines(worldDigest, continents, faction
     tier: 'medium',
     maxTokens: 900,
     messages: [
-      { role: 'system', content: t('ai.continentsPrompt', { parentDigest: worldDigest, skeleton, factions: factionList }) },
+      { role: 'system', content: t('ai.continentsPrompt', { parentDigest: worldDigest, skeleton, factions: factionList }) + settingLine(blueprint) },
       { role: 'user',   content: t('ai.continentsUserMsg') },
     ],
     schema: CONTINENTS_OUTLINE_SCHEMA,
@@ -82,7 +83,7 @@ export async function generateProvinceOutline(parentDigest, node, blueprint) {
       { role: 'system', content: t('ai.provincePrompt', {
           parentDigest, id: node.id, name: node.name,
           climate: node.climate ?? 'temperate', hook: node.hook ?? '',
-        }) },
+        }) + settingLine(blueprint) },
       { role: 'user',   content: t('ai.provinceUserMsg') },
     ],
     schema: PROVINCE_OUTLINE_SCHEMA,
@@ -96,7 +97,7 @@ export async function generateRegion(parentDigest, blueprint) {
     tier: 'medium',
     maxTokens: 800,
     messages: [
-      { role: 'system', content: t('ai.regionPrompt', { parentDigest }) + regionHints(blueprint) },
+      { role: 'system', content: t('ai.regionPrompt', { parentDigest }) + regionHints(blueprint) + settingLine(blueprint) },
       { role: 'user',   content: t('ai.regionUserMsg') },
     ],
     schema: REGION_SCHEMA,
@@ -110,7 +111,7 @@ export async function generateSettlement(parentDigest, regionId, blueprint) {
     tier: 'medium',
     maxTokens: 3000,
     messages: [
-      { role: 'system', content: t('ai.settlementPrompt', { parentDigest, regionId }) + settlementHints(blueprint) },
+      { role: 'system', content: t('ai.settlementPrompt', { parentDigest, regionId }) + settlementHints(blueprint) + settingLine(blueprint) },
       { role: 'user',   content: t('ai.settlementUserMsg') },
     ],
     schema: SETTLEMENT_SCHEMA,

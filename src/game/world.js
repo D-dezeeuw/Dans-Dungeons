@@ -7,6 +7,7 @@ import { tRaw } from '../i18n/i18n.js';
 import { Dice } from './rules.js';
 import { statBlockFor, bossBlockFor, bossTierForLevel, BESTIARY, DEFAULT_ENEMY_IDS } from './bestiary.js';
 import { DUNGEON_OVERLAYS, DOMAIN_TREASURES, DOMAIN_KEYS } from './worldseed.js';
+import { activePack } from '../settings/index.js';
 import { generateDungeon as libGenerateDungeon } from 'bag-of-holding-client';
 
 // ─── Creature presentation (name + intro, localized) ─────────────────────────
@@ -45,8 +46,11 @@ function dungeonContent() {
     treasures:       tRaw('world.treasures'),
     keys:            tRaw('world.keys'),
     loot:            tRaw('world.loot') ?? [],
-    domainTreasures: DOMAIN_TREASURES,
-    domainKeys:      DOMAIN_KEYS,
+    // Room prose, loot and creature names all come through i18n, so the pack's
+    // content overlay re-points them with no change here. These two are keyed
+    // objects consumed directly, so they take the pack explicitly.
+    domainTreasures: activePack().domainTreasures ?? DOMAIN_TREASURES,
+    domainKeys:      activePack().domainKeys ?? DOMAIN_KEYS,
     enemyName,
     enemyIntro,
   };
@@ -74,7 +78,10 @@ export function generateDungeon(seed, blueprint, { partyLevel = 1, act = 1 } = {
   // than just a bigger hit-point pool. The generator asks for the boss block by
   // passing isBoss, so ordinary enemies are untouched.
   const blockFor = (id, opts = {}) => (opts.isBoss
-    ? bossBlockFor(id, { tier: bossTierForLevel(partyLevel) })
+    // The boss keeps the locale's display name (and so the pack's skin) — the
+    // template turns "Downdraught" into "Elite Downdraught" rather than
+    // reaching past it to the SRD's own "Air Elemental".
+    ? bossBlockFor(id, { tier: bossTierForLevel(partyLevel), name: enemyName(id) })
     : statBlockFor(id));
 
   return libGenerateDungeon(seed, {
@@ -82,7 +89,7 @@ export function generateDungeon(seed, blueprint, { partyLevel = 1, act = 1 } = {
     rng:             seed != null ? Dice.seededRng(seed) : undefined,
     statBlockFor:    blockFor,
     crOf:            (id) => BESTIARY[id]?.cr ?? 0,
-    overlays:        DUNGEON_OVERLAYS,
+    overlays:        activePack().overlays ?? DUNGEON_OVERLAYS,
     defaultEnemyIds: DEFAULT_ENEMY_IDS,
     content:         dungeonContent(),
     size:            dungeonSizeForAct(act),

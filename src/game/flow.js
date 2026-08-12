@@ -18,7 +18,8 @@ import { describeAiError } from '../ai/errors.js';
 // The read-only screens (/story, the map, quests, inventory) live in views.js:
 // they read state and print, and share nothing with the loop that mutates it.
 import { renderStoryView, renderRegionMap, showQuests, showInventory,
-         resolveDungeonQuests } from './views.js';
+         resolveDungeonQuests, renderLexiconAnswer, renderLexiconTopics,
+         tryLexicon } from './views.js';
 import { clearTurnMarks, setScrubHandler } from './undo.js';
 import { enterEncounterState, exitEncounterState } from './encounter-state.js';
 import { cutChapter, shouldCutChapter, recap, chapterIndex } from './chapters.js';
@@ -38,8 +39,10 @@ import {
   beginTravel, stepTravel, isTravelDone, pickEncounter,
 } from 'bag-of-holding-client';
 import { setStoryFlag, awardReputation, reputationStanding, requeueActClose } from './story.js';
+import { recordCanon, markEncountered, currentPlaceId } from './ledger.js';
+import { activePack, applyPackOverlay, packIds, packCard, pickPack, resolvePack } from '../settings/index.js';
 import * as UI from '../ui/console.js';
-import { t, tRaw } from '../i18n/i18n.js';
+import { t, tRaw, locale } from '../i18n/i18n.js';
 import { getSkills } from '../ui/chips.js';
 
 // TTS helpers — imported lazily so the audio module is a no-op when TTS is off.
@@ -184,6 +187,27 @@ async function handleMeta(raw) {
   if (cmd === 'settings') { UI.appendEntry('system', t('setup.reRunSetup')); await setupKey(); return; }
   if (cmd === 'map')   { renderRegionMap(); return; }
   if (cmd === 'story') { renderStoryView(); return; }
+  // The dictionary. Free, like every other meta command: the Game Master knows
+  // the world and the player met it yesterday, and asking which is which should
+  // not cost a turn (doc 19, Part II).
+  if (cmd === 'what' || cmd.startsWith('what ')) {
+    const q = cmd.replace(/^what\s*/, '').trim();
+    if (q) await renderLexiconAnswer(q); else renderLexiconTopics();
+    return;
+  }
+  // Whether dictionary answers are restyled in the setting's voice. A text
+  // game's settings surface is its meta commands; this one is off by default,
+  // costs a tiny call per lookup, and does nothing at all under a pack with no
+  // voice (classic), where there is no register to speak in.
+  if (cmd === 'dictionary') {
+    const next = !(appState.settings?.lexiconParaphrase ?? false);
+    setValue('settings.lexiconParaphrase', next);
+    tick();
+    saveToStorage();
+    UI.appendEntry('system', `${t('sidebar.lexiconVoiceLabel')}: ${next ? t('common.yes') : t('common.no')}`);
+    if (next) UI.appendEntry('system', t('sidebar.lexiconVoiceHint'));
+    return;
+  }
   if (cmd === 'help') { UI.appendEntry('system', t('meta.helpList')); return; }
   UI.appendEntry('system', t('meta.unknownCmd', { cmd: raw }));
 }
@@ -204,12 +228,35 @@ export async function startNewGame() {
     );
   }
 
+  // The setting, chosen before anything else — including the character, whose
+  // class labels the pack skins. 'surprise' defers to the campaign seed, which
+  // draws the THEME first and then rolls every content choice inside it: a
+  // world cannot be cyberpunk with a mushroom farm if the mushroom farm was
+  // never in the deck being drawn from (doc 19 §3).
+  const settingChoice = await UI.pickFrom(
+    t('newgame.settingQuestion'),
+    ['surprise', ...packIds()],
+    (id) => id === 'surprise' ? t('newgame.settingSurprise') : packCard(resolvePack(id), locale()).name,
+    0,
+  );
+
   clearTurnMarks();   // a fresh game must not be undoable into the prior game's history
   setValue('party',  { pc: null, inventory: [] });
   setValue('flags',       {});
   setValue('transcript',  []);
   setValue('session.turnCount', 0);
   setValue('session.phase', 'char-create');
+
+  // The seed both the pack draw and the world roll come from. Minted here so
+  // the pack is known before character creation and before any generator runs.
+  const worldSeed = Math.floor(Math.random() * 2147483647);
+  const settingId = settingChoice === 'surprise' ? pickPack(worldSeed) : settingChoice;
+  setValue('world.settingId', settingId);
+  const pack = applyPackOverlay(resolvePack(settingId));
+  tick();
+  UI.appendEntry('system', t('newgame.settingChosen', { name: packCard(pack, locale()).name }));
+  UI.appendEntry('system', packCard(pack, locale()).blurb);
+  UI.appendEntry('system', '');
 
   const { magic, ...pc } = (await createCharacter(UI)) ?? {};
   if (!pc.record) { UI.appendEntry('error', t('setup.createCancelled')); return; }
@@ -235,25 +282,26 @@ export async function startNewGame() {
   }
 
   if (mode === 'campaign') {
-    await startCampaign();
+    await startCampaign(worldSeed, pack);
   } else {
-    await startQuickDungeon();
+    await startQuickDungeon(worldSeed, pack);
   }
 }
 
 // ─── Quick Dungeon (legacy flow) ─────────────────────────────────────────────
 
-async function startQuickDungeon() {
-  const seed = Math.floor(Math.random() * 2147483647);
-  const blueprint = buildWorldBlueprint(seed);
+async function startQuickDungeon(seed = Math.floor(Math.random() * 2147483647), pack = activePack()) {
+  const blueprint = buildWorldBlueprint(seed, pack);
   const world = generateDungeon(seed, blueprint, { partyLevel: appState.party?.pc?.record?.level ?? 1 });
-  setValue('world', world);
+  // settingId rides in `world`, so it survives export/import, slots and every
+  // time-travel branch — and a whole-world write must not drop it.
+  setValue('world', { ...world, settingId: pack?.id ?? appState.world?.settingId ?? null });
   setValue('session.phase', 'play');
   seedCombat(seed);   // epoch-seeded combat dice — replayable + auditable (rng.js)
   commit();
 
   // Show the dungeon theme in transcript for flavor.
-  UI.appendEntry('system', `Theme: ${blueprint.dungeonTheme}. Tone: ${blueprint.tone}.`);
+  UI.appendEntry('system', t('newgame.themeLine', { theme: blueprint.dungeonTheme, tone: blueprint.tone }));
   UI.appendEntry('system', '');
 
   await beginAdventure();
@@ -261,7 +309,7 @@ async function startQuickDungeon() {
 
 // ─── Campaign flow (worldgen → settlement → dungeon) ─────────────────────────
 
-async function startCampaign() {
+async function startCampaign(worldSeed = null, pack = activePack()) {
   UI.appendEntry('system', '');
 
   const progress = (key, detail) => {
@@ -273,8 +321,8 @@ async function startCampaign() {
   // creative constraints (tone, climate, threat, factions, dungeon theme). Without
   // this the campaign got generic, unconstrained AI output — see worldbible.js,
   // which already does this correctly.
-  const blueprintSeed = Math.floor(Math.random() * 2147483647);
-  const blueprint = buildWorldBlueprint(blueprintSeed);
+  const blueprintSeed = worldSeed ?? Math.floor(Math.random() * 2147483647);
+  const blueprint = buildWorldBlueprint(blueprintSeed, pack);
   progress('detail', `Blueprint: ${blueprint.tone} ${blueprint.worldArchetype}, ${blueprint.threatType}, ${blueprint.climate}.`);
 
   let seed, factions, beats, region, settlement;
@@ -303,6 +351,7 @@ async function startCampaign() {
   // Store world state
   const worldState = {
     ...appState.world,
+    settingId: pack?.id ?? appState.world?.settingId ?? null,
     blueprint,
     seed:   seed.name,
     name:   seed.name,
@@ -320,7 +369,7 @@ async function startCampaign() {
     // three neighbour stubs. Costs nothing until visited. Seeded from the
     // NUMERIC blueprint seed — world.seed holds the world's NAME, and the
     // old read degenerated every skeleton to seed 0.
-    geography: initialAtlas(region.id, region.name, blueprintSeed),
+    geography: initialAtlas(region.id, region.name, blueprintSeed, { syllables: pack?.syllables ?? null }),
   };
 
   // The global outline (doc 17, detail 0 → 1 for every continent, one call):
@@ -511,6 +560,10 @@ async function settlementLoop(settlementId) {
     const raw = await UI.prompt('');
     if (!raw.trim()) continue;
     if (raw.startsWith('/')) { await handleMeta(raw); continue; }
+    // A question the player already knows the answer to is answered from
+    // stored knowledge, for free (doc 19). A miss returns false and falls
+    // through to a normal turn — the Game Master owns what the index cannot.
+    if (await tryLexicon(raw)) continue;
 
     // Fast travel to an already-discovered settlement (chip value).
     const ft = raw.match(/^fasttravel:(.+)$/);
@@ -775,6 +828,14 @@ async function converseWithNpc(settlementId, npcId) {
     if (revealed) {
       UI.appendEntry('system', t('settlement.secretRevealed', { name: npc.name, secret: npc.secret }));
       setStoryFlag(`secret-${slug(npc.id ?? npc.name)}-revealed`);
+      // What the player has been told is now part of the world, not just a line
+      // that scrolls away: recording it as canon puts it in the ledger, which is
+      // where the scope packet's `known` tier and the lexicon both read from —
+      // and it means undo rewinds the KNOWLEDGE along with the reveal.
+      const npcEntity = `${currentPlaceId()}.npc.${slug(npc.id ?? npc.name)}`;
+      markEncountered(npcEntity);
+      recordCanon(npcEntity, 'name', npc.name, { because: t('settlement.secretBecause', { name: npc.name }) });
+      recordCanon(npcEntity, 'note', npc.secret, { because: t('settlement.secretBecause', { name: npc.name }) });
       tick();
     }
     saveToStorage();
@@ -1042,6 +1103,10 @@ async function runEncounterLoop() {
     const raw = await UI.prompt('');
     if (!raw.trim()) continue;
     if (raw.startsWith('/')) { await handleMeta(raw); continue; }
+    // A question the player already knows the answer to is answered from
+    // stored knowledge, for free (doc 19). A miss returns false and falls
+    // through to a normal turn — the Game Master owns what the index cannot.
+    if (await tryLexicon(raw)) continue;
     if (/^\s*(flee|run|escape|vlucht|ren)\b/i.test(raw) || raw === t('travel.fleeCmd')) {
       UI.appendEntry('player', `> ${raw}`);
       outcome = 'flee';
@@ -1576,6 +1641,10 @@ async function playLoop() {
 
     if (!raw?.trim()) continue;
     if (raw.startsWith('/')) { await handleMeta(raw); continue; }
+    // A question the player already knows the answer to is answered from
+    // stored knowledge, for free (doc 19). A miss returns false and falls
+    // through to a normal turn — the Game Master owns what the index cannot.
+    if (await tryLexicon(raw)) continue;
 
     UI.appendEntry('player', `> ${raw}`);
     UI.clearChips();

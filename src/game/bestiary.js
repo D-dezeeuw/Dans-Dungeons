@@ -39,10 +39,18 @@ function parseDamage(spec) {
 // legendary actions and legendary resistance, so a solo fight plays differently
 // instead of merely lasting longer. `tier` picks how far above its base the
 // creature is raised (see the engine's monster-templates).
-export function bossBlockFor(monsterId, { tier = 'elite' } = {}) {
+// `name` overrides the creature's display name BEFORE the template is applied,
+// so the tier title is built from it: elevate() composes "Elite " + the base
+// name, and a boss block carries a `name` that the dungeon generator applies
+// over whatever the content provider had chosen. Without this the vault boss
+// was the one creature in the game the locale table could not rename — every
+// campaign's finale said "Elite Air Elemental" while the four rooms before it
+// said "Downdraught", and a setting pack's most visible fight was the one
+// place its wardrobe fell off.
+export function bossBlockFor(monsterId, { tier = 'elite', name = null } = {}) {
   const base = BESTIARY[monsterId];
   if (!base) throw new Error(`Unknown monster: ${monsterId}`);
-  const raised = elevate({ ...base, id: monsterId }, tier);
+  const raised = elevate({ ...base, id: monsterId, ...(name ? { name } : {}) }, tier);
   return { ...statBlockFrom(raised), boss: true, template: tier, name: raised.name };
 }
 

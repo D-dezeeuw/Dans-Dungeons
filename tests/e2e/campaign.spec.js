@@ -185,6 +185,16 @@ async function mockOpenRouter(page) {
   const answer = makeCampaignMock();
   await page.route('**/api/v1/chat/completions', async (route) => {
     const body = route.request().postDataJSON() ?? {};
+    // Ground truth for 'this action was free': every completion the app asks
+    // for is counted in the page, where the test can read it.
+    await page.evaluate(() => { window.__ddCalls = (window.__ddCalls ?? 0) + 1; }).catch(() => {});
+    // Keep the system prompts the app actually sent, so a test can assert the
+    // pack's voice reached the model rather than only that the pack loaded.
+    const sysText = (body.messages ?? []).filter(m => m.role === 'system').map(m => m.content).join('\n');
+    await page.evaluate((text) => {
+      window.__ddPrompts = (window.__ddPrompts ?? []);
+      window.__ddPrompts.push(text);
+    }, sysText).catch(() => {});
     const content = answer(body);
     if (body.stream) {
       const chunk = JSON.stringify({ choices: [{ delta: { content } }] });
@@ -215,13 +225,23 @@ async function bootDeluxe(page) {
   await expect(page.locator('#transcript')).toBeVisible();
 }
 
-// Answer the wizard. Deluxe asks the MODE first ("1" = campaign), THEN the
-// character wizard (name, then numbered picks). The first driver typed the
-// name into the mode prompt and the hero ended up christened "1".
-async function driveWizardIntoCampaign(page) {
+// Answer the wizard. Deluxe asks the MODE first ("1" = campaign), then the
+// SETTING (doc 19 — packs), then the character wizard (name, then numbered
+// picks). The first driver typed the name into the mode prompt and the hero
+// ended up christened "1"; the setting question is inserted at the same seam,
+// so it gets the same care.
+//
+// The setting is answered BY NAME rather than by number: pickFrom matches an
+// option's id or label, and pinning 'classic' by index would couple this test
+// to the order packs happen to be registered in. Classic inherits everything,
+// so this scenario keeps testing the campaign rather than a pack.
+async function driveWizardIntoCampaign(page, settingId = 'classic') {
   const cmd = page.locator('#cmd');
   await expect(cmd).toBeEnabled({ timeout: 30_000 });
   await cmd.fill('1');            // campaign mode
+  await cmd.press('Enter');
+  await expect(cmd).toBeEnabled({ timeout: 30_000 });
+  await cmd.fill(settingId);      // the setting pack
   await cmd.press('Enter');
   await expect(cmd).toBeEnabled({ timeout: 30_000 });
   await cmd.fill('Tessa');        // the character's name
@@ -265,6 +285,37 @@ test('a campaign crosses the sea: city, factions, far continent, dungeon', async
   // Factions and story exist before we leave.
   await type('/story');
   await expect(transcript).toContainText('── Story ──');
+
+  // ── The dictionary is free (doc 19, Part II) ────────────────────────────
+  // The player asks about a name the narrator has been using. It is answered
+  // from stored knowledge: no thinking indicator, no model call, no turn.
+  const turnCount = () => page.evaluate(() => {
+    try { return JSON.parse(localStorage.getItem('dans-dungeons')).data.session.turnCount ?? null; }
+    catch { return null; }
+  });
+  const turnsBefore = await turnCount();
+  const callsBefore = await page.evaluate(() => window.__ddCalls ?? 0);
+  await type('what is Brinemarket?');
+  await expect(transcript).toContainText('Brinemarket —', { timeout: 10_000 });
+  expect(await page.evaluate(() => window.__ddCalls ?? 0), 'a dictionary lookup must not call the model').toBe(callsBefore);
+  if (turnsBefore !== null) {
+    expect(await turnCount(), 'a dictionary lookup must not cost a turn').toBe(turnsBefore);
+  }
+
+  // Bare /what suggests what is worth asking about, and an unknown name is
+  // refused rather than invented.
+  await type('/what');
+  await expect(transcript).toContainText('Things you could ask about:');
+  await type('/what the Obsidian Parliament');
+  await expect(transcript).toContainText('means nothing to you yet');
+
+  // A question the index CANNOT answer is not swallowed: it flows on to the
+  // Game Master as an ordinary turn, which is what keeps false positives at
+  // zero for questions about the live scene.
+  const callsBeforeMiss = await page.evaluate(() => window.__ddCalls ?? 0);
+  await type('what is that sound?');
+  await expect.poll(() => page.evaluate(() => window.__ddCalls ?? 0), { timeout: 20_000 })
+    .toBeGreaterThan(callsBeforeMiss);
 
   // Talk to a citizen — the conversation points across the sea.
   await type('talk to Mara');
@@ -314,4 +365,72 @@ test('a campaign crosses the sea: city, factions, far continent, dungeon', async
   console.log('===== CAMPAIGN RUN TRANSCRIPT =====');
   console.log(finalText);
   console.log('===== END TRANSCRIPT =====');
+});
+
+
+// ─── A pack changes the world's clothes and nothing else (doc 19, Part I) ────
+//
+// classic is asserted to be a no-op by the unit suite; this is the other
+// direction, in a real browser: pick the far reskin and prove its content
+// reaches the three places a player meets it — the room prose, the creature
+// names, and the voice the model is briefed in. The mock answers the same
+// schemas either way, so anything that changes here changed because the pack
+// changed it.
+
+test('a setting pack re-skins the game it is playing', async ({ page }) => {
+  test.setTimeout(240_000);
+  const transcript = page.locator('#transcript');
+  const cmd = page.locator('#cmd');
+  const type = async (s) => {
+    await expect(cmd).toBeEnabled({ timeout: 30_000 });
+    await cmd.fill(s);
+    await cmd.press('Enter');
+  };
+
+  await bootDeluxe(page);
+  await driveWizardIntoCampaign(page, 'neon-stacks');
+
+  // The world was generated under the pack. The wizard's confirmation line is
+  // gone by now — the town render owns the screen and clears it — so the honest
+  // read is the save: the id rides in `world`, which is what makes it survive
+  // export, slots and every time-travel branch.
+  const settingId = await page.evaluate(() => {
+    try { return JSON.parse(localStorage.getItem('dans-dungeons')).data.world.settingId ?? null; }
+    catch { return null; }
+  });
+  expect(settingId).toBe('neon-stacks');
+
+  // Genesis has run, so the setting statement has already had to constrain
+  // every worldgen prompt. (The voice block rides on the prompts that SPEAK —
+  // narrator, dialogue, travel — so it cannot be asserted until a turn plays.)
+  const genesisPrompts = await page.evaluate(() => window.__ddPrompts ?? []);
+  expect(genesisPrompts.filter(p => /vertical mega-city/i.test(p)).length,
+    'the setting statement must constrain the generators').toBeGreaterThan(0);
+
+  // Travel into the dungeon: room prose and creature names are the pack's.
+  await type('travel to the Bell Cistern');
+  await expect(transcript).toContainText(/exits/i, { timeout: 60_000 });
+  const dungeonText = await transcript.innerText();
+  expect(dungeonText, 'room prose comes from the pack overlay, not the base bundle')
+    .toMatch(/gate landing|lift lobby|cage door|turnstile|stair head/i);
+  expect(dungeonText, 'a fantasy room description would mean the overlay never applied')
+    .not.toMatch(/tapestries|mildew and hay/i);
+
+  // Play a turn: now the narrator has been briefed, and the brief carries the
+  // pack's register. This is the assertion that would catch a {{voice}} slot
+  // added to a template but never filled by a call site.
+  await type('look around');
+  await expect(transcript).toContainText(NARRATION, { timeout: 30_000 });
+  const prompts = await page.evaluate(() => window.__ddPrompts ?? []);
+  expect(prompts.filter(p => /choom/.test(p)).length,
+    'the pack voice must reach the prompts that speak').toBeGreaterThan(0);
+
+  // The dictionary speaks the pack's vocabulary too: /map relabels the layers.
+  await type('/map');
+  await expect(transcript).toContainText('Known sprawl');
+
+  const finalText = await transcript.innerText();
+  console.log('===== NEON-STACKS RUN =====');
+  console.log(finalText.slice(-2500));
+  console.log('===== END =====');
 });

@@ -12,11 +12,15 @@
 
 import { appState, setValue, tick, saveToStorage } from '../core/state.js';
 import * as UI from '../ui/console.js';
-import { t } from '../i18n/i18n.js';
+import { t, tRaw, locale } from '../i18n/i18n.js';
 import { progress as storyProgress, actNumber, gmDirective } from './acts-runtime.js';
 import { reputationStanding, awardReputation, setStoryFlag } from './story.js';
 import { mapView, provinceOf } from './atlas.js';
 import { rumours } from './world-clocks.js';
+import { allEntities, hasEncountered } from './ledger.js';
+import { memoryContext } from './chapters.js';
+import { buildLexiconIndex, lookupLexicon, renderLexiconEntry,
+         renderLexiconCandidates, lexiconTopics, matchLexiconQuestion } from './lexicon.js';
 import { xpProgress, awardMilestone, announcementFor } from './progression.js';
 import { goldOf } from 'bag-of-holding-client';
 import { setQuestStatus, activeQuests } from 'bag-of-holding-client';
@@ -131,8 +135,96 @@ export function renderRegionMap() {
   UI.appendEntry('system', '');
 }
 
-// Compact world snapshot for the settlement classifier.
+// ─── The lexicon (doc 19, Part II) ───────────────────────────────────────────
+//
+// The binding half of src/game/lexicon.js: it gathers what live state knows
+// and hands the pure module its `{ t, tRaw, locale }`. Everything here is a
+// FREE action — it prints and returns, exactly like the other views. No
+// classifier call, no undo mark, no turn count, no save write. That guarantee
+// is structural, not a promise: these run before processTurn ever sees the
+// input, the same way `/`-commands do.
 
+const I18N = { t, tRaw, locale };
+
+function lexiconSources() {
+  return {
+    world:           appState.world ?? {},
+    inventory:       appState.party?.inventory ?? [],
+    entities:        allEntities(),
+    hasEncountered,
+    encounteredKeys: Object.keys(appState.world?.encountered ?? {}),
+    knownMap:        mapView(),
+    memory:          memoryContext(),
+    story:           storyProgress(),
+    rumours:         rumours({ limit: 4 }),
+    standingOf:      (id) => t(`story.standing.${reputationStanding(id)}`),
+  };
+}
+
+// Print one entry. With `settings.lexiconParaphrase` on and a pack voice to
+// speak in, a KNOWN entry is restyled first — computed, then printed once, so
+// the player never sees the note replaced by prose. Heard-of and refusals are
+// never restyled: hearsay keeps its honest prefix, and a refusal is a contract.
+async function printEntry(entry) {
+  const lines = renderLexiconEntry(entry, I18N);
+  if (appState.settings?.lexiconParaphrase && entry?.cls === 'known') {
+    try {
+      const { paraphraseLexicon } = await import('../ai/lexicon-voice.js');
+      const said = await paraphraseLexicon(lines);
+      if (said) {
+        UI.appendEntry('system', lines[0]);     // the header stays factual
+        UI.appendEntry('system', said);
+        UI.appendEntry('system', '');
+        return;
+      }
+    } catch { /* the deterministic lines below are the fallback */ }
+  }
+  for (const line of lines) UI.appendEntry('system', line);
+  UI.appendEntry('system', '');
+}
+
+// `/what` with no term: what a confused player could ask about right now.
+export function renderLexiconTopics() {
+  const sources = lexiconSources();
+  const topics  = lexiconTopics(buildLexiconIndex(sources, I18N), sources);
+  if (!topics.length) { UI.appendEntry('system', t('lexicon.noTopics')); return; }
+  UI.appendEntry('system', t('lexicon.topicsHeader'));
+  for (const e of topics) {
+    UI.appendEntry('system', t('lexicon.topicLine', { name: e.name, kind: t(`lexicon.kind.${e.kind}`) }));
+  }
+  UI.appendEntry('system', '');
+}
+
+// `/what <term>` — an explicit command deserves an explicit answer, so a miss
+// says so rather than falling through to the turn engine.
+export async function renderLexiconAnswer(query) {
+  const res = lookupLexicon(query, buildLexiconIndex(lexiconSources(), I18N), I18N);
+  if (res.hit)        { await printEntry(res.hit); return true; }
+  if (res.candidates) { for (const l of renderLexiconCandidates(res.candidates, I18N)) UI.appendEntry('system', l); return true; }
+  UI.appendEntry('system', t('lexicon.unknown'));
+  return false;
+}
+
+// A typed question ("what is Saltmarch?"). Returns true when it was answered
+// for free. A MISS returns false on purpose: the index only holds what the
+// player already knows, and "what is that sound?" is a real question for the
+// Game Master, who answers it diegetically and charges a turn — as today.
+export async function tryLexicon(raw) {
+  const query = matchLexiconQuestion(raw, I18N);
+  if (!query) return false;
+  const res = lookupLexicon(query, buildLexiconIndex(lexiconSources(), I18N), I18N);
+  if (res.hit) {
+    UI.appendEntry('player', `> ${raw}`);
+    await printEntry(res.hit);
+    return true;
+  }
+  if (res.candidates) {
+    UI.appendEntry('player', `> ${raw}`);
+    for (const l of renderLexiconCandidates(res.candidates, I18N)) UI.appendEntry('system', l);
+    return true;
+  }
+  return false;
+}
 
 // Phase 4.3/4.7: clearing a dungeon completes the player's active quests, raises
 // quest-done flags (beat prerequisites), and rewards the quest-givers' factions.

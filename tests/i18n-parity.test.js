@@ -36,6 +36,10 @@ const flat = { en: flatten(en), nl: flatten(nl) };
 const KEYED_TABLES = [
   'world.enemyIntros',
   'world.enemyNames',
+  // The lexicon's kind labels are indexed by `entry.kind`, so a kind present in
+  // one bundle and not the other renders the raw key ("lexicon.kind.faction")
+  // to a Dutch player — the same silence as the creature intros.
+  'lexicon.kind',
 ];
 
 // Themed content indexed by dungeon theme. Every theme the generator can roll
@@ -78,6 +82,11 @@ const SHARED_VERBATIM = new Set([
   'map.settlementLine',
   'map.rumouredLine',
   'story.factionLine',
+  'lexicon.entryHeader',     // pure format string ("{{name}} — {{kind}}")
+  'lexicon.topicLine',       // pure format string (indented "{{name}} — {{kind}}")
+  'lexicon.npcRole',         // "{{role}} in {{place}}" — "in" is the same preposition in Dutch
+  'lexicon.kind.continent',  // same word in Dutch
+  'lexicon.kind.detail',     // same word in Dutch
   // Creature names Dutch uses unchanged. Each is a deliberate call, not an
   // oversight: a Dutch player says "goblin", not "aardmannetje".
   'world.enemyNames.ghoul',
@@ -141,6 +150,32 @@ describe('keyed content tables agree entry for entry', () => {
       }
     });
   }
+
+  // The lexicon's question patterns are matched as literal prefixes, first
+  // match wins. That makes ORDER load-bearing: with "tell me" ahead of "tell me
+  // about", the query for "tell me about the bell" becomes "about the bell" and
+  // every lookup of that form misses. A prefix must never precede the longer
+  // pattern it is a prefix of.
+  it('lexicon question patterns are usable and ordered longest-first', () => {
+    for (const [code, bundle] of Object.entries(LOCALES)) {
+      const patterns = bundle.lexicon?.patterns;
+      assert.ok(Array.isArray(patterns) && patterns.length >= 4,
+        `${code}.json lexicon.patterns must list the question forms this locale types`);
+      for (const p of patterns) {
+        assert.ok(typeof p === 'string' && p.trim() === p && p === p.toLowerCase() && p.length > 1,
+          `${code}.json lexicon.patterns entry '${p}' must be a trimmed lowercase phrase`);
+      }
+      patterns.forEach((p, i) => {
+        patterns.slice(i + 1).forEach((later) => {
+          assert.ok(!later.startsWith(`${p} `),
+            `${code}.json: '${p}' precedes '${later}', so '${later}' can never match`);
+        });
+      });
+      const articles = bundle.lexicon?.articles;
+      assert.ok(Array.isArray(articles) && articles.length >= 1 && articles.every(a => typeof a === 'string' && a),
+        `${code}.json lexicon.articles must list this locale's articles`);
+    }
+  });
 
   it('every creature with an intro has a display name', () => {
     for (const [code, bundle] of Object.entries(LOCALES)) {

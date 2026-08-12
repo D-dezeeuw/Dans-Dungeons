@@ -7,6 +7,7 @@ import { appendEntry, setThinking } from './transcript.js';
 import { pickFrom, prompt } from './input.js';
 import { getJournalLog } from '../game/flow.js';
 import { importTimeTravel } from '../game/undo.js';
+import { applyPackOverlay } from '../settings/index.js';
 import { reconcilePc } from '../game/character.js';
 import { t, locale } from '../i18n/i18n.js';
 import { escHtml } from '../core/utils.js';
@@ -407,4 +408,7 @@ function resetAndRestore(snap) {
   // campaign's character — and wrote it over the import (audit F2).
   if (snap?.party?.pc) setValue('party.pc', reconcilePc(snap.party.pc));
   tick();
+  // The imported world may have been generated under a different setting pack;
+  // its content overlay has to follow it in (doc 19 §3).
+  applyPackOverlay();
 }

@@ -5,6 +5,7 @@
 
 import { SRD, createEngine } from './rules.js';
 import { t } from '../i18n/i18n.js';
+import { skinLabel } from '../settings/index.js';
 import { DEFAULT_START_GOLD } from 'bag-of-holding-client';
 import { defaultLoadout } from './spells.js';
 
@@ -66,14 +67,16 @@ export async function createCharacter(ui) {
   const name    = nameRaw.trim() || 'Dan';
 
   // Class — default: fighter (index 0)
+  // The LABEL is the pack's ('Netrunner'); the id stays 'wizard', the sheet
+  // derives from the same SRD data, and no rule moves.
   const classId = await ui.pickFrom(t('charCreate.classPrompt'), STARTER_CLASSES, (c) =>
-    c.charAt(0).toUpperCase() + c.slice(1), 0
+    skinLabel('class', c, c.charAt(0).toUpperCase() + c.slice(1)), 0
   );
 
   // Species — default: human (index 0)
   const speciesIds = Object.keys(SRD.species);
   const speciesId  = await ui.pickFrom(t('charCreate.speciesPrompt'), speciesIds, (s) =>
-    SRD.species[s]?.name ?? (s.charAt(0).toUpperCase() + s.slice(1)), 0
+    skinLabel('species', s, SRD.species[s]?.name ?? (s.charAt(0).toUpperCase() + s.slice(1))), 0
   );
 
   // Background — default: soldier (index 3)

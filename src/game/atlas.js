@@ -15,6 +15,7 @@ import {
   ancestorsOf, childrenOf, promoteNode,
 } from 'bag-of-holding-client';
 import { appState, setValue, tick } from '../core/state.js';
+import { activePack } from '../settings/index.js';
 
 export function geography() { return appState.world?.geography ?? emptyGeography(); }
 
@@ -24,9 +25,11 @@ function save(geo) { setValue('world.geography', geo); tick(); return geo; }
 // sea lanes), the starting region filed under the first province, and three
 // neighbour stubs. Pure — returns the graph for the caller to include in its
 // own world write (campaign setup writes `world` wholesale).
-export function initialAtlas(regionId, regionName, seed) {
+export function initialAtlas(regionId, regionName, seed, { syllables = null } = {}) {
   const worldSeed = (Number(seed) || mintSeed()) >>> 0;
-  const { geo: skeleton, provinces } = mintWorldSkeleton(worldSeed);
+  // A setting is largely its proper nouns: the pack's syllable banks name the
+  // continents and provinces, so a cyberpunk world does not open on Veldrath.
+  const { geo: skeleton, provinces } = mintWorldSkeleton(worldSeed, { syllables });
   let geo = addNode(skeleton, {
     id: regionId, name: regionName, kind: 'region',
     seed: worldSeed, stub: false, detail: 2, parent: provinces[0] ?? null,
@@ -51,14 +54,26 @@ export function initAtlas(regionId, regionName, seed) {
 // Stub names and hooks are deterministic from the seed, so the same world always
 // promises the same places. They are placeholders until the region is generated,
 // at which point the real name replaces them.
+//
+// The word banks come from the setting pack when it has one. The layers ABOVE
+// the region were skinned first (the library's skeleton takes the pack's
+// syllables), which left the frontier as the one layer still minting Saltfen
+// and Elderdowns into a world of ferry gates — and the frontier is the layer a
+// player reads most, because it is what the map calls the places they have not
+// been yet.
+const DEFAULT_REGION_A = ['Salt', 'Ash', 'Iron', 'Grey', 'Thorn', 'Ember', 'Mire', 'Bone', 'Storm', 'Elder'];
+const DEFAULT_REGION_B = ['Reach', 'March', 'Hollow', 'Fen', 'Downs', 'Barrows', 'Waste', 'Shore', 'Vale', 'Wold'];
+const DEFAULT_HOOKS = ['smoke on the horizon', 'a road nobody maintains', 'bells heard at odd hours',
+                       'a border nobody polices', 'water that tastes of iron', 'birds that will not settle'];
+
 function neighbourName(seed, direction) {
-  const words = ['Reach', 'March', 'Hollow', 'Fen', 'Downs', 'Barrows', 'Waste', 'Shore', 'Vale', 'Wold'];
-  const qual  = ['Salt', 'Ash', 'Iron', 'Grey', 'Thorn', 'Ember', 'Mire', 'Bone', 'Storm', 'Elder'];
-  return `${qual[seed % qual.length]}${words[(seed >> 5) % words.length].toLowerCase()}`;
+  const syl  = activePack().syllables;
+  const qual = syl?.provincePrefixes ?? DEFAULT_REGION_A;
+  const word = syl?.provinceSuffixes ?? DEFAULT_REGION_B;
+  return `${qual[seed % qual.length]}${word[(seed >> 5) % word.length].toLowerCase()}`;
 }
 function neighbourHook(seed, direction) {
-  const hooks = ['smoke on the horizon', 'a road nobody maintains', 'bells heard at odd hours',
-                 'a border nobody polices', 'water that tastes of iron', 'birds that will not settle'];
+  const hooks = activePack().frontierHooks ?? DEFAULT_HOOKS;
   return hooks[seed % hooks.length];
 }
 

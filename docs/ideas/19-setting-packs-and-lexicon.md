@@ -1,6 +1,12 @@
 # 19 — Setting packs & the player's lexicon
 
-> **Status:** design / approved scope (owner-directed, 2026-08-12: *"we need to
+> **Status: SHIPPED, 2026-08-12** — every phase in §17 except the deliberately
+> deferred topic chips (§13c). What the code does differs from this plan in
+> nine places, each recorded in [§20](#20--implementation-record), which is the
+> section to read if the two disagree. The design sections below are unedited:
+> they are the reasoning, and the reasoning survived.
+
+> **Original status:** design / approved scope (owner-directed, 2026-08-12: *"we need to
 > make sure the enemies, location, translations, but also things like how the
 > AI writes responses fit a bit in that theme. 'Friend', 'Matey', 'Choom', all
 > differ from the theme chosen … make it choosable or (seeded) generated
@@ -888,3 +894,111 @@ a red flag in review:
    the budget" to fit a voice block; §6's ≤120-token lint is the ceiling.
 8. **Legal/PI:** no published-setting names (the `blueprint.js` god-table
    precedent), fictional-analog treatment per §7.4.
+
+---
+
+## 20 · Implementation record
+
+Written after the fact, from the branch that shipped it. Where this section
+and the design above disagree, this section is what the code does.
+
+### What changed from the plan, and why
+
+**1. The lexicon takes its sources injected** (§12 specified
+`buildLexiconIndex()` reading `appState`). `src/game/lexicon.js` is pure:
+`buildLexiconIndex(sources, i18n)`. The plan's signature would have made the
+module untestable for the same three reasons `preClassify` takes `{ t, locale }`
+— `state.js` imports the `spektrum` alias, `i18n.js` reads `localStorage` at
+import time, and `bag-of-holding-client` is an esbuild alias the node runner
+cannot resolve. `src/game/views.js` is the binding half and gathers the eleven
+sources; the ledger needed one new export (`allEntities`) because `foldAll`
+requires a prefix and the dictionary spans the whole world.
+
+**2. Table merging belongs to the library, not the game** (§5 T1, §9). The
+plan had the game deep-merge `pack.tables` over `DEFAULT_TABLES` — which the
+library did not export. Worse, `buildBlueprint(seed, { tables })` was
+**all-or-nothing**: a host replacing only `dungeonThemes` (the normal shape of
+a genre re-skin) left `tables.tones` undefined and the factory threw inside
+`pick()`. Fixed where it belonged: bag-of-holding-client 0.12.0 exports
+`DEFAULT_TABLES` and `mergeTables`, applies the merge inside both
+`buildBlueprint` and `deriveBlueprint`, and returns the defaults by identity
+for an absent override — so every existing caller rolls byte-identically. The
+game now passes `pack.tables` straight through.
+
+**3. The empty-palette starvation** (not in the plan). `THEME_CLIMATES` and
+`BAND_SETTLEMENTS` became overridable as designed (C2), but a pack whose
+`themeClimates` leaves a band unclaimed produced an EMPTY `dungeonThemePalette`,
+which reaches the region tier as `pick([])` → `undefined`: a dungeon with no
+theme. The library now falls back to the full theme list for an unclaimed band
+— a worse fit and a working dungeon, which is the right trade.
+
+**4. The lexicon surfaces are async.** `tryLexicon` and `renderLexiconAnswer`
+return promises so the optional paraphrase (§14) can await a call. The three
+loop sites became `if (await tryLexicon(raw)) continue;`. The free action is
+still free by construction — the await resolves immediately when the toggle is
+off, which is the default and the only state the classic pack can be in.
+
+**5. `/dictionary`, not a sidebar toggle** (§14). The chrome toggles are icon
+buttons in `index.html` with a DOM contract test behind them; a meta command is
+this game's established settings surface for text-first options, costs no
+markup, and is discoverable through `/help`. Same setting
+(`settings.lexiconParaphrase`), same default (off).
+
+**6. A new lint rule: unskinned reachable creatures** (§9). Travel encounters
+(`OVERWORLD_ENEMY_IDS`) and the no-overlay fallback (`DEFAULT_ENEMY_IDS`) are
+reached WITHOUT consulting a dungeon overlay, so a pack that renames its own
+themes' creatures still meets a "Wolf" on the ferry crossing. The lint now
+fails a pack that renames any creature and leaves those pools alone. It caught
+five in neon-stacks.
+
+**7. §1 row 10 was wrong about bosses.** The inventory claimed
+`world.enemyNames[id]` overrides `BESTIARY[id].name`. True for ordinary
+enemies; false for the vault boss. `bossBlockFor` built its name from the SRD
+block and the dungeon generator applies a block's `name` over the content
+provider's, so four rooms of "Sump Rat" ended in "Elite Giant Rat". The skin
+now goes in *before* the template, which composes the tier title from it
+("Elite Downdraught"). This was a pre-existing defect in classic too.
+
+**8. §1 missed the region frontier.** The inventory listed the skeleton's
+syllable banks (row 3) but not `atlas.js`'s own `neighbourName`/`neighbourHook`,
+which mint the region stubs — so the layers above the region wore the pack's
+names while the frontier kept promising "Saltfen" and "bells heard at odd
+hours" in a city with no bells. That is the layer a player reads *most*, since
+it names everywhere they have not been. Both now come from the pack, and packs
+gained an optional `frontierHooks` field.
+
+**9. The vendored client was eight versions stale** (not in the plan at all).
+`vendor/bag-of-holding-client` was pinned at 0.3.0 while the library was at
+0.11.0, so none of the client-side fixes had reached the shipped game. The
+re-vendor to 0.12.0 brought them in and surfaced one stale fixture:
+`blueprint-context.test.js` still described god domains as
+`{ domain, exemplars: ['Kelemvor', 'Myrkul'] }` — the shape the library retired
+when it replaced named deities with epithets to keep Product Identity out of
+prompts. Worth a standing habit: re-vendor when the library moves, not when a
+feature needs it.
+
+### Where things live
+
+| Concern | File |
+|---|---|
+| Dictionary index, matching, rendering (pure) | `src/game/lexicon.js` |
+| Its binding to live state + the three surfaces | `src/game/views.js` |
+| Optional paraphrase | `src/ai/lexicon-voice.js` |
+| Locale resolution order (pure) | `src/i18n/resolve.js` |
+| Registry, seeded draw, lint | `src/settings/packs.js` |
+| Active pack, overlay install, label skins | `src/settings/index.js` |
+| Voice block, setting noun, image style | `src/settings/voice.js` |
+| The packs | `src/settings/pack-{classic,dark-ages,neon-stacks}.js` |
+| Author's lint runner | `scripts/lint-pack.js` |
+| Tests | `tests/{lexicon,setting-packs,i18n-overlay}.test.js`, `tests/e2e/campaign.spec.js` |
+
+### Still open
+
+- **Topic chips** (§13c) — deferred by design; bare `/what` covers discovery.
+- **Pack-localised voice blocks** — `voice.register` and the examples are
+  written in English for both locales, as §6 specified.
+- **EPUB cover styles per pack** (§1 row 12) and **cartridge `settingId`**
+  (§8) — untouched, as scoped.
+- The recorded-but-open live-run findings of §18 (`leave`→travel verb trap,
+  Attack chip with no hostile, worldgen per-call `timeoutMs`, narrator
+  repetition) are still open: none of them tripped a test on this branch.

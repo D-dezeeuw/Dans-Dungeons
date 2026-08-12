@@ -28,7 +28,10 @@
     "journalTitle": "Download je avontuur als een HTML-dagboek",
     "screenshotTitle": "Sla de huidige scèneschets op als PNG",
     "allSketchesTitle": "Download alle sessieschetsen als HTML",
-    "importTitle": "Importeer een opgeslagen spelbestand"
+    "importTitle": "Importeer een opgeslagen spelbestand",
+    "settingLabel": "Wereld",
+    "lexiconVoiceLabel": "Woordenboek in wereldstem",
+    "lexiconVoiceHint": "Herschrijf /what-antwoorden in de stem van de wereld (één kleine call per keer)"
   },
   "actionbar": {
     "move": "Bewegen",
@@ -157,7 +160,7 @@
     "saved": "Spel opgeslagen in localStorage.",
     "saveFailed": "Opslaan MISLUKT — de browseropslag is vol. Exporteer je spel (Instellingen → Opslaan) voordat je dit tabblad sluit.",
     "status": "{{name}} — HP {{hp}}/{{max}}, AC {{ac}}",
-    "helpList": "/save · /status · /settings · /restart · /help",
+    "helpList": "/what · /dictionary · /map · /story · /save · /status · /settings · /restart · /help",
     "unknownCmd": "Onbekend commando: {{cmd}}  (probeer /help)"
   },
   "newgame": {
@@ -170,7 +173,12 @@
     "sketchNo": "Nee, bedankt",
     "ttsQuestion": "Spraakvertelling inschakelen?",
     "ttsYes": "Ja, lees het verhaal voor",
-    "ttsNo": "Nee, bedankt"
+    "ttsNo": "Nee, bedankt",
+    "settingQuestion": "In welke wereld speel je?",
+    "settingSurprise": "Verras me",
+    "settingChosen": "Wereld: {{name}}.",
+    "settingMissing": "Deze save noemt een wereld die deze versie niet kent ({{id}}). Je speelt hem in klassieke kleren.",
+    "themeLine": "Thema: {{theme}}. Toon: {{tone}}."
   },
   "settlement": {
     "banner": "── {{name}} ──────────────────────────────────",
@@ -240,7 +248,8 @@
     "confrontIntro": "Je zoekt de dreiging op — en vindt haar. {{name}} draait zich naar je toe.",
     "threatResolved": "{{name}} is verslagen. De plek haalt opgelucht adem.",
     "noThreatHere": "Er valt hier niets te bestrijden.",
-    "sailChip": "Zeil naar {{name}}"
+    "sailChip": "Zeil naar {{name}}",
+    "secretBecause": "{{name}} vertrouwde het je toe."
   },
   "adventure": {
     "banner": "── HET AVONTUUR BEGINT ───────────────────────",
@@ -1088,6 +1097,62 @@
     },
     "stallNudge": "De draad die je hebt genegeerd vindt je alsnog — een boodschapper, een gerucht, een gezicht dat je niet verwachtte. Waar je ook voor wegliep, het wacht niet langer."
   },
+  "lexicon": {
+    "entryHeader": "{{name}} — {{kind}}",
+    "unknown": "Die naam zegt je nog niets.",
+    "heardOfPrefix": "Je kent het alleen van horen zeggen: ",
+    "hiddenMore": "Je voelt dat er meer aan de hand is dan je kunt zien.",
+    "ambiguous": "Welke bedoel je? {{names}}",
+    "topicsHeader": "Dingen waar je naar kunt vragen:",
+    "topicLine": "  {{name}} — {{kind}}",
+    "noTopics": "Er schiet je niets te binnen. Speel verder.",
+    "lineage": "Ligt in: {{chain}}",
+    "climate": "Klimaat: {{climate}}",
+    "npcRole": "{{role}} in {{place}}",
+    "npcFaction": "Hoort bij {{faction}}",
+    "factionStanding": "Jouw aanzien: {{standing}}",
+    "questGiver": "Gegeven door {{npc}}",
+    "questFor": "Een opdracht die je hebt aangenomen.",
+    "itemPlain": "Er valt je niets bijzonders aan op.",
+    "creatureAlive": "Nog overeind.",
+    "creatureDead": "Dood.",
+    "actBody": "Bedrijf {{act}} van {{acts}} — {{done}} van {{total}} momenten achter de rug.",
+    "kind": {
+      "place": "plaats",
+      "region": "streek",
+      "province": "provincie",
+      "continent": "continent",
+      "settlement": "nederzetting",
+      "npc": "persoon",
+      "creature": "wezen",
+      "detail": "detail",
+      "faction": "factie",
+      "item": "voorwerp",
+      "quest": "opdracht",
+      "chapter": "hoofdstuk",
+      "story": "verhaal",
+      "rumour": "gerucht",
+      "era": "tijdperk",
+      "legend": "legende",
+      "thing": "ding"
+    },
+    "patterns": [
+      "wat is",
+      "wat zijn",
+      "wie is",
+      "wie zijn",
+      "waar is",
+      "waar ligt",
+      "vertel me over",
+      "vertel eens over",
+      "leg uit"
+    ],
+    "articles": [
+      "de",
+      "het",
+      "een"
+    ]
+  },
   "common": {
     "yes": "Ja",
     "no": "Nee"
@@ -1097,12 +1162,12 @@
     "summarizePrompt": "Je houdt een lopend geheugen bij van een hoofdstuk uit een tafelrolspel-campagne zodat de Spelleider nooit vergeet wat er gebeurd is.\n\nVorige samenvatting:\n{{previous}}\n\nVastgelegde gebeurtenissen: {{events}}\n\nHerschrijf de samenvatting zodat die alles tot nu toe dekt, inclusief de nieuwe beurten hieronder. Houd het onder de 200 woorden. Lopende tekst, geen kopjes of lijsten. Noem mensen, plaatsen en losse eindjes expliciet — deze tekst is alles wat de Spelleider zich later herinnert, dus een naam die je weglaat is een naam die vergeten wordt. Geef concrete feiten (wie, waar, wat er veranderde, wat er nog openstaat) de voorkeur boven sfeer. Schrijf in {{language}}. Geef alleen de samenvattende tekst terug.",
     "chapterTitlePrompt": "Geef dit hoofdstuk van een fantasycampagne een korte sprekende titel: 2 tot 5 woorden, geen aanhalingstekens, geen nummering, in {{language}}. Geef alleen de titel terug.",
     "beatCheckPrompt": "You judge whether a story beat was just fulfilled. The beat's dramatic purpose is:\n\"{{purpose}}\"\n\nGiven the GM narration the user provides, set fulfilled=true ONLY if the narration CLEARLY accomplishes that dramatic purpose (the key event happened on screen). If it merely hints at, sets up, or is unrelated to the purpose, set fulfilled=false. Be strict — when in doubt, false. Antwoord met fulfilled (alleen true als de scène dat doel duidelijk vervult) en een reason van één zin.",
-    "travelPrompt": "You are a travel narrator for a fantasy RPG. Write ONE vivid prose paragraph (2-4 sentences) for a single travel beat. No dialogue, no game mechanics, no lists, no headings. Beat and details:\n{{context}}\nWrite in {{language}}.",
+    "travelPrompt": "You are a travel narrator for a fantasy RPG. Write ONE vivid prose paragraph (2-4 sentences) for a single travel beat. No dialogue, no game mechanics, no lists, no headings. Beat and details:\n{{context}}\nHOW THIS WORLD SOUNDS:\n{{voice}}\n\nWrite in {{language}}.",
     "travelUserMsg": "Narrate this travel beat.",
     "settlementClassifierPrompt": "Je bent een classifier voor een tekst-RPG in een nederzetting. Vertaal de vrije tekst van de speler (Engels of Nederlands) naar één gestructureerde actie.\n\nIntenties:\n- talk: een NPC aanspreken of benaderen. Zet target op de naam of rol van de NPC.\n- buy: koopwaar bekijken of kopen bij een handelaar.\n- travel: vertrekken via een uitgang (een kerker, weg of wildernis). Zet target op de bestemmingsnaam of richting.\n- rest: slapen / herstellen in een herberg.\n- confront: een bekende lokale dreiging opzoeken en bevechten (een opgejaagd wezen, een gevaar waar men over praat). Zet target op de naam van de dreiging.\n- quest: aangenomen opdrachten / het opdrachtenlogboek bekijken.\n- inventory: meegedragen spullen en goud bekijken.\n- look: rondkijken, of alles wat niet bij het bovenstaande past.\n\nContext van de huidige locatie (de geldige NPC- en uitgangnamen):\n{{context}}\n\nGeef één JSON-object terug. Zet target op de relevante NPC-/uitgang-/itemnaam, anders null.",
-    "npcDialoguePrompt": "Je speelt één NPC in een fantasystadje. Blijf volledig in je rol. Antwoord met ÉÉN korte gesproken zin (1-3 zinnen) — geen verteltekst, geen aanhalingstekens eromheen.\n\nNPC: {{name}}, een {{role}} ({{attitude}}).\nPersoonlijkheid: {{personality}}\nFactie: {{faction}} (aanzien van de speler: {{reputation}})\nBekende opdrachthaak: {{questHook}}\nBewaard geheim: {{secret}}\nMag het geheim deze beurt onthullen: {{mayReveal}}\n\nRegels:\n- Als 'Mag het geheim onthullen' NO is, onthul of hint nooit sterk naar het geheim; ontwijk als erop wordt aangedrongen.\n- Als YES en de speler vraagt door of heeft vertrouwen verdiend, MAG je het geheim laten ontvallen — zet revealsSecret alleen op true als je antwoord het daadwerkelijk prijsgeeft.\n- Laat je houding en het factie-aanzien van de speler doorklinken in je toon.\n- Antwoord in {{language}}.\n\nRecent gesprek:\n{{transcript}}",
+    "npcDialoguePrompt": "Je speelt één NPC in {{settingNoun}}. Blijf volledig in je rol. Antwoord met ÉÉN korte gesproken zin (1-3 zinnen) — geen verteltekst, geen aanhalingstekens eromheen.\n\nNPC: {{name}}, een {{role}} ({{attitude}}).\nPersoonlijkheid: {{personality}}\nFactie: {{faction}} (aanzien van de speler: {{reputation}})\nBekende opdrachthaak: {{questHook}}\nBewaard geheim: {{secret}}\nMag het geheim deze beurt onthullen: {{mayReveal}}\n\nZO KLINKT DEZE WERELD:\n{{voice}}\n\nRegels:\n- Als 'Mag het geheim onthullen' NO is, onthul of hint nooit sterk naar het geheim; ontwijk als erop wordt aangedrongen.\n- Als YES en de speler vraagt door of heeft vertrouwen verdiend, MAG je het geheim laten ontvallen — zet revealsSecret alleen op true als je antwoord het daadwerkelijk prijsgeeft.\n- Laat je houding en het factie-aanzien van de speler doorklinken in je toon.\n- Antwoord in {{language}}.\n\nRecent gesprek:\n{{transcript}}",
     "classifierPrompt": "You are a D&D action classifier. Classify the player's intent from their free-text input.\n\nIMPORTANT: The player writes in Dutch (Nederlands). Interpret Dutch input correctly.\nExamples: \"ga naar het noorden\" → move north, \"pak de sleutel\" → take, \"val aan\" → attack, \"sluip langs\" → skill stealth.\nCardinal directions in Dutch: noorden=north, zuiden=south, oosten=east, westen=west.\n\nCurrent scene (use this to identify valid targets):\n{{scene}}\n\nOutput a single JSON object. Be generous in interpretation.\n- movement → move (set direction to north/south/east/west in ENGLISH)\n- pick up items → take (set target_id to the item's id from scene loot)\n- open/unlock → unlock\n- direction: the cardinal direction for move (ENGLISH), null otherwise\n- target_id: NPC id for attack, item id for take, null otherwise\n- \"ik spreek vuurstraal uit op de goblin\" / \"verbrand hem\" → cast (zet spell_id op de id van de spreuk uit scene.spells, target_id op de NPC-id)\n- spell_id: alleen ids die in scene.spells voorkomen. Noemt de speler een spreuk die hij niet heeft, classificeer dan alsnog als cast en zet spell_id op wat hij zei — de regellaag weigert het en legt uit waarom.\nDC-richtlijn (een check buiten 5-25 is geen check maar een uitgemaakte zaak):\n  5  triviaal · 10 makkelijk · 13 gemiddeld · 15 lastig · 18 zeer lastig · 20 heldhaftig · 25 bijna onmogelijk\nKies de band die het verhaal echt vraagt; blaas een DC niet op om een scène spannend te maken.",
-    "narratorPrompt": "Je bent de Spelleider van een lopende tafelrolspel-campagne en vertelt één beurt.\n\nToon van de setting: {{tone}}. Tweede persoon (\"je slaat toe\", \"je ontwijkt\"). Vertel in het Nederlands.\n\nWAT JE JE HERINNERT (eerdere hoofdstukken, oudste eerst):\n{{memory}}\n\nRecente uitwisseling:\n{{transcript}}\n\nHuidige scène:\n{{scene}}\n\nAfgehandelde mechanica (al beslist — dit zijn feiten):\n{{resolved}}\n\nHARDE REGELS — deze overtreden breekt het spel:\n- Verzin nooit dobbelresultaten, schade, treffers of missers. Gebruik exact de afgehandelde feiten.\n- Verzin nooit een uitgang, deur, ruimte, voorwerp of NPC die niet in de scène staat. Als de speler naar iets grijpt dat er niet is, zeg dat dan.\n- Verander nooit de wereldtoestand in de vertelling: geen genezing, geen dood, geen gewonnen of verloren voorwerpen, geen ontgrendelde deuren, tenzij de afgehandelde feiten dat zeggen.\n- Als resolved.noEffect waar is, veranderde deze actie mechanisch niets. Vertel alleen sfeer, gedachte of dialoog. Impliceer geen blijvende verandering.\n- Als de intentie 'impossible' is, beschrijf alleen het falen en waarom. Er verandert niets.\n- De knownDetails in de scène heb je eerder zelf vastgelegd. Ze zijn nog steeds waar — eer ze; ze tegenspreken is een continuïteitsfout.\n\nWAT JE VRIJ MAG VERZINNEN: zintuiglijke textuur. Geuren, geluiden, licht, weer, slijtage en schade, hoe het stof of vocht in een ruimte eruitziet, een achteloos gebaar. Daar komt het karakter van de wereld vandaan — een gebarsten klok, schimmel op een gordijn, een pop zonder gezicht. Verzin op die schaal gerust vaak.\nAls je een persoon, wezen of plaats een naam geeft, doe dat bewust: het wordt echt en blijvend.\n\nPRIVÉ, ALLEEN VOOR JOU (zeg hier nooit iets van hardop, breek nooit uit je rol):\n{{gm}}\n\nStuur de scène subtiel richting de directive.\n\n2–4 zinnen. Eindig op spanning of gevolg.\n- story.activeSetups bevat al geplante aanwijzingen die nog niet zijn ingelost. Laat er terloops één terugkomen wanneer het bij de scène past — een detail dat opnieuw opvalt, een naam die je opvangt. Leg het nooit uit en los het nooit op: dat is de taak van het verhaal, niet van deze alinea.\n\nGeef ALLEEN een JSON-object terug — geen markdown, geen extra tekst:\n{\"narration\":\"...\",\"combat_ended\":true/false,\"outcome\":\"continue\"|\"victory\"|\"defeat\"|\"flee\"}",
+    "narratorPrompt": "Je bent de Spelleider van een lopende tafelrolspel-campagne en vertelt één beurt.\n\nToon van de setting: {{tone}}. Tweede persoon (\"je slaat toe\", \"je ontwijkt\"). Vertel in het Nederlands.\n\nZO KLINKT DEZE WERELD (volg dit register; het is de setting, geen suggestie):\n{{voice}}\n\nWAT JE JE HERINNERT (eerdere hoofdstukken, oudste eerst):\n{{memory}}\n\nRecente uitwisseling:\n{{transcript}}\n\nHuidige scène:\n{{scene}}\n\nAfgehandelde mechanica (al beslist — dit zijn feiten):\n{{resolved}}\n\nHARDE REGELS — deze overtreden breekt het spel:\n- Verzin nooit dobbelresultaten, schade, treffers of missers. Gebruik exact de afgehandelde feiten.\n- Verzin nooit een uitgang, deur, ruimte, voorwerp of NPC die niet in de scène staat. Als de speler naar iets grijpt dat er niet is, zeg dat dan.\n- Verander nooit de wereldtoestand in de vertelling: geen genezing, geen dood, geen gewonnen of verloren voorwerpen, geen ontgrendelde deuren, tenzij de afgehandelde feiten dat zeggen.\n- Als resolved.noEffect waar is, veranderde deze actie mechanisch niets. Vertel alleen sfeer, gedachte of dialoog. Impliceer geen blijvende verandering.\n- Als de intentie 'impossible' is, beschrijf alleen het falen en waarom. Er verandert niets.\n- De knownDetails in de scène heb je eerder zelf vastgelegd. Ze zijn nog steeds waar — eer ze; ze tegenspreken is een continuïteitsfout.\n\nWAT JE VRIJ MAG VERZINNEN: zintuiglijke textuur. Geuren, geluiden, licht, weer, slijtage en schade, hoe het stof of vocht in een ruimte eruitziet, een achteloos gebaar. Daar komt het karakter van de wereld vandaan — een gebarsten klok, schimmel op een gordijn, een pop zonder gezicht. Verzin op die schaal gerust vaak.\nAls je een persoon, wezen of plaats een naam geeft, doe dat bewust: het wordt echt en blijvend.\n\nPRIVÉ, ALLEEN VOOR JOU (zeg hier nooit iets van hardop, breek nooit uit je rol):\n{{gm}}\n\nStuur de scène subtiel richting de directive.\n\n2–4 zinnen. Eindig op spanning of gevolg.\n- story.activeSetups bevat al geplante aanwijzingen die nog niet zijn ingelost. Laat er terloops één terugkomen wanneer het bij de scène past — een detail dat opnieuw opvalt, een naam die je opvangt. Leg het nooit uit en los het nooit op: dat is de taak van het verhaal, niet van deze alinea.\n\nGeef ALLEEN een JSON-object terug — geen markdown, geen extra tekst:\n{\"narration\":\"...\",\"combat_ended\":true/false,\"outcome\":\"continue\"|\"victory\"|\"defeat\"|\"flee\"}",
     "narrateTurnPrompt": "Narrate the outcome of this turn. Respond in Dutch.",
     "autoplayPrompt": "Je bent een moedige avonturier in een D&D kerkerverkenning.\n\nBeslissingsprioriteit:\n1. Als er een vijand is — vecht met je beste wapen of klassevaardigheid\n2. Als er voorwerpen op de grond liggen (scene.room.loot) — pak ze op\n3. Als er een vergrendelde uitgang is (scene.room.exits met locked:true) EN je hebt een sleutel — ontgrendel\n4. Beweeg naar een ONBEZOCHTE kamer (zie navigatie-info hieronder)\n5. Gebruik een vaardigheid als het past (Waarneming, Sluipen, Onderzoek)\n6. Rondkijken ALLEEN als niets anders van toepassing is\n\n{{navigation}}\n\nKRITIEKE REGELS:\n- Kies ALLEEN uit de beschikbare actielijst. Verzin GEEN acties.\n- Kies ALTIJD eerst een uitgang met ONBEZOCHT of \"GA HIER\".\n- Als er geen onbezochte uitgangen zijn, keer terug via \"LEIDT NAAR ONBEZOCHTE KAMERS\".\n- Beweeg NOOIT naar een \"doodlopend\" uitgang tenzij er geen andere optie is.\n- Herhaal NOOIT dezelfde actie twee keer achter elkaar.\n\nHuidige scène:\n{{scene}}\n\nBeschikbare acties (kies ALLEEN uit deze lijst):\n{{actions}}\n\nRecente transcriptie:\n{{transcript}}\n\nAntwoord in het Nederlands. Geef ALLEEN een JSON-object:\n{\"action\": \"kies één actie uit de beschikbare actielijst hierboven\"}",
     "autoplayUserMsg": "Kies je volgende actie.",
@@ -1134,7 +1199,9 @@
     "continentsUserMsg": "Schets de continenten.",
     "provincePrompt": "Je bent een fantasy-wereldarchitect. Een schip nadert de provincie hieronder; schets wat de reiziger aantreft.\n\nWereld tot nu toe:\n{{parentDigest}}\n\nDe provincie: id \"{{id}}\", werknaam \"{{name}}\", klimaat {{climate}}. Haakje: {{hook}}\n\nLever:\n- id: exact \"{{id}}\"\n- name: de echte naam (de werknaam is een plaatshouder)\n- digest: 40-60 woorden over waar deze provincie om draait\n- conflicts: precies 2 korte regels met levende spanning\n- landmarks: precies 2 kenmerkende plekken waar een reiziger van hoort\n- dominantFactionId: het lokaal dominante factie-id, of null\n- factionStance: dominant, contested of absent\n\nAntwoord volledig in het Nederlands. Geef ALLEEN een JSON-object dat het schema volgt.",
     "provinceUserMsg": "Schets de provincie.",
-    "worldgenStepContinents": "De continenten in kaart brengen…"
+    "worldgenStepContinents": "De continenten in kaart brengen…",
+    "defaultSettingNoun": "a fantasy town",
+    "lexiconPrompt": "Herschrijf de notitie hieronder in de stem van deze wereld. Het is een woordenboekvermelding waar de speler om vroeg.\n\nZO KLINKT DEZE WERELD:\n{{voice}}\n\nHARDE REGELS:\n- Je mag herordenen, inkorten en herformuleren. Je mag NIETS toevoegen: geen feiten, namen, getallen, hints, gissingen of speculatie.\n- Alles in je antwoord moet al in de notitie staan. Kun je daar niet aan voldoen, geef de notitie dan ongewijzigd terug.\n- Houd het even lang of korter dan de notitie. Geen inleiding, geen afsluiting, geen aanhalingstekens.\n- Schrijf in {{language}}.\n\nGeef ALLEEN een JSON-object terug: {\"answer\":\"...\"}"
   },
   "thinking": {
     "reading": "De Dungeon Master overweegt je woorden",

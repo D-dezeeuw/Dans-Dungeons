@@ -18,7 +18,7 @@ import { beginRoller, commitRoller }          from './rng.js';
 import { buildStoryContext, setStoryFlag, activeBeat, completeBeatNow, takePendingActClose, requeueActClose } from './story.js';
 import { beginTurn, finalizeTurn }          from './undo.js';
 import { recordMechanical, currentPlaceId, currentRoomId, entitiesUnder,
-         recentEvents, encounterKey } from './ledger.js';
+         recentEvents, markEncountered } from './ledger.js';
 import { assembleScope }                     from './scope.js';
 import { extractCanon }                      from '../ai/canon.js';
 import { memoryContext, maybeRefreshDigest } from './chapters.js';
@@ -342,17 +342,8 @@ async function absorbNarration(narration) {
 
 // The entity ids the extractor is allowed to attach facts to: this room, this
 // place, the NPCs present, and anything the ledger already knows here.
-// Record that the player has now seen these entities. The scope assembler's
-// `known` tier filters on this, which is what stops the GM referring to things
-// this character has never encountered.
-function markEncountered(ids) {
-  const seen = appState.world?.encountered ?? {};
-  for (const id of ids) {
-    const key = encounterKey(id);
-    if (!seen[key]) setValue(`world.encountered.${key}`, true);
-  }
-}
-
+// (`markEncountered` moved to ledger.js — it owns the encounter key encoding,
+// and the settlement reveal path needs the same writer.)
 function knownSceneIds(place) {
   const room = currentRoomId();
   const ids  = new Set([place, room, `${place}.pc`]);

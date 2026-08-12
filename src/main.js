@@ -16,6 +16,7 @@ import { getSpend, onSpendChange, budgetWarningDue, setBudget, getBudget, TIERS 
 import * as UI from './ui/console.js';
 import { locale, setLocale, t } from './i18n/i18n.js';
 import { claimTab, onPrimaryChange } from './core/tabs.js';
+import { applyPackOverlay } from './settings/index.js';
 import { onSchemaViolation } from './ai/validate.js';
 
 async function boot() {
@@ -289,6 +290,16 @@ async function boot() {
       tick();
       if (appState.party?.pc) setValue('party.pc', reconcilePc(appState.party.pc));
     }
+  }
+
+  // The setting pack's content overlay is i18n module state, not Spektrum
+  // state: `world.settingId` rides in the save, but the CONTENT it selects has
+  // to be re-installed on every path that re-enters a running game. This is the
+  // boot path; import, slot load and time-travel restore each re-apply too.
+  // Miss one and the campaign silently reverts to base content halfway through.
+  const mounted = applyPackOverlay();
+  if (appState.world?.settingId && mounted.id !== appState.world.settingId) {
+    UI.appendEntry('system', t('newgame.settingMissing', { id: appState.world.settingId }));
   }
 
   await ensureKey();
