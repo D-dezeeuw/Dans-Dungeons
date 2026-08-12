@@ -113,6 +113,33 @@ describe('the lint actually catches what it claims to', () => {
     assert.match(lint({ voice: { address: ['x'], examples: { npc: ['a', 'b', 'c', 'd'] } } }), /more than 3 lines/);
   });
 
+  it('rejects one creature id claimed by two themes', () => {
+    // Display names are keyed by creature id globally, so the second theme
+    // would silently show the first theme's name for the same stat block.
+    const out = lint({ overlays: {
+      a: { atmosphere: 'x', enemies: ['goblin', 'skeleton', 'ghoul'] },
+      b: { atmosphere: 'y', enemies: ['skeleton', 'zombie', 'wight'] },
+    } });
+    assert.match(out, /'skeleton' is in both 'a' and 'b' — one id, one name/);
+  });
+
+  it('rejects climate work that quietly does not apply', () => {
+    const withThemes = {
+      tables: { dungeonThemes: ['den'] },
+      overlays: { den: { atmosphere: 'x', enemies: ['goblin', 'skeleton', 'ghoul'] } },
+      i18n: { en: { world: { dressing: { den: ['a detail long enough'] } } } },
+    };
+    // A climate entry for a theme that is not rolled reads as coverage and is not.
+    assert.match(lint({ ...withThemes, themeClimates: { den: ['arid'], ghost: ['mire'] } }),
+      /themeClimates names 'ghost', which is not in dungeonThemes/);
+    // A band nothing claims falls back to every theme — the pack's careful
+    // climate work stops applying exactly there.
+    assert.match(lint({ ...withThemes, themeClimates: { den: ['arid'] } }),
+      /no theme claims the 'mire' band/);
+    assert.match(lint({ ...withThemes, themeClimates: { den: ['arid'] }, bandSettlements: { neon: ['x'] } }),
+      /bandSettlements names unknown climate band 'neon'/);
+  });
+
   it('rejects a creature rename that leaves the travel pools in fantasy clothes', () => {
     const out = lint({ i18n: { en: { world: { enemyNames: { skeleton: 'Chassis' } } } } });
     assert.match(out, /unskinned/, 'a pack that renames one creature must account for the ones it cannot see');

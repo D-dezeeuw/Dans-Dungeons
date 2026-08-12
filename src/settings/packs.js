@@ -106,6 +106,7 @@ export function lintPack(pack, { knownCreatureIds = null, baseKeys = null, clima
   // Creature pools name existing stat blocks. A pack renames a skeleton; it
   // never invents one.
   const overlays = pack.overlays ?? {};
+  const claimedBy = new Map();
   for (const [theme, entry] of Object.entries(overlays)) {
     if (!entry?.atmosphere) say(`overlay '${theme}' has no atmosphere line`);
     const enemies = entry?.enemies ?? [];
@@ -113,6 +114,16 @@ export function lintPack(pack, { knownCreatureIds = null, baseKeys = null, clima
     if (knownCreatureIds) {
       for (const id of enemies) {
         if (!knownCreatureIds.has(id)) say(`overlay '${theme}' names unknown creature '${id}'`);
+      }
+    }
+    // A display name is keyed by creature id GLOBALLY, so one stat block
+    // cannot be a rack warden in one theme and a sump rat in another — the
+    // second theme silently shows the first theme's name.
+    for (const id of enemies) {
+      if (claimedBy.has(id) && claimedBy.get(id) !== theme) {
+        say(`creature '${id}' is in both '${claimedBy.get(id)}' and '${theme}' — one id, one name`);
+      } else {
+        claimedBy.set(id, theme);
       }
     }
   }
@@ -132,6 +143,24 @@ export function lintPack(pack, { knownCreatureIds = null, baseKeys = null, clima
       for (const band of bands ?? []) {
         if (!climateBands.includes(band)) say(`theme '${theme}' names unknown climate band '${band}'`);
       }
+      // A climate entry for a theme the pack does not roll is a no-op that
+      // reads as coverage — usually a theme that was renamed on one side only.
+      if (themes && !themes.includes(theme)) say(`themeClimates names '${theme}', which is not in dungeonThemes`);
+    }
+    // A band no theme claims still gets provinces; the library falls back to
+    // the whole theme list for it, so the pack's careful climate work simply
+    // stops applying there. Worth saying out loud rather than discovering it
+    // in the one province that came out wrong.
+    if (themes) {
+      const claimed = new Set(Object.values(pack.themeClimates).flat());
+      for (const band of climateBands) {
+        if (!claimed.has(band)) say(`no theme claims the '${band}' band — provinces there fall back to every theme`);
+      }
+    }
+  }
+  if (pack.bandSettlements && climateBands) {
+    for (const band of Object.keys(pack.bandSettlements)) {
+      if (!climateBands.includes(band)) say(`bandSettlements names unknown climate band '${band}'`);
     }
   }
 
