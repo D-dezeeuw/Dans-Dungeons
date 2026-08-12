@@ -22,7 +22,7 @@ import { resolvePack, packCard, DEFAULT_PACK_ID } from './packs.js';
 
 export {
   SETTING_PACKS, DEFAULT_PACK_ID, packIds, resolvePack, isKnownPack,
-  packCard, pickPack, lintPack,
+  packCard, packTagline, pickPack, lintPack,
 } from './packs.js';
 
 // The pack the current world was generated with. Falls back to classic, which
@@ -46,6 +46,36 @@ export function applyPackOverlay(pack = activePack()) {
 // The pack's card in the player's language, for the wizard and the sidebar.
 export function activePackCard() {
   return packCard(activePack(), locale());
+}
+
+// Does the active pack author this content itself, in any locale? Used where a
+// caller has to know whether the pack OWNS a table rather than just read it
+// through the overlay — the vault's treasure precedence is the case that
+// matters (see src/game/world.js).
+export function packAuthors(path) {
+  const tree = activePack().i18n;
+  if (!tree) return false;
+  return Object.values(tree).some((byLocale) => {
+    const val = path.split('.').reduce((o, k) => (o == null ? o : o[k]), byLocale);
+    return Array.isArray(val) ? val.length > 0 : val != null;
+  });
+}
+
+// The active pack as the library's `setting` object — one mapping, used by
+// every library entry point that decides a world's vocabulary. The game's live
+// genesis calls the pieces individually (the skeleton takes syllables + hooks,
+// the blueprint takes tables); anything that bakes a PRE-generated world
+// passes this whole object to bakeCartridge, which records the id so a catalog
+// can say which world is which. Without one mapping the two paths drift, and a
+// mounted cartridge disagrees with the live game about its own genre.
+export function settingSlice(pack = activePack()) {
+  if (!pack || pack.id === DEFAULT_PACK_ID) return null;   // classic = library defaults
+  return {
+    id:        pack.id,
+    tables:    pack.tables    ?? null,
+    syllables: pack.syllables ?? null,
+    hooks:     pack.stubHooks ?? null,
+  };
 }
 
 // Class and species labels, skinned. The mechanics never move: `classId` stays

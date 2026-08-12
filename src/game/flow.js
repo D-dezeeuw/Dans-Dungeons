@@ -40,7 +40,8 @@ import {
 } from 'bag-of-holding-client';
 import { setStoryFlag, awardReputation, reputationStanding, requeueActClose } from './story.js';
 import { recordCanon, markEncountered, currentPlaceId } from './ledger.js';
-import { activePack, applyPackOverlay, packIds, packCard, pickPack, resolvePack } from '../settings/index.js';
+import { activePack, applyPackOverlay, packIds, packCard, packTagline, pickPack, resolvePack,
+         settingSlice } from '../settings/index.js';
 import * as UI from '../ui/console.js';
 import { t, tRaw, locale } from '../i18n/i18n.js';
 import { getSkills } from '../ui/chips.js';
@@ -236,7 +237,7 @@ export async function startNewGame() {
   const settingChoice = await UI.pickFrom(
     t('newgame.settingQuestion'),
     ['surprise', ...packIds()],
-    (id) => id === 'surprise' ? t('newgame.settingSurprise') : packCard(resolvePack(id), locale()).name,
+    (id) => id === 'surprise' ? t('newgame.settingSurprise') : packTagline(resolvePack(id), locale()),
     0,
   );
 
@@ -322,6 +323,7 @@ async function startCampaign(worldSeed = null, pack = activePack()) {
   // this the campaign got generic, unconstrained AI output — see worldbible.js,
   // which already does this correctly.
   const blueprintSeed = worldSeed ?? Math.floor(Math.random() * 2147483647);
+  const setting = settingSlice(pack);
   const blueprint = buildWorldBlueprint(blueprintSeed, pack);
   progress('detail', `Blueprint: ${blueprint.tone} ${blueprint.worldArchetype}, ${blueprint.threatType}, ${blueprint.climate}.`);
 
@@ -369,7 +371,8 @@ async function startCampaign(worldSeed = null, pack = activePack()) {
     // three neighbour stubs. Costs nothing until visited. Seeded from the
     // NUMERIC blueprint seed — world.seed holds the world's NAME, and the
     // old read degenerated every skeleton to seed 0.
-    geography: initialAtlas(region.id, region.name, blueprintSeed, { syllables: pack?.syllables ?? null }),
+    geography: initialAtlas(region.id, region.name, blueprintSeed,
+      { syllables: pack?.syllables ?? null, hooks: pack?.stubHooks ?? null }),
   };
 
   // The global outline (doc 17, detail 0 → 1 for every continent, one call):

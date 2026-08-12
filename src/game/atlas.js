@@ -25,11 +25,14 @@ function save(geo) { setValue('world.geography', geo); tick(); return geo; }
 // sea lanes), the starting region filed under the first province, and three
 // neighbour stubs. Pure — returns the graph for the caller to include in its
 // own world write (campaign setup writes `world` wholesale).
-export function initialAtlas(regionId, regionName, seed, { syllables = null } = {}) {
+export function initialAtlas(regionId, regionName, seed, { syllables = null, hooks = null } = {}) {
   const worldSeed = (Number(seed) || mintSeed()) >>> 0;
   // A setting is largely its proper nouns: the pack's syllable banks name the
   // continents and provinces, so a cyberpunk world does not open on Veldrath.
-  const { geo: skeleton, provinces } = mintWorldSkeleton(worldSeed, { syllables });
+  // Its hooks are the other half — they are what the map says about a district
+  // nobody has walked, and the library's talk of sailors and caravans belongs
+  // to one genre only.
+  const { geo: skeleton, provinces } = mintWorldSkeleton(worldSeed, { syllables, hooks });
   let geo = addNode(skeleton, {
     id: regionId, name: regionName, kind: 'region',
     seed: worldSeed, stub: false, detail: 2, parent: provinces[0] ?? null,

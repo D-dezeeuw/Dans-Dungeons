@@ -21,7 +21,7 @@ import { fileURLToPath } from 'node:url';
 
 import {
   SETTING_PACKS, DEFAULT_PACK_ID, packIds, resolvePack, isKnownPack, packCard,
-  pickPack, lintPack, flattenKeys, renderVoiceFields, VOICE_TOKEN_BUDGET,
+  pickPack, lintPack, flattenKeys, renderVoiceFields, VOICE_TOKEN_BUDGET, packTagline,
 } from '../src/settings/packs.js';
 import { PACK as classic } from '../src/settings/pack-classic.js';
 import { CUSTOM_MONSTERS, OVERWORLD_ENEMY_IDS, DEFAULT_ENEMY_IDS } from '../src/game/creatures.js';
@@ -34,6 +34,24 @@ import { SRD, elevate } from '../vendor/bag-of-holding/index.js';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const bundle = (code) => JSON.parse(fs.readFileSync(path.join(ROOT, `src/i18n/${code}.json`), 'utf8'));
 const BASE_KEYS = new Set(flattenKeys(bundle('en')));
+// Every base string a pack could inherit, as { key, text } — the forbid rule
+// checks a pack's banned words against the content it does NOT override.
+function baseTextOf(bundle) {
+  const out = [];
+  const walk = (node, prefix) => {
+    for (const [k, v] of Object.entries(node ?? {})) {
+      const key = prefix ? `${prefix}.${k}` : k;
+      if (typeof v === 'string') out.push({ key, text: v });
+      else if (Array.isArray(v)) out.push({ key, text: v.filter(x => typeof x === 'string').join(' ') });
+      else if (v && typeof v === 'object') walk(v, key);
+    }
+  };
+  walk(bundle, '');
+  // Model prompts are instructions, not player-facing prose; a forbid word
+  // appearing inside one is the pack doing its job.
+  return out.filter(e => !e.key.startsWith('ai.'));
+}
+const BASE_TEXT = baseTextOf(bundle('en'));
 
 // Every creature the engine can actually run a fight with — src/game/bestiary.js
 // composes the same set, but it imports the `bag-of-holding` bare specifier, so
@@ -51,6 +69,7 @@ describe('every shipped pack passes the lint', () => {
         baseKeys: BASE_KEYS,
         climateBands: CLIMATE_BANDS,
         reachableCreatureIds: REACHABLE,
+        baseText: BASE_TEXT,
       });
       assert.deepEqual(problems, [], problems.join('\n'));
     });
@@ -67,7 +86,7 @@ describe('the lint actually catches what it claims to', () => {
   const base = { id: 'test', packVersion: 1, card: { en: { name: 'T', blurb: 'b' } } };
   const lint = (over) => lintPack({ ...base, ...over }, {
     knownCreatureIds: KNOWN_IDS, baseKeys: BASE_KEYS, climateBands: CLIMATE_BANDS,
-    reachableCreatureIds: REACHABLE,
+    reachableCreatureIds: REACHABLE, baseText: BASE_TEXT,
   }).join(' | ');
 
   it('rejects an enemy with no stat block', () => {
@@ -97,9 +116,27 @@ describe('the lint actually catches what it claims to', () => {
     assert.match(lint({ i18n: { en: {}, nl: { world: { houseStyles: ['x'] } } } }), /has no English original/);
   });
 
-  it('rejects half a naming culture', () => {
-    assert.match(lint({ syllables: { continentPrefixes: ['Ka', 'Vo', 'Se', 'Tu'] } }),
-      /syllables.continentSuffixes needs at least four/);
+  it('rejects half a naming culture, and a bank too thin to name a world', () => {
+    const half = lint({ syllables: { continentPrefixes: ['Ka', 'Vo', 'Se', 'Tu', 'Mi', 'No', 'Ra', 'Zu'] } });
+    assert.match(half, /syllables.continentSuffixes needs at least 8/);
+    // Four entries used to pass. The skeleton deals five prefixes and five
+    // suffixes per continent, so a four-entry bank yields sixteen possible
+    // province names for a whole landmass — legal, and threadbare in play.
+    assert.match(lint({ syllables: {
+      continentPrefixes: ['Ka', 'Vo', 'Se', 'Tu'], continentSuffixes: ['ra', 'no', 'mi', 'du'],
+      provincePrefixes: ['Lo', 'Fa', 'Mu', 'Si'], provinceSuffixes: ['gate', 'row', 'end', 'run'],
+    } }), /needs at least 10 entries/);
+  });
+
+  it('rejects a house style the {{style}} frames cannot hold', () => {
+    // The frames read "the entrance hall of a {{style}}" and "The foyer of
+    // this {{style}} greets you", so an article or a clause renders as
+    // "of a a garden that outlived its gardeners".
+    const styles = (list) => ({ i18n: { en: { world: { houseStyles: list } } } });
+    assert.match(lint(styles(['a crumbling manor'])), /starts with an article/);
+    assert.match(lint(styles(['garden that outlived its gardeners'])), /is a clause/);
+    assert.match(lint(styles(['a very long name for a place nobody would ever say'])), /too long/);
+    assert.equal(lint(styles(['crumbling manor', 'sealed archive'])), '');
   });
 
   it('rejects a voice block that would tax every turn', () => {
@@ -113,9 +150,49 @@ describe('the lint actually catches what it claims to', () => {
     assert.match(lint({ voice: { address: ['x'], examples: { npc: ['a', 'b', 'c', 'd'] } } }), /more than 3 lines/);
   });
 
+  it('rejects one creature id claimed by two themes', () => {
+    // Display names are keyed by creature id globally, so the second theme
+    // would silently show the first theme's name for the same stat block.
+    const out = lint({ overlays: {
+      a: { atmosphere: 'x', enemies: ['goblin', 'skeleton', 'ghoul'] },
+      b: { atmosphere: 'y', enemies: ['skeleton', 'zombie', 'wight'] },
+    } });
+    assert.match(out, /'skeleton' is in both 'a' and 'b' — one id, one name/);
+  });
+
+  it('rejects climate work that quietly does not apply', () => {
+    const withThemes = {
+      tables: { dungeonThemes: ['den'] },
+      overlays: { den: { atmosphere: 'x', enemies: ['goblin', 'skeleton', 'ghoul'] } },
+      i18n: { en: { world: { dressing: { den: ['a detail long enough'] } } } },
+    };
+    // A climate entry for a theme that is not rolled reads as coverage and is not.
+    assert.match(lint({ ...withThemes, themeClimates: { den: ['arid'], ghost: ['mire'] } }),
+      /themeClimates names 'ghost', which is not in dungeonThemes/);
+    // A band nothing claims falls back to every theme — the pack's careful
+    // climate work stops applying exactly there.
+    assert.match(lint({ ...withThemes, themeClimates: { den: ['arid'] } }),
+      /no theme claims the 'mire' band/);
+    assert.match(lint({ ...withThemes, themeClimates: { den: ['arid'] }, bandSettlements: { neon: ['x'] } }),
+      /bandSettlements names unknown climate band 'neon'/);
+  });
+
   it('rejects a creature rename that leaves the travel pools in fantasy clothes', () => {
     const out = lint({ i18n: { en: { world: { enemyNames: { skeleton: 'Chassis' } } } } });
     assert.match(out, /unskinned/, 'a pack that renames one creature must account for the ones it cannot see');
+  });
+
+  it('rejects forbidding a word the inherited content still prints', () => {
+    // The failure two pack authors found by reading: neon-stacks banned
+    // 'magic' while skills.arcana.desc — rendered on a skill chip every
+    // campaign — says "spells, magic items, and the planes".
+    assert.match(lint({ voice: { address: ['x'], forbid: ['magic'] } }),
+      /voice.forbid names 'magic', but the inherited 'skills\.arcana\.desc' still says it/);
+    // A word the pack's own overlay replaces is fair to forbid.
+    assert.equal(lint({
+      voice: { address: ['x'], forbid: ['tapestries'] },
+      i18n: { en: { world: { rooms: { entrance: ['no tapestries here'] } } } },
+    }), '');
   });
 
   it('refuses functions and rules material', () => {
@@ -197,8 +274,18 @@ describe('seeded selection: the theme is drawn first', () => {
     const shuffled = ['gamma', 'delta', 'alpha', 'beta'];
     for (const seed of [7, 5150, 900001]) {
       assert.equal(pickPack(seed, ids), pickPack(seed, shuffled),
-        'sorting the list is what stops adding a pack reshuffling old seeds');
+        'reordering the registry must not change which pack a seed draws');
     }
+  });
+
+  it('remaps when the roster GROWS, which is harmless and worth stating', () => {
+    // `h % list.length` necessarily changes when the length does, so adding a
+    // pack does change which one a given seed would draw. Nothing observes
+    // that: `world.settingId` is written once at genesis and travels with the
+    // save, so an existing campaign keeps the pack it was generated under.
+    const grown = [...ids, 'epsilon'];
+    const moved = [1, 2, 3, 4, 5, 6, 7, 8].filter(s => pickPack(s, ids) !== pickPack(s, grown));
+    assert.ok(moved.length > 0, 'a bigger deck deals differently — this is the documented behaviour');
   });
 
   it('spreads across the registry rather than favouring one pack', () => {
@@ -265,5 +352,36 @@ describe('the vault boss wears the same wardrobe as everything else', () => {
 
   it('the unskinned path is unchanged', () => {
     assert.equal(elevate({ ...SRD.monsters.zombie, id: 'zombie' }, 'elite').name, 'Elite Zombie');
+  });
+});
+
+describe('the wizard menu stays scannable as the roster grows', () => {
+  // Names alone were fine at three packs and are a guessing game at nine:
+  // "The Deep Holds" and "The Walled Quarter" tell a first-time player nothing
+  // about which world they just picked.
+  it('pairs the name with the blurb’s first clause', () => {
+    const line = packTagline(classic, 'en');
+    assert.match(line, /^Classic Fantasy — /);
+    assert.ok(!line.endsWith('.'), 'the tagline is a label, not a sentence');
+  });
+
+  it('clamps a long blurb at a word boundary', () => {
+    const long = { card: { en: { name: 'X', blurb: `${'word '.repeat(40)}.` } } };
+    const line = packTagline(long, 'en');
+    assert.ok(line.length <= 4 + 56 + 1, `too long: ${line.length}`);
+    assert.ok(line.endsWith('…'));
+    assert.ok(!/\s…$/.test(line), 'no dangling space before the ellipsis');
+  });
+
+  it('degrades to the bare name when there is no blurb', () => {
+    assert.equal(packTagline({ card: { en: { name: 'Only A Name', blurb: '' } } }, 'en'), 'Only A Name');
+    assert.equal(packTagline({ id: 'bare' }, 'en'), 'bare');
+  });
+
+  it('every shipped pack produces a usable menu line', () => {
+    for (const [id, pack] of Object.entries(SETTING_PACKS)) {
+      const line = packTagline(pack, 'en');
+      assert.ok(line.length > 3 && line.length < 90, `${id}: ${line.length} chars — ${line}`);
+    }
   });
 });
