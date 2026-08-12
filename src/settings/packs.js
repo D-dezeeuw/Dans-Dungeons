@@ -17,6 +17,7 @@
 
 import { PACK as classic }    from './pack-classic.js';
 import { PACK as darkAges }   from './pack-dark-ages.js';
+import { PACK as highElven }  from './pack-high-elven.js';
 import { PACK as neonStacks } from './pack-neon-stacks.js';
 import { estimateTokens }     from '../game/scope-budget.js';
 
@@ -25,6 +26,7 @@ export const DEFAULT_PACK_ID = 'classic';
 export const SETTING_PACKS = Object.freeze({
   classic,
   'dark-ages': darkAges,
+  'high-elven': highElven,
   'neon-stacks': neonStacks,
 });
 
