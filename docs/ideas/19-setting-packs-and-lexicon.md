@@ -995,6 +995,55 @@ suffixes per continent, so a four-entry bank yields sixteen possible province
 names for a whole landmass. §2's floors (8 / 8 / 10 / 10) are now what the lint
 enforces; it used to accept four.
 
+
+### The roster, and what the later packs taught
+
+Eight packs ship: `classic`, `dark-ages`, `high-elven` (near reskins — register,
+tables and labels only) and `deep-holds`, `deep-shelter`, `dust-and-diesel`,
+`neon-stacks`, `walled-quarter` (far reskins — own themes, creatures, room
+prose and layer vocabulary).
+
+The far reskins renamed the LAYERS, which §5 anticipated only for the map
+strings. The load-bearing surprise is the sea lane: the mechanic for "a
+multi-day crossing between two port provinces" now carries a passage through
+unlit tunnels between deeps, a suited night crossing over a hostile surface
+between shelters, a route over the roofs arranged through favours, and an
+overnight coach up the coast. No travel code changed. That is the strongest
+evidence the seams are cut in the right places.
+
+Writing them found four more faults, all fixed and all now linted:
+
+1. **The stub hooks had no seam.** §20 item 8 fixed the region frontier; the
+   two layers ABOVE it still drew from the library's eight rumours, so a
+   sealed shelter's neighbouring level was somewhere "sailors will not name
+   after dark". Fixed in bag-of-holding-client 0.13.0 (`mintWorldSkeleton({
+   hooks })`) plus a `stubHooks` pack field. The lint refuses a pack that
+   renames the layers and leaves the rumours behind — they are the same
+   layer's vocabulary and have to travel together.
+2. **The domain treasure always beat the pack's.** The generator prefers a
+   domain-matched vault prize, and every blueprint has a primary god domain,
+   so the pack's authored prize never appeared — a grounded 1970s setting got
+   "a hovering crystal containing a spell frozen mid-cast". A pack that
+   authors `world.treasures` now owns the vault. Corollary worth knowing:
+   `world.treasures` had never been drawn from in ANY campaign, base included.
+3. **A pack could forbid a word its own inherited content prints.**
+   `neon-stacks` banned 'magic' while `skills.arcana.desc` was on a skill chip
+   every campaign. The lint now cross-checks forbid lists against inherited
+   content, scoped to *fiction* namespaces — a pack should forbid the narrator
+   writing "hit points", and the level-up notice printing it is chrome doing
+   its job.
+4. **`world.houseStyles` had an unstated grammatical contract** and the
+   syllable floors disagreed with §2 — both above.
+
+Still open, and recorded rather than fixed: `ROLE_BUILDINGS` in the client's
+layout module hardcodes inn/tavern/blacksmith for NPC→workplace binding, so a
+far reskin that replaces `buildingTypes` would bind nothing (latent — nothing
+in `src/` calls `settlementLayout` yet); the client's hydration fallback emits
+'ask about it in any harbor tavern' where no pack can reach it (also latent);
+the base bundle has no `enemyNames.air-elemental` though the id is spawnable;
+and stub hooks are picked independently per node, so a small world can repeat
+one — the climate bands solved that by dealing without replacement.
+
 ### Where things live
 
 | Concern | File |
