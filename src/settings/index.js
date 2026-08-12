@@ -17,9 +17,8 @@
 //                        themed, some not", which reads as a content bug.
 
 import { appState } from '../core/state.js';
-import { setContentOverlay } from '../i18n/i18n.js';
-import { resolvePack, packCard, packIds, isKnownPack, DEFAULT_PACK_ID } from './packs.js';
-import { locale } from '../i18n/i18n.js';
+import { setContentOverlay, locale } from '../i18n/i18n.js';
+import { resolvePack, packCard, DEFAULT_PACK_ID } from './packs.js';
 
 export {
   SETTING_PACKS, DEFAULT_PACK_ID, packIds, resolvePack, isKnownPack,
