@@ -192,7 +192,20 @@ async function handleMeta(raw) {
   // not cost a turn (doc 19, Part II).
   if (cmd === 'what' || cmd.startsWith('what ')) {
     const q = cmd.replace(/^what\s*/, '').trim();
-    if (q) renderLexiconAnswer(q); else renderLexiconTopics();
+    if (q) await renderLexiconAnswer(q); else renderLexiconTopics();
+    return;
+  }
+  // Whether dictionary answers are restyled in the setting's voice. A text
+  // game's settings surface is its meta commands; this one is off by default,
+  // costs a tiny call per lookup, and does nothing at all under a pack with no
+  // voice (classic), where there is no register to speak in.
+  if (cmd === 'dictionary') {
+    const next = !(appState.settings?.lexiconParaphrase ?? false);
+    setValue('settings.lexiconParaphrase', next);
+    tick();
+    saveToStorage();
+    UI.appendEntry('system', `${t('sidebar.lexiconVoiceLabel')}: ${next ? t('common.yes') : t('common.no')}`);
+    if (next) UI.appendEntry('system', t('sidebar.lexiconVoiceHint'));
     return;
   }
   if (cmd === 'help') { UI.appendEntry('system', t('meta.helpList')); return; }
@@ -550,7 +563,7 @@ async function settlementLoop(settlementId) {
     // A question the player already knows the answer to is answered from
     // stored knowledge, for free (doc 19). A miss returns false and falls
     // through to a normal turn — the Game Master owns what the index cannot.
-    if (tryLexicon(raw)) continue;
+    if (await tryLexicon(raw)) continue;
 
     // Fast travel to an already-discovered settlement (chip value).
     const ft = raw.match(/^fasttravel:(.+)$/);
@@ -1093,7 +1106,7 @@ async function runEncounterLoop() {
     // A question the player already knows the answer to is answered from
     // stored knowledge, for free (doc 19). A miss returns false and falls
     // through to a normal turn — the Game Master owns what the index cannot.
-    if (tryLexicon(raw)) continue;
+    if (await tryLexicon(raw)) continue;
     if (/^\s*(flee|run|escape|vlucht|ren)\b/i.test(raw) || raw === t('travel.fleeCmd')) {
       UI.appendEntry('player', `> ${raw}`);
       outcome = 'flee';
@@ -1631,7 +1644,7 @@ async function playLoop() {
     // A question the player already knows the answer to is answered from
     // stored knowledge, for free (doc 19). A miss returns false and falls
     // through to a normal turn — the Game Master owns what the index cannot.
-    if (tryLexicon(raw)) continue;
+    if (await tryLexicon(raw)) continue;
 
     UI.appendEntry('player', `> ${raw}`);
     UI.clearChips();

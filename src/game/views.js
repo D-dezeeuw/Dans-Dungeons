@@ -161,8 +161,25 @@ function lexiconSources() {
   };
 }
 
-function printEntry(entry) {
-  for (const line of renderLexiconEntry(entry, I18N)) UI.appendEntry('system', line);
+// Print one entry. With `settings.lexiconParaphrase` on and a pack voice to
+// speak in, a KNOWN entry is restyled first — computed, then printed once, so
+// the player never sees the note replaced by prose. Heard-of and refusals are
+// never restyled: hearsay keeps its honest prefix, and a refusal is a contract.
+async function printEntry(entry) {
+  const lines = renderLexiconEntry(entry, I18N);
+  if (appState.settings?.lexiconParaphrase && entry?.cls === 'known') {
+    try {
+      const { paraphraseLexicon } = await import('../ai/lexicon-voice.js');
+      const said = await paraphraseLexicon(lines);
+      if (said) {
+        UI.appendEntry('system', lines[0]);     // the header stays factual
+        UI.appendEntry('system', said);
+        UI.appendEntry('system', '');
+        return;
+      }
+    } catch { /* the deterministic lines below are the fallback */ }
+  }
+  for (const line of lines) UI.appendEntry('system', line);
   UI.appendEntry('system', '');
 }
 
@@ -180,9 +197,9 @@ export function renderLexiconTopics() {
 
 // `/what <term>` — an explicit command deserves an explicit answer, so a miss
 // says so rather than falling through to the turn engine.
-export function renderLexiconAnswer(query) {
+export async function renderLexiconAnswer(query) {
   const res = lookupLexicon(query, buildLexiconIndex(lexiconSources(), I18N), I18N);
-  if (res.hit)        { printEntry(res.hit); return true; }
+  if (res.hit)        { await printEntry(res.hit); return true; }
   if (res.candidates) { for (const l of renderLexiconCandidates(res.candidates, I18N)) UI.appendEntry('system', l); return true; }
   UI.appendEntry('system', t('lexicon.unknown'));
   return false;
@@ -192,13 +209,13 @@ export function renderLexiconAnswer(query) {
 // for free. A MISS returns false on purpose: the index only holds what the
 // player already knows, and "what is that sound?" is a real question for the
 // Game Master, who answers it diegetically and charges a turn — as today.
-export function tryLexicon(raw) {
+export async function tryLexicon(raw) {
   const query = matchLexiconQuestion(raw, I18N);
   if (!query) return false;
   const res = lookupLexicon(query, buildLexiconIndex(lexiconSources(), I18N), I18N);
   if (res.hit) {
     UI.appendEntry('player', `> ${raw}`);
-    printEntry(res.hit);
+    await printEntry(res.hit);
     return true;
   }
   if (res.candidates) {

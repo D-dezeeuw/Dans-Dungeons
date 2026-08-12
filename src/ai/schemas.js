@@ -92,6 +92,18 @@ export const JOURNAL_SCHEMA = {
   additionalProperties: false,
 };
 
+// The lexicon's optional restyling (doc 19 §14). One field, because the model's
+// only job is to say the SAME thing differently — a schema with room for
+// anything else is an invitation to add.
+export const LEXICON_PARAPHRASE_SCHEMA = {
+  type: 'object',
+  properties: {
+    answer: { type: 'string' },
+  },
+  required: ['answer'],
+  additionalProperties: false,
+};
+
 export const AUTOPLAY_SCHEMA = {
   type: 'object',
   properties: {

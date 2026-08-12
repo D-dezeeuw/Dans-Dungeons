@@ -29,7 +29,9 @@
     "screenshotTitle": "Sla de huidige scèneschets op als PNG",
     "allSketchesTitle": "Download alle sessieschetsen als HTML",
     "importTitle": "Importeer een opgeslagen spelbestand",
-    "settingLabel": "Wereld"
+    "settingLabel": "Wereld",
+    "lexiconVoiceLabel": "Woordenboek in wereldstem",
+    "lexiconVoiceHint": "Herschrijf /what-antwoorden in de stem van de wereld (één kleine call per keer)"
   },
   "actionbar": {
     "move": "Bewegen",
@@ -158,7 +160,7 @@
     "saved": "Spel opgeslagen in localStorage.",
     "saveFailed": "Opslaan MISLUKT — de browseropslag is vol. Exporteer je spel (Instellingen → Opslaan) voordat je dit tabblad sluit.",
     "status": "{{name}} — HP {{hp}}/{{max}}, AC {{ac}}",
-    "helpList": "/what · /map · /story · /save · /status · /settings · /restart · /help",
+    "helpList": "/what · /dictionary · /map · /story · /save · /status · /settings · /restart · /help",
     "unknownCmd": "Onbekend commando: {{cmd}}  (probeer /help)"
   },
   "newgame": {
@@ -1198,7 +1200,8 @@
     "provincePrompt": "Je bent een fantasy-wereldarchitect. Een schip nadert de provincie hieronder; schets wat de reiziger aantreft.\n\nWereld tot nu toe:\n{{parentDigest}}\n\nDe provincie: id \"{{id}}\", werknaam \"{{name}}\", klimaat {{climate}}. Haakje: {{hook}}\n\nLever:\n- id: exact \"{{id}}\"\n- name: de echte naam (de werknaam is een plaatshouder)\n- digest: 40-60 woorden over waar deze provincie om draait\n- conflicts: precies 2 korte regels met levende spanning\n- landmarks: precies 2 kenmerkende plekken waar een reiziger van hoort\n- dominantFactionId: het lokaal dominante factie-id, of null\n- factionStance: dominant, contested of absent\n\nAntwoord volledig in het Nederlands. Geef ALLEEN een JSON-object dat het schema volgt.",
     "provinceUserMsg": "Schets de provincie.",
     "worldgenStepContinents": "De continenten in kaart brengen…",
-    "defaultSettingNoun": "a fantasy town"
+    "defaultSettingNoun": "a fantasy town",
+    "lexiconPrompt": "Herschrijf de notitie hieronder in de stem van deze wereld. Het is een woordenboekvermelding waar de speler om vroeg.\n\nZO KLINKT DEZE WERELD:\n{{voice}}\n\nHARDE REGELS:\n- Je mag herordenen, inkorten en herformuleren. Je mag NIETS toevoegen: geen feiten, namen, getallen, hints, gissingen of speculatie.\n- Alles in je antwoord moet al in de notitie staan. Kun je daar niet aan voldoen, geef de notitie dan ongewijzigd terug.\n- Houd het even lang of korter dan de notitie. Geen inleiding, geen afsluiting, geen aanhalingstekens.\n- Schrijf in {{language}}.\n\nGeef ALLEEN een JSON-object terug: {\"answer\":\"...\"}"
   },
   "thinking": {
     "reading": "De Dungeon Master overweegt je woorden",

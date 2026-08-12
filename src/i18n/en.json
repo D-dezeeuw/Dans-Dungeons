@@ -29,7 +29,9 @@
     "screenshotTitle": "Save current scene sketch as PNG",
     "allSketchesTitle": "Download all session sketches as HTML",
     "importTitle": "Import a saved game file",
-    "settingLabel": "Setting"
+    "settingLabel": "Setting",
+    "lexiconVoiceLabel": "Dictionary in world voice",
+    "lexiconVoiceHint": "Restyle /what answers in the setting’s voice (one tiny call each)"
   },
   "actionbar": {
     "move": "Move",
@@ -158,7 +160,7 @@
     "saved": "Game saved to localStorage.",
     "saveFailed": "Save FAILED — browser storage is full. Export your game (Settings → Save) before closing this tab.",
     "status": "{{name}} — HP {{hp}}/{{max}}, AC {{ac}}",
-    "helpList": "/what · /map · /story · /save · /status · /settings · /restart · /help",
+    "helpList": "/what · /dictionary · /map · /story · /save · /status · /settings · /restart · /help",
     "unknownCmd": "Unknown command: {{cmd}}  (try /help)"
   },
   "newgame": {
@@ -1201,7 +1203,8 @@
     "provincePrompt": "You are a fantasy world architect. A ship is approaching the province below; outline what the traveller finds.\n\nWorld so far:\n{{parentDigest}}\n\nThe province: id \"{{id}}\", working name \"{{name}}\", climate {{climate}}. Hook: {{hook}}\n\nProduce:\n- id: exactly \"{{id}}\"\n- name: its true name (the working name is a placeholder)\n- digest: 40-60 words of what this province is about\n- conflicts: exactly 2 short lines of live tension here\n- landmarks: exactly 2 signature places a traveller would hear of\n- dominantFactionId: the locally dominant faction id, or null\n- factionStance: dominant, contested, or absent\n\nRespond entirely in English. Output ONLY a JSON object matching the schema.",
     "provinceUserMsg": "Outline the province.",
     "worldgenStepContinents": "Charting the continents…",
-    "defaultSettingNoun": "a fantasy town"
+    "defaultSettingNoun": "a fantasy town",
+    "lexiconPrompt": "Rewrite the note below in this world's voice. It is a dictionary entry the player asked for.\n\nHOW THIS WORLD SOUNDS:\n{{voice}}\n\nHARD RULES:\n- You may reorder, compress and rephrase. You may not ADD anything: no facts, names, numbers, hints, guesses or speculation.\n- Everything in your answer must already be in the note. If you cannot comply, return the note unchanged.\n- Keep it to the note's length or shorter. No preamble, no sign-off, no quotation marks.\n- Write in {{language}}.\n\nOutput ONLY a JSON object: {\"answer\":\"...\"}"
   },
   "thinking": {
     "reading": "The Dungeon Master considers your words",
