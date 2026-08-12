@@ -13,7 +13,7 @@
 // edges connect them so a campaign can cross the water in act 4 and land
 // somewhere that was always going to be there.
 
-import { mulberry32, randInt, pick } from './rng.js';
+import { mulberry32, randInt, pick, shuffle } from './rng.js';
 import { emptyGeography, addNode, connect, DIRECTIONS } from './geography.js';
 
 const patchNode = (geo, id, fields) =>
@@ -35,16 +35,34 @@ const HOOKS = [
 // regions inside a province inherit its band instead of rerolling at random.
 export const CLIMATE_BANDS = ['temperate', 'arid', 'frozen', 'tropical', 'volcanic', 'coastal', 'highland', 'mire'];
 
-const continentName = (rng) => `${pick(CONTINENT_A, rng)}${pick(CONTINENT_B, rng)}`;
-const provinceName  = (rng) => `${pick(PROVINCE_A, rng)}${pick(PROVINCE_B, rng)}`;
+// A host can supply its own banks — a setting is largely its proper nouns, and
+// "Veldrath" belongs to a different world than "Kau Lung". Partial sets fill in
+// from the defaults so a host can re-skin continents without restating
+// provinces.
+function banks(syllables) {
+  return {
+    cA: syllables?.continentPrefixes ?? CONTINENT_A,
+    cB: syllables?.continentSuffixes ?? CONTINENT_B,
+    pA: syllables?.provincePrefixes  ?? PROVINCE_A,
+    pB: syllables?.provinceSuffixes  ?? PROVINCE_B,
+  };
+}
+
+// Exported so scoped blueprints can mint a matching naming culture without
+// duplicating the syllable banks.
+export const SYLLABLES = Object.freeze({
+  continentPrefixes: CONTINENT_A, continentSuffixes: CONTINENT_B,
+  provincePrefixes: PROVINCE_A, provinceSuffixes: PROVINCE_B,
+});
 
 // Mint the layered skeleton: continents and provinces as stubs, sea edges
 // between port provinces. Pure and deterministic — the same seed always
 // shapes the same world. Returns { geo, continents, provinces } where the
 // lists are ids in minting order (the first province of the first continent
 // is the conventional starting province).
-export function mintWorldSkeleton(seed, { continents = null, provincesPer = null } = {}) {
+export function mintWorldSkeleton(seed, { continents = null, provincesPer = null, syllables = null } = {}) {
   const rng = mulberry32((seed ?? 1) >>> 0);
+  const { cA, cB, pA, pB } = banks(syllables);
   let geo = emptyGeography();
   const continentIds = [];
   const provinceIds = [];
@@ -55,24 +73,33 @@ export function mintWorldSkeleton(seed, { continents = null, provincesPer = null
     const cRng  = mulberry32(cSeed);
     const cId   = `continent-${c}`;
     geo = addNode(geo, {
-      id: cId, name: continentName(cRng), kind: 'continent',
+      id: cId, name: `${pick(cA, cRng)}${pick(cB, cRng)}`, kind: 'continent',
       seed: cSeed, hook: pick(HOOKS, cRng), stub: true, detail: 0, parent: null,
     });
     continentIds.push(cId);
 
     const nProvinces = provincesPer ?? randInt(2, 4, cRng);
+    // Naming culture: each continent commits to a syllable subset, so names
+    // on one landmass rhyme with each other and not with the neighbour's.
+    // Recorded on the continent node for hints and later landfall minting.
+    const prefixes = shuffle(pA, cRng).slice(0, 5);
+    const suffixes = shuffle(pB, cRng).slice(0, 5);
+    geo = patchNode(geo, cId, { nameParts: { prefixes, suffixes } });
+    // Climate spread: deal bands without replacement so a 4-province
+    // continent gets 4 different bands instead of `temperate` three times.
+    const bandDeck = shuffle(CLIMATE_BANDS, cRng);
     let prevProvince = null;
     for (let p = 0; p < nProvinces; p++) {
       const pSeed = randInt(1, 2 ** 30, cRng);
       const pRng  = mulberry32(pSeed);
       const pId   = `${cId}.province-${p}`;
       geo = addNode(geo, {
-        id: pId, name: provinceName(pRng), kind: 'province',
+        id: pId, name: `${pick(prefixes, pRng)}${pick(suffixes, pRng)}`, kind: 'province',
         seed: pSeed, hook: pick(HOOKS, pRng), stub: true, detail: 0, parent: cId,
       });
-      // The province owns its climate band and its domain focus — recorded on
-      // the node so regions/dungeons inside it inherit instead of rerolling.
-      geo = patchNode(geo, pId, { climate: pick(CLIMATE_BANDS, pRng) });
+      // The province owns its climate band — recorded on the node so regions
+      // and dungeons inside it inherit instead of rerolling.
+      geo = patchNode(geo, pId, { climate: bandDeck[p % bandDeck.length] });
       provinceIds.push(pId);
       // Provinces of a continent form a land chain (a simple, walkable shape;
       // richer internal topology can come later without breaking ids).

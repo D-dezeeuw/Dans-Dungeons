@@ -29,9 +29,12 @@ const BP = {
   climate: 'frozen tundra',
   settlementType: 'mining camp',
   dungeonTheme: 'undead crypt',
+  // Domains are described by EPITHET, never by a published setting's deity —
+  // the kernel's docs/legal.md rule. This fixture named two real ones until the
+  // library's cleanup reached the vendored copy and the shape check caught it.
   godDomains: [
-    { domain: 'death', exemplars: ['Kelemvor', 'Myrkul'] },
-    { domain: 'war', exemplars: ['Tempus'] },
+    { domain: 'death', epithets: ['the one who judges every life at its end'] },
+    { domain: 'war',   epithets: ['the hand that steadies the spear'] },
   ],
   buildingTypes: ['tavern', 'blacksmith', 'temple', 'barracks'],
   locationTypes: ['crossroads', 'ancient ruin', 'standing stones'],
@@ -49,7 +52,9 @@ describe('blueprintContext (world-seed constraint block)', () => {
   });
 
   it('lists god domains with an exemplar', () => {
-    assert.match(ctx, /God domains to draw from: death \(e\.g\. Kelemvor\), war \(e\.g\. Tempus\)/);
+    assert.match(ctx, /God domains to draw from: death — the one who judges every life at its end; war — the hand that steadies the spear/);
+    assert.match(ctx, /Invent original names for these gods/,
+      'a clean table alone does not stop a model reaching for a deity it has read');
   });
 
   it('lists faction archetypes with descriptions', () => {
