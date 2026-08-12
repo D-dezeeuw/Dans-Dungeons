@@ -21,7 +21,7 @@ import { fileURLToPath } from 'node:url';
 
 import {
   SETTING_PACKS, DEFAULT_PACK_ID, packIds, resolvePack, isKnownPack, packCard,
-  pickPack, lintPack, flattenKeys, renderVoiceFields, VOICE_TOKEN_BUDGET,
+  pickPack, lintPack, flattenKeys, renderVoiceFields, VOICE_TOKEN_BUDGET, packTagline,
 } from '../src/settings/packs.js';
 import { PACK as classic } from '../src/settings/pack-classic.js';
 import { CUSTOM_MONSTERS, OVERWORLD_ENEMY_IDS, DEFAULT_ENEMY_IDS } from '../src/game/creatures.js';
@@ -292,5 +292,36 @@ describe('the vault boss wears the same wardrobe as everything else', () => {
 
   it('the unskinned path is unchanged', () => {
     assert.equal(elevate({ ...SRD.monsters.zombie, id: 'zombie' }, 'elite').name, 'Elite Zombie');
+  });
+});
+
+describe('the wizard menu stays scannable as the roster grows', () => {
+  // Names alone were fine at three packs and are a guessing game at nine:
+  // "The Deep Holds" and "The Walled Quarter" tell a first-time player nothing
+  // about which world they just picked.
+  it('pairs the name with the blurb’s first clause', () => {
+    const line = packTagline(classic, 'en');
+    assert.match(line, /^Classic Fantasy — /);
+    assert.ok(!line.endsWith('.'), 'the tagline is a label, not a sentence');
+  });
+
+  it('clamps a long blurb at a word boundary', () => {
+    const long = { card: { en: { name: 'X', blurb: `${'word '.repeat(40)}.` } } };
+    const line = packTagline(long, 'en');
+    assert.ok(line.length <= 4 + 56 + 1, `too long: ${line.length}`);
+    assert.ok(line.endsWith('…'));
+    assert.ok(!/\s…$/.test(line), 'no dangling space before the ellipsis');
+  });
+
+  it('degrades to the bare name when there is no blurb', () => {
+    assert.equal(packTagline({ card: { en: { name: 'Only A Name', blurb: '' } } }, 'en'), 'Only A Name');
+    assert.equal(packTagline({ id: 'bare' }, 'en'), 'bare');
+  });
+
+  it('every shipped pack produces a usable menu line', () => {
+    for (const [id, pack] of Object.entries(SETTING_PACKS)) {
+      const line = packTagline(pack, 'en');
+      assert.ok(line.length > 3 && line.length < 90, `${id}: ${line.length} chars — ${line}`);
+    }
   });
 });

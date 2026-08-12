@@ -40,7 +40,7 @@ import {
 } from 'bag-of-holding-client';
 import { setStoryFlag, awardReputation, reputationStanding, requeueActClose } from './story.js';
 import { recordCanon, markEncountered, currentPlaceId } from './ledger.js';
-import { activePack, applyPackOverlay, packIds, packCard, pickPack, resolvePack } from '../settings/index.js';
+import { activePack, applyPackOverlay, packIds, packCard, packTagline, pickPack, resolvePack } from '../settings/index.js';
 import * as UI from '../ui/console.js';
 import { t, tRaw, locale } from '../i18n/i18n.js';
 import { getSkills } from '../ui/chips.js';
@@ -236,7 +236,7 @@ export async function startNewGame() {
   const settingChoice = await UI.pickFrom(
     t('newgame.settingQuestion'),
     ['surprise', ...packIds()],
-    (id) => id === 'surprise' ? t('newgame.settingSurprise') : packCard(resolvePack(id), locale()).name,
+    (id) => id === 'surprise' ? t('newgame.settingSurprise') : packTagline(resolvePack(id), locale()),
     0,
   );
 

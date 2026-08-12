@@ -22,7 +22,7 @@ import { resolvePack, packCard, DEFAULT_PACK_ID } from './packs.js';
 
 export {
   SETTING_PACKS, DEFAULT_PACK_ID, packIds, resolvePack, isKnownPack,
-  packCard, pickPack, lintPack,
+  packCard, packTagline, pickPack, lintPack,
 } from './packs.js';
 
 // The pack the current world was generated with. Falls back to classic, which

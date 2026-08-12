@@ -46,6 +46,22 @@ export function packCard(pack, locale = 'en') {
   return card[locale] ?? card.en ?? { name: pack?.id ?? '', blurb: '' };
 }
 
+// `Name — first clause of the blurb`, for the wizard's numbered list.
+//
+// The list showed names alone, which was fine at three packs and is a guessing
+// game at nine: "The Deep Holds" and "The Walled Quarter" tell a first-time
+// player nothing about which world they are picking. The full blurb prints
+// after the choice; this is the scannable half.
+export function packTagline(pack, locale = 'en', max = 56) {
+  const { name, blurb } = packCard(pack, locale);
+  const first = String(blurb ?? '').split(/(?<=\.)\s/)[0].trim().replace(/\.$/, '');
+  if (!first) return name;
+  const short = first.length <= max
+    ? first
+    : `${first.slice(0, max).replace(/[\s,;:—-]+\S*$/, '')}…`;
+  return `${name} — ${short}`;
+}
+
 // ─── Seeded selection: theme first, contents second ──────────────────────────
 //
 // The campaign seed picks the PACK before anything else is rolled, and the
