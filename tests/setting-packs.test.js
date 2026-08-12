@@ -224,8 +224,18 @@ describe('seeded selection: the theme is drawn first', () => {
     const shuffled = ['gamma', 'delta', 'alpha', 'beta'];
     for (const seed of [7, 5150, 900001]) {
       assert.equal(pickPack(seed, ids), pickPack(seed, shuffled),
-        'sorting the list is what stops adding a pack reshuffling old seeds');
+        'reordering the registry must not change which pack a seed draws');
     }
+  });
+
+  it('remaps when the roster GROWS, which is harmless and worth stating', () => {
+    // `h % list.length` necessarily changes when the length does, so adding a
+    // pack does change which one a given seed would draw. Nothing observes
+    // that: `world.settingId` is written once at genesis and travels with the
+    // save, so an existing campaign keeps the pack it was generated under.
+    const grown = [...ids, 'epsilon'];
+    const moved = [1, 2, 3, 4, 5, 6, 7, 8].filter(s => pickPack(s, ids) !== pickPack(s, grown));
+    assert.ok(moved.length > 0, 'a bigger deck deals differently — this is the documented behaviour');
   });
 
   it('spreads across the registry rather than favouring one pack', () => {

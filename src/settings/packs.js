@@ -28,8 +28,10 @@ export const SETTING_PACKS = Object.freeze({
   'neon-stacks': neonStacks,
 });
 
-// Sorted, so registry insertion order can never silently reshuffle which pack
-// a given seed draws.
+// Sorted, so reordering the registry cannot change which pack a seed draws.
+// (ADDING one does change it — the draw is modulo the roster size — but
+// nothing observes that: `world.settingId` is written once at genesis and
+// travels with the save, so a campaign keeps the pack it was born under.)
 export function packIds() { return Object.keys(SETTING_PACKS).sort(); }
 
 // Never throws: a save naming a pack that no longer exists degrades to classic
