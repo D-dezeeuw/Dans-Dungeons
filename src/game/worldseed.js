@@ -5,15 +5,39 @@
 // seed convention and keeps the domain-themed treasures/keys (consumed by the
 // dungeon generator) plus a re-export of the dungeon-theme overlays.
 
-import { buildBlueprint } from 'bag-of-holding-client';
+import { buildBlueprint, worldSeedConstraints } from 'bag-of-holding-client';
+import { locale } from '../i18n/i18n.js';
 
 export { DUNGEON_OVERLAYS } from './dungeon-overlays.js';
 
 // Same seed → same blueprint. The library's seeded RNG (mulberry32) matches the
 // engine's Dice.seededRng, so blueprints are identical to the pre-extraction
 // build for any given seed.
-export function buildWorldBlueprint(seed) {
-  return buildBlueprint(seed);
+//
+// With a pack (doc 19): the SEED is unchanged and only the deck changes. Theme
+// first, contents second — the pack is chosen before this is called, and every
+// draw here happens inside its tables. The pack's id and its one-line setting
+// statement ride along on the blueprint so the seven worldgen prompts can
+// constrain themselves without a second lookup.
+export function buildWorldBlueprint(seed, pack = null) {
+  // The library merges a partial `tables` over its own defaults, so a pack
+  // states only what it replaces and `null` rolls exactly as before.
+  const bp = buildBlueprint(seed, { tables: pack?.tables ?? null });
+  if (!pack) return bp;
+  return {
+    ...bp,
+    settingId:  pack.id ?? null,
+    promptLine: pack.promptLine?.[locale()] ?? pack.promptLine?.en ?? null,
+  };
+}
+
+// The library's constraint block plus the pack's setting statement. One symbol
+// for all seven generators in worldgen.js: without it, a pack could re-skin
+// every table the blueprint draws from and still have the model narrate a
+// medieval tavern, because nothing ever told it what world it was writing.
+export function appConstraints(bp) {
+  const base = worldSeedConstraints(bp);
+  return bp?.promptLine ? `${base}\nSetting: ${bp.promptLine}` : base;
 }
 
 // ─── Domain-themed treasures (20 domains) ────────────────────────────────────
