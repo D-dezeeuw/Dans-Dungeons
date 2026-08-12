@@ -120,6 +120,17 @@ export const PACK = Object.freeze({
     mire:      ['sump row', 'seep tier', 'drain market', 'silt walk'],
   },
 
+  // What the ferry crews say about a district they do not gate for. The
+  // library's pool is sailors and caravans; here distance is water, power and
+  // who is owed.
+  stubHooks: [
+    'the water there is metered by the hour and nobody says by whom',
+    'its lifts run, and the call buttons are painted over',
+    'two clans hold the same stairwell and both take the toll',
+    'the grid draws power for floors that report nobody living on them',
+    'no ferry has gated there since the last surge',
+    'their ancestor tablets were moved and the shrine was not told',
+  ],
   // ─── Naming culture ────────────────────────────────────────────────────────
   // Invented phonetics for a dense coastal port sprawl. Every syllable here is
   // made up rather than borrowed: real morphemes concatenate into real place
@@ -201,7 +212,11 @@ export const PACK = Object.freeze({
     register:     'clipped street cant; tech worn casually; short sentences',
     honorifics:   ['elder, for anyone a tier above'],
     exclamations: ['null that', 'rain on it'],
-    forbid:       ['thee', 'ye', 'tavern', 'm\'lord', 'sword', 'magic'],
+    // 'magic' is deliberately NOT here: skills.arcana.desc ("Recall lore about
+    // spells, magic items, and the planes") is inherited, not overridden, and
+    // the skill chips print it every campaign. Forbidding a word the UI shows
+    // teaches the narrator to write around something the player can see.
+    forbid:       ['thee', 'ye', 'tavern', 'm\'lord', 'sword', 'longbow'],
     examples: {
       narrator: [
         'Rain works down forty storeys of pipe to find you.',

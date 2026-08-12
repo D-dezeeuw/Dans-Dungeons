@@ -34,6 +34,24 @@ import { SRD, elevate } from '../vendor/bag-of-holding/index.js';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const bundle = (code) => JSON.parse(fs.readFileSync(path.join(ROOT, `src/i18n/${code}.json`), 'utf8'));
 const BASE_KEYS = new Set(flattenKeys(bundle('en')));
+// Every base string a pack could inherit, as { key, text } — the forbid rule
+// checks a pack's banned words against the content it does NOT override.
+function baseTextOf(bundle) {
+  const out = [];
+  const walk = (node, prefix) => {
+    for (const [k, v] of Object.entries(node ?? {})) {
+      const key = prefix ? `${prefix}.${k}` : k;
+      if (typeof v === 'string') out.push({ key, text: v });
+      else if (Array.isArray(v)) out.push({ key, text: v.filter(x => typeof x === 'string').join(' ') });
+      else if (v && typeof v === 'object') walk(v, key);
+    }
+  };
+  walk(bundle, '');
+  // Model prompts are instructions, not player-facing prose; a forbid word
+  // appearing inside one is the pack doing its job.
+  return out.filter(e => !e.key.startsWith('ai.'));
+}
+const BASE_TEXT = baseTextOf(bundle('en'));
 
 // Every creature the engine can actually run a fight with — src/game/bestiary.js
 // composes the same set, but it imports the `bag-of-holding` bare specifier, so
@@ -51,6 +69,7 @@ describe('every shipped pack passes the lint', () => {
         baseKeys: BASE_KEYS,
         climateBands: CLIMATE_BANDS,
         reachableCreatureIds: REACHABLE,
+        baseText: BASE_TEXT,
       });
       assert.deepEqual(problems, [], problems.join('\n'));
     });
@@ -67,7 +86,7 @@ describe('the lint actually catches what it claims to', () => {
   const base = { id: 'test', packVersion: 1, card: { en: { name: 'T', blurb: 'b' } } };
   const lint = (over) => lintPack({ ...base, ...over }, {
     knownCreatureIds: KNOWN_IDS, baseKeys: BASE_KEYS, climateBands: CLIMATE_BANDS,
-    reachableCreatureIds: REACHABLE,
+    reachableCreatureIds: REACHABLE, baseText: BASE_TEXT,
   }).join(' | ');
 
   it('rejects an enemy with no stat block', () => {
@@ -161,6 +180,19 @@ describe('the lint actually catches what it claims to', () => {
   it('rejects a creature rename that leaves the travel pools in fantasy clothes', () => {
     const out = lint({ i18n: { en: { world: { enemyNames: { skeleton: 'Chassis' } } } } });
     assert.match(out, /unskinned/, 'a pack that renames one creature must account for the ones it cannot see');
+  });
+
+  it('rejects forbidding a word the inherited content still prints', () => {
+    // The failure two pack authors found by reading: neon-stacks banned
+    // 'magic' while skills.arcana.desc — rendered on a skill chip every
+    // campaign — says "spells, magic items, and the planes".
+    assert.match(lint({ voice: { address: ['x'], forbid: ['magic'] } }),
+      /voice.forbid names 'magic', but the inherited 'skills\.arcana\.desc' still says it/);
+    // A word the pack's own overlay replaces is fair to forbid.
+    assert.equal(lint({
+      voice: { address: ['x'], forbid: ['tapestries'] },
+      i18n: { en: { world: { rooms: { entrance: ['no tapestries here'] } } } },
+    }), '');
   });
 
   it('refuses functions and rules material', () => {

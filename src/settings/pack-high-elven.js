@@ -121,6 +121,16 @@ export const PACK = Object.freeze({
   themeClimates: null,
   bandSettlements: null,
 
+  // What a court says about a holding it has not visited. The register is the
+  // point: they report the maintenance schedule, not the danger.
+  stubHooks: [
+    'its household has not answered a summons in two hundred years',
+    'the accord that governs it was signed by people still living',
+    'they keep the lamps lit and receive no one',
+    'their singers hold a ward nobody has verified this century',
+    'the road there is maintained, and unused',
+    'a case concerning it has been open since before the mortal kingdoms',
+  ],
   // The lever dark-ages could skip and this one cannot: the library's banks
   // mint Saltmarch and Elderdowns, and a court of immortals cannot be seated in
   // Saltmarch. Prefix+suffix is bare concatenation with no joiner, so the two

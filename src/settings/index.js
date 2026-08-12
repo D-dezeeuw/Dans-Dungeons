@@ -48,6 +48,19 @@ export function activePackCard() {
   return packCard(activePack(), locale());
 }
 
+// Does the active pack author this content itself, in any locale? Used where a
+// caller has to know whether the pack OWNS a table rather than just read it
+// through the overlay — the vault's treasure precedence is the case that
+// matters (see src/game/world.js).
+export function packAuthors(path) {
+  const tree = activePack().i18n;
+  if (!tree) return false;
+  return Object.values(tree).some((byLocale) => {
+    const val = path.split('.').reduce((o, k) => (o == null ? o : o[k]), byLocale);
+    return Array.isArray(val) ? val.length > 0 : val != null;
+  });
+}
+
 // Class and species labels, skinned. The mechanics never move: `classId` stays
 // 'wizard' in the record, the sheet derives from the same SRD data, and only
 // the word on the button changes. A netrunner is a wizard's numbers wearing

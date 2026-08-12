@@ -7,7 +7,7 @@ import { tRaw } from '../i18n/i18n.js';
 import { Dice } from './rules.js';
 import { statBlockFor, bossBlockFor, bossTierForLevel, BESTIARY, DEFAULT_ENEMY_IDS } from './bestiary.js';
 import { DUNGEON_OVERLAYS, DOMAIN_TREASURES, DOMAIN_KEYS } from './worldseed.js';
-import { activePack } from '../settings/index.js';
+import { activePack, packAuthors } from '../settings/index.js';
 import { generateDungeon as libGenerateDungeon } from 'bag-of-holding-client';
 
 // ─── Creature presentation (name + intro, localized) ─────────────────────────
@@ -49,8 +49,17 @@ function dungeonContent() {
     // Room prose, loot and creature names all come through i18n, so the pack's
     // content overlay re-points them with no change here. These two are keyed
     // objects consumed directly, so they take the pack explicitly.
-    domainTreasures: activePack().domainTreasures ?? DOMAIN_TREASURES,
-    domainKeys:      activePack().domainKeys ?? DOMAIN_KEYS,
+    //
+    // Precedence matters more than it looks: the generator prefers a
+    // domain-matched treasure over the pool, and EVERY blueprint has a primary
+    // god domain, so the domain table always wins. That is right for a fantasy
+    // world and wrong for a re-skinned one — a grounded 1970s setting's
+    // hand-written vault prize was being replaced by "a hovering crystal
+    // containing a spell frozen mid-cast". So a pack that authors its own
+    // treasures owns the vault: withholding the domain table lets its pool be
+    // what the generator draws from.
+    domainTreasures: activePack().domainTreasures ?? (packAuthors('world.treasures') ? {} : DOMAIN_TREASURES),
+    domainKeys:      activePack().domainKeys      ?? (packAuthors('world.keys')      ? {} : DOMAIN_KEYS),
     enemyName,
     enemyIntro,
   };

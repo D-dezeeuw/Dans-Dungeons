@@ -95,6 +95,45 @@ export const PACK = Object.freeze({
       { type: 'cavern granaries',  desc: 'growers of the deep\'s own food, and the loudest voice against any new shaft' },
     ],
 
+    // The legacy 20-climate table is the last surface vocabulary left in the
+    // blueprint: `buildBlueprint` rolls it into `climate` and renders it into
+    // the worldgen context ("Climate: mangrove swamp"), and `flow.js` falls
+    // back to it when a region has none. A world with no sky cannot inherit
+    // it. `settlementTypes` has to come with it in the same breath — the
+    // singleton looks the palette up BY climate name and falls back to
+    // `settlementTypes['temperate forest']`, so overriding one without the
+    // other hands an underground hold a farming village.
+    climates: [
+      'dry limestone galleries', 'wet chalk workings', 'granite deeps', 'salt beds',
+      'coal measures', 'iron seams', 'frost-cracked upper galleries', 'flooded lower drifts',
+      'basalt heat galleries', 'gypsum caverns', 'shale slips', 'sandstone sumps',
+      'quartz reefs', 'clay swells', 'fungus caverns', 'undersea workings',
+      'crest adits', 'ash beds', 'ancestor courses', 'sealed ground',
+    ],
+
+    settlementTypes: {
+      'dry limestone galleries':      ['cut hall', 'guild hall', 'shift town'],
+      'wet chalk workings':           ['pump works', 'drain-gate hall', 'seep works'],
+      'granite deeps':                ['deep hall', 'stone-law hall', 'gate-head hall'],
+      'salt beds':                    ['salt works', 'brine hall', 'store-cavern hall'],
+      'coal measures':                ['lamp-house hall', 'firedamp works', 'gang town'],
+      'iron seams':                   ['smelt works', 'forge hall', 'ore-floor town'],
+      'frost-cracked upper galleries': ['frost-gate hall', 'cold store works', 'upper gallery hall'],
+      'flooded lower drifts':         ['sump hall', 'pump works', 'raft landing'],
+      'basalt heat galleries':        ['forge hall', 'heat-gallery hall', 'slag works'],
+      'gypsum caverns':               ['plaster works', 'white hall', 'quarry hall'],
+      'shale slips':                  ['timber hall', 'shored hall', 'prop-yard works'],
+      'sandstone sumps':              ['cistern hall', 'water-court hall', 'seep works'],
+      'quartz reefs':                 ['assay hall', 'stamp works', 'claim town'],
+      'clay swells':                  ['brick works', 'kiln hall', 'mud-gate hall'],
+      'fungus caverns':               ['grow-cavern hall', 'bed works', 'granary hall'],
+      'undersea workings':            ['tide-gate works', 'sea-adit hall', 'salt-gate hall'],
+      'crest adits':                  ['crest-gate hall', 'high adit works', 'wind-gate hall'],
+      'ash beds':                     ['dust works', 'ration hall', 'dry delve'],
+      'ancestor courses':             ['vault hall', 'warden hall', 'lamp-rota hall'],
+      'sealed ground':                ['watch hall', 'sealed-gate hall', 'gate-head works'],
+    },
+
     // Exactly six, all invented compounds. Every one of them is a place a hold
     // would have a policy about: ground it sealed, ground it buries in, ground
     // it lost to water, heat, crop or somebody older.
@@ -145,6 +184,17 @@ export const PACK = Object.freeze({
     mire:      ['sump hall', 'pump works', 'drain-gate hall', 'seep works'],
   },
 
+  // What the reckoners say about a hold nobody here has worked. The library's
+  // pool talks of sailors and caravans; underground, distance is measured in
+  // air, water and who owes whom.
+  stubHooks: [
+    'its air comes from somewhere nobody has surveyed',
+    'the debt-stone there was cut over, not added to',
+    'two holds claim the same seam and neither will open the ledger',
+    'the water in its lower works runs warm',
+    'nobody from there has come up the long dark in nine years',
+    'their ancestor-vault is sealed from the inside',
+  ],
   // ─── Naming culture ────────────────────────────────────────────────────────
   // Hard consonants, all invented: real morphemes concatenate into real place
   // names sooner or later and §7.4 does not survive a lucky roll. Prefix +

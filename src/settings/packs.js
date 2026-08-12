@@ -15,19 +15,27 @@
 // pack — a pack whose enemy pool names a creature with no stat block would
 // otherwise crash a dungeon four hours into a campaign.
 
-import { PACK as classic }    from './pack-classic.js';
-import { PACK as darkAges }   from './pack-dark-ages.js';
-import { PACK as highElven }  from './pack-high-elven.js';
-import { PACK as neonStacks } from './pack-neon-stacks.js';
-import { estimateTokens }     from '../game/scope-budget.js';
+import { PACK as classic }       from './pack-classic.js';
+import { PACK as darkAges }      from './pack-dark-ages.js';
+import { PACK as deepHolds }     from './pack-deep-holds.js';
+import { PACK as deepShelter }   from './pack-deep-shelter.js';
+import { PACK as dustAndDiesel } from './pack-dust-and-diesel.js';
+import { PACK as highElven }     from './pack-high-elven.js';
+import { PACK as neonStacks }    from './pack-neon-stacks.js';
+import { PACK as walledQuarter } from './pack-walled-quarter.js';
+import { estimateTokens }        from '../game/scope-budget.js';
 
 export const DEFAULT_PACK_ID = 'classic';
 
 export const SETTING_PACKS = Object.freeze({
   classic,
   'dark-ages': darkAges,
+  'deep-holds': deepHolds,
+  'deep-shelter': deepShelter,
+  'dust-and-diesel': dustAndDiesel,
   'high-elven': highElven,
   'neon-stacks': neonStacks,
+  'walled-quarter': walledQuarter,
 });
 
 // Sorted, so reordering the registry cannot change which pack a seed draws.
@@ -105,8 +113,22 @@ export const VOICE_TOKEN_BUDGET = 120;   // a per-turn tax; keep it small
 const VOICE_EXAMPLE_MAX = 3;
 const VOICE_EXAMPLE_CHARS = 120;
 
+const escapeRe = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+// Which namespaces count as FICTION for the forbid check. The distinction is
+// real and load-bearing: a pack SHOULD forbid the narrator from writing "hit
+// points", and the level-up notice printing "hit points" is chrome doing its
+// job — system text is allowed to use system vocabulary. Only the strings a
+// player reads as part of the world, or that the narrator can echo, are
+// evidence that a forbidden word still exists in this setting.
+const FICTION = new Set([
+  'world', 'skills', 'classAbilities', 'describe', 'travel', 'settlement',
+  'map', 'sail', 'rumour', 'story', 'adventure', 'victory', 'defeat',
+  'spells', 'lexicon', 'charCreate',
+]);
+
 export function lintPack(pack, { knownCreatureIds = null, baseKeys = null, climateBands = null,
-                                 reachableCreatureIds = null } = {}) {
+                                 reachableCreatureIds = null, baseText = null } = {}) {
   const problems = [];
   const say = (msg) => problems.push(`${pack?.id ?? '(unnamed)'}: ${msg}`);
 
@@ -130,7 +152,7 @@ export function lintPack(pack, { knownCreatureIds = null, baseKeys = null, clima
   for (const [theme, entry] of Object.entries(overlays)) {
     if (!entry?.atmosphere) say(`overlay '${theme}' has no atmosphere line`);
     const enemies = entry?.enemies ?? [];
-    if (enemies.length < 3) say(`overlay '${theme}' needs at least three enemies (entrance → vault)`);
+    if (enemies.length < 4) say(`overlay '${theme}' needs at least four enemies (entrance → vault); doc 19 §7.3 says 4–5`);
     if (knownCreatureIds) {
       for (const id of enemies) {
         if (!knownCreatureIds.has(id)) say(`overlay '${theme}' names unknown creature '${id}'`);
@@ -188,13 +210,27 @@ export function lintPack(pack, { knownCreatureIds = null, baseKeys = null, clima
   // reach, not only the ones its own themes name. Travel encounters and the
   // no-overlay fallback draw from fixed pools, so a pack whose skeletons are
   // derelict chassis still meets a "Wolf" on the road unless it says otherwise.
-  const skinned = pack.i18n?.en?.world?.enemyNames ?? null;
+  // Every locale, not just English: the two checks were coupled by accident
+  // (packs are English-only by the translation rule), and that coupling would
+  // break silently the day the rule relaxes.
+  const skinTables = Object.values(pack.i18n ?? {})
+    .map(tree => tree?.world?.enemyNames)
+    .filter(Boolean);
+  const skinned = skinTables.length ? Object.assign({}, ...skinTables) : null;
   if (skinned && reachableCreatureIds) {
     const named = new Set([...Object.keys(skinned), ...Object.values(overlays).flatMap(o => o?.enemies ?? [])]);
     for (const id of reachableCreatureIds) {
       if (!named.has(id)) say(`renames creatures but leaves '${id}' unskinned — it can still appear in travel or a themeless dungeon`);
       else if (!skinned[id]) say(`creature '${id}' can appear but has no display name in this pack`);
     }
+  }
+
+  // A pack that names its own world above the region has to say what the
+  // rumours about it sound like, or the map screen describes its districts as
+  // places "sailors will not name after dark". The two travel together: they
+  // are the same layer's vocabulary.
+  if (pack.syllables && !(pack.stubHooks?.length >= 4)) {
+    say('syllables without stubHooks — the layers get pack names and library rumours');
   }
 
   // Naming banks come as a complete set or not at all — half a set produces
@@ -240,6 +276,33 @@ export function lintPack(pack, { knownCreatureIds = null, baseKeys = null, clima
     }
     const cost = estimateTokens(renderVoiceFields(v));
     if (cost > VOICE_TOKEN_BUDGET) say(`voice block costs ~${cost} tokens, over the ${VOICE_TOKEN_BUDGET} budget`);
+
+    // A forbidden word the pack's own INHERITED content still produces teaches
+    // the narrator to write around something the player can see anyway.
+    // neon-stacks forbade 'magic' while skills.arcana.desc — "Recall lore
+    // about spells, magic items, and the planes" — was rendered on a skill
+    // chip every campaign. Two pack authors found that by reading; it is
+    // cheaper to check.
+    if (baseText) {
+      // Ancestor-aware: a pack that supplies `world.dressing` shadows the whole
+      // table, because every consumer reads the OBJECT (`tRaw('world.dressing')`)
+      // and indexes into it — the base's twenty-four fantasy entries are
+      // unreachable even though their individual key paths still resolve. A
+      // leaf-only check reported a vampire castle at a pack that cannot roll one.
+      const overridden = new Set();
+      for (const key of flattenKeys(pack.i18n?.en ?? {})) {
+        const parts = key.split('.');
+        for (let i = 1; i <= parts.length; i++) overridden.add(parts.slice(0, i).join('.'));
+      }
+      for (const word of v.forbid ?? []) {
+        const isOverridden = (key) => key.split('.')
+          .some((_, i, parts) => overridden.has(parts.slice(0, i + 1).join('.')));
+        const hit = baseText.find(({ key, text }) =>
+          FICTION.has(key.split('.')[0]) && !isOverridden(key)
+          && new RegExp(`\\b${escapeRe(word)}\\b`, 'i').test(text));
+        if (hit) say(`voice.forbid names '${word}', but the inherited '${hit.key}' still says it`);
+      }
+    }
   }
 
   // Overlay keys must name real content. A typo'd key is not an override, it

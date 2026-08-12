@@ -21,10 +21,30 @@ import { CLIMATE_BANDS } from '../vendor/bag-of-holding-client/index.js';
 import { SRD } from '../vendor/bag-of-holding/index.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const baseKeys = new Set(flattenKeys(JSON.parse(fs.readFileSync(path.join(ROOT, 'src/i18n/en.json'), 'utf8'))));
+// Every base string a pack could inherit, as { key, text } — the forbid rule
+// checks a pack's banned words against the content it does NOT override.
+function baseTextOf(bundle) {
+  const out = [];
+  const walk = (node, prefix) => {
+    for (const [k, v] of Object.entries(node ?? {})) {
+      const key = prefix ? `${prefix}.${k}` : k;
+      if (typeof v === 'string') out.push({ key, text: v });
+      else if (Array.isArray(v)) out.push({ key, text: v.filter(x => typeof x === 'string').join(' ') });
+      else if (v && typeof v === 'object') walk(v, key);
+    }
+  };
+  walk(bundle, '');
+  // Model prompts are instructions, not player-facing prose; a forbid word
+  // appearing inside one is the pack doing its job.
+  return out.filter(e => !e.key.startsWith('ai.'));
+}
+
+const baseBundle = JSON.parse(fs.readFileSync(path.join(ROOT, 'src/i18n/en.json'), 'utf8'));
+const baseKeys = new Set(flattenKeys(baseBundle));
+const baseText = baseTextOf(baseBundle);
 const knownCreatureIds = new Set(Object.keys({ ...SRD.monsters, ...CUSTOM_MONSTERS }));
 const reachableCreatureIds = [...new Set([...OVERWORLD_ENEMY_IDS, ...DEFAULT_ENEMY_IDS])];
-const opts = { knownCreatureIds, baseKeys, climateBands: CLIMATE_BANDS, reachableCreatureIds };
+const opts = { knownCreatureIds, baseKeys, baseText, climateBands: CLIMATE_BANDS, reachableCreatureIds };
 
 const targets = [];
 const arg = process.argv[2];

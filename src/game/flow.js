@@ -369,7 +369,8 @@ async function startCampaign(worldSeed = null, pack = activePack()) {
     // three neighbour stubs. Costs nothing until visited. Seeded from the
     // NUMERIC blueprint seed — world.seed holds the world's NAME, and the
     // old read degenerated every skeleton to seed 0.
-    geography: initialAtlas(region.id, region.name, blueprintSeed, { syllables: pack?.syllables ?? null }),
+    geography: initialAtlas(region.id, region.name, blueprintSeed,
+      { syllables: pack?.syllables ?? null, hooks: pack?.stubHooks ?? null }),
   };
 
   // The global outline (doc 17, detail 0 → 1 for every continent, one call):
