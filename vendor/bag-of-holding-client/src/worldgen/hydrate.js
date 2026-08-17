@@ -16,7 +16,8 @@ import { SYLLABLES } from './skeleton.js';
 import { makePatch } from '../ledger/patch.js';
 import {
   CONTINENT_OUTLINE_SCHEMA, PROVINCE_OUTLINE_SCHEMA, REGION_SCHEMA,
-  SETTLEMENT_SCHEMA, CROWN_SCHEMA, LEGEND_SCHEMA,
+  SETTLEMENT_SCHEMA, CROWN_SCHEMA, LEGEND_SCHEMA, FACTION_SCHEMA,
+  WORLD_NPC_SCHEMA,
 } from './schemas.js';
 
 // ─── Template registry ───────────────────────────────────────────────────────
@@ -154,6 +155,38 @@ export const HYDRATION_TEMPLATES = Object.freeze({
       digest: `${stub.title} — a story with a place attached`,
     }),
   },
+  faction: {
+    full: { schema: FACTION_SCHEMA, tier: 'medium', retries: 1 },
+    consumes: ['tone', 'threatExpression'],
+    method: 'llm',
+    // Territory must be real provinces and relations must be real factions —
+    // both coerce rather than reject, because a faction whose prose is good
+    // but whose ids drifted is worth keeping.
+    post: ['territoryResolves', 'relationsResolve'],
+    fallback: (stub) => {
+      const { archetype, ...rest } = stripStub(stub);
+      return {
+        ...rest,
+        description: `${stub.name}${archetype ? `, a ${archetype}` : ''}, holding ${stub.territory.length || 'no'} province${stub.territory.length === 1 ? '' : 's'}.`,
+        values: 'what it holds, it keeps',
+        digest: `${stub.name} — ${archetype ?? 'a power with borders'}`,
+      };
+    },
+  },
+  npc: {
+    full: { schema: WORLD_NPC_SCHEMA, tier: 'tiny', retries: 1 },
+    consumes: ['tone', 'threatExpression'],
+    method: 'llm',
+    // The links are the point: seatOf must be a real crown, leads a real
+    // faction. Coerce to null rather than reject — a face whose prose is
+    // good but whose id drifted is still a face.
+    post: ['npcLinksResolve'],
+    fallback: (stub) => ({
+      ...stripStub(stub),
+      description: `${stub.name}, who ${stub.voice} — and wants ${stub.wants.join(', and ')}.`,
+      digest: `${stub.name} — the face of a power`,
+    }),
+  },
 });
 
 const stripStub = ({ stub, ...rest }) => rest;
@@ -213,6 +246,37 @@ export function coerceBeatLocation(beat, gazetteer) {
     return { g, score: want.filter(w => have.includes(w)).length };
   }).sort((a, b) => b.score - a.score || (a.g.id < b.g.id ? -1 : 1));
   return { ...beat, preferredLocation: scored[0].g.id };
+}
+
+// The world's dramatis personae: every power a beat may cast, as {id, name}.
+// Factions, crowns and npcs — the entities the depth phases store — so "defeat
+// the King of Faction A" can point at the crown entity the war names, not at
+// a label only prose remembers.
+export function castGazetteerOf(data) {
+  const out = [];
+  for (const f of data?.factions ?? []) out.push({ id: f.id, name: f.name });
+  for (const c of data?.lore?.crowns ?? []) out.push({ id: c.id, name: c.name });
+  for (const n of data?.npcs ?? []) out.push({ id: n.id, name: n.name });
+  return out;
+}
+
+// Deterministic cast coercion, the same move coerceBeatLocation makes for
+// places: an exact entity id passes, a near-miss re-binds by token overlap,
+// and an entry matching NOTHING is dropped — casting a random power is worse
+// than casting none. Never invents an entity; moves the intention.
+export function coerceBeatCast(beat, gazetteer) {
+  if (!beat?.cast?.length) return beat;
+  const cast = [];
+  for (const entry of beat.cast) {
+    if (gazetteer.some(g => g.id === entry)) { cast.push(entry); continue; }
+    const want = String(entry).toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+    const scored = gazetteer.map(g => {
+      const have = `${g.id} ${g.name}`.toLowerCase();
+      return { g, score: want.filter(w => have.includes(w)).length };
+    }).sort((a, b) => b.score - a.score || (a.g.id < b.g.id ? -1 : 1));
+    if (scored[0]?.score > 0 && !cast.includes(scored[0].g.id)) cast.push(scored[0].g.id);
+  }
+  return { ...beat, cast };
 }
 
 // ─── Minting (what a hydration leaves behind) ────────────────────────────────
@@ -287,6 +351,33 @@ const POST_CHECKS = {
     }
     return out;
   },
+  // A hydrated faction's territory must be provinces the world actually has.
+  // Coerce by filtering: prose about a place that does not exist is dropped,
+  // the rest of the faction survives.
+  territoryResolves(result, ctx) {
+    const bad = (result.territory ?? []).filter(id => !ctx.geo?.nodes?.[id]);
+    if (!bad.length) return [];
+    return [{ check: 'territoryResolves', at: 'territory', value: bad.join(','),
+      coerce: (r) => ({ ...r, territory: r.territory.filter(id => ctx.geo?.nodes?.[id]) }) }];
+  },
+
+  // Allies and enemies must name real factions — the reputation ripples and
+  // the war state both walk these arrays, and a dangling id there is a war
+  // against nobody.
+  relationsResolve(result, ctx) {
+    const known = new Set((ctx.factions ?? []).map(f => f.id));
+    const out = [];
+    for (const field of ['allies', 'enemies']) {
+      // Bad: an unknown faction, or the faction naming itself.
+      const bad = (result[field] ?? []).filter(id => !known.has(id) || id === result.id);
+      if (bad.length) {
+        out.push({ check: 'relationsResolve', at: field, value: bad.join(','),
+          coerce: (r) => ({ ...r, [field]: r[field].filter(id => known.has(id) && id !== r.id) }) });
+      }
+    }
+    return out;
+  },
+
   factionsExist(result, ctx) {
     const known = new Set((ctx.factions ?? []).map(f => f.id));
     const out = [];
@@ -316,6 +407,19 @@ const POST_CHECKS = {
     if (result.seat == null || ctx.geo.nodes[result.seat]) return [];
     return [{ check: 'seatResolves', at: 'seat', value: result.seat,
       coerce: (r) => ({ ...r, seat: null }) }];
+  },
+  // A world npc's links must hold: seatOf a real crown, leads a real faction.
+  npcLinksResolve(result, ctx) {
+    const out = [];
+    if (result.seatOf != null && !(ctx.crowns ?? []).some(c => c.id === result.seatOf)) {
+      out.push({ check: 'npcLinksResolve', at: 'seatOf', value: result.seatOf,
+        coerce: (r) => ({ ...r, seatOf: null }) });
+    }
+    if (result.leads != null && !(ctx.factions ?? []).some(f => f.id === result.leads)) {
+      out.push({ check: 'npcLinksResolve', at: 'leads', value: result.leads,
+        coerce: (r) => ({ ...r, leads: null }) });
+    }
+    return out;
   },
   sitesResolve(result, ctx) {
     const bad = (result.sites ?? []).filter(s => !ctx.geo.nodes[s]);

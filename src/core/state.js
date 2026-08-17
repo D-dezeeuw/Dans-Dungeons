@@ -57,9 +57,17 @@ const DEFAULTS = {
     rollLog: [],         // verifyLog-compatible audit of this epoch's rolls
   },
   ai: {
-    tier:    'free',       // 'free' | 'deluxe'
+    tier:    'free',       // 'free' | 'deluxe'  — this app's feature gates
     baseUrl: 'https://openrouter.ai/api/v1',
     key: '',
+    // Which kind of credential `key` is (src/ai/relay.js):
+    //   'openrouter' — the player's own provider key; their account pays.
+    //   'tenant'     — a hosted deployment's token; the operator's account
+    //                  pays, inside the tier budget `relayTier` names, and
+    //                  `baseUrl` points at that deployment's relay.
+    credential: 'openrouter',
+    tenantUrl: null,       // the deployment a tenant token belongs to
+    relayTier: null,       // 'free' | 'patron' | 'studio' — the operator's call
     models: { ...DEFAULT_MODELS },
     totalTokens: 0,
     totalCostUsd: 0,

@@ -33,6 +33,27 @@ export { fetchModelIds } from './src/llm/catalog.js';
 export { JsonFieldStreamer } from './src/llm/stream.js';
 export { call, chatCompletion, chatStream, repairJson, checkKey } from './src/llm/client.js';
 export { generateImage, parseImageFromResponse } from './src/llm/image.js';
+// Whether an image may be made at all — pure, host-agnostic gate math, shared
+// with the MCP server so "the DM asked for a picture" and "the player clicked
+// render" answer to the same budget.
+export {
+  IMAGE_TIERS, DEFAULT_IMAGE_TIER, GRANT_TTL_MS, tierPolicy,
+  emptyImageGate, normalizeImageGate, rollImageWindow,
+  enableImages, disableImages, canRenderImage, imageGateStatus,
+  spendImageRender, refundImageRender, isGrantExpired, composeImagePrompt,
+} from './src/llm/imagegate.js';
+// Whether a *relayed* text turn may be paid for — the same pure-math split, one
+// layer over: a hosted deployment holds the provider key and this says how much
+// a tenant token may spend against it. Applied by the server; the browser reads
+// the snapshot to show what is left.
+export {
+  RELAY_TIERS, DEFAULT_RELAY_TIER, relayTierPolicy,
+  emptyRelayBudget, normalizeRelayBudget, rollRelayWindow,
+  canRelay, chargeRelay, relayBudgetStatus,
+} from './src/llm/relaygate.js';
+// Pointing a config at that relay instead of at the provider: the tenant half
+// of "paste a key or paste a token".
+export { RELAY_MARKER, RELAY_PROBE_TIMEOUT_MS, relayBaseUrl, tenantConfig, probeRelay } from './src/llm/tenant.js';
 export { synthesizeSpeech, transcribeAudio, pcmToWav, bytesToBase64, TTS_FALLBACKS, PCM_MODELS } from './src/llm/audio.js';
 
 export { makeClock, isFull, advance, tickAll, clockMood, pressingClocks } from './src/narrative/clocks.js';
@@ -43,6 +64,7 @@ export {
   makePatch, appendPatch, fold, foldAll, getPath, historyOf,
   dirtyTargets, recentCauses, compact, SCOPES, KINDS,
   pathsConflict, mechanicalPathsOf,
+  digestScopeOf, causesFor,
 } from './src/ledger/patch.js';
 
 // ── Worldgen ───────────────────────────────────────────────────────────────────
@@ -62,7 +84,7 @@ export {
 } from './src/worldgen/geography.js';
 export {
   HYDRATION_TEMPLATES, hydrateNode, ensureLineage, lineageContext,
-  gazetteerOf, coerceBeatLocation, runPostConditions,
+  gazetteerOf, coerceBeatLocation, castGazetteerOf, coerceBeatCast, runPostConditions,
   mintProvinceRegions, mintRegionSites, promoteObserved,
   portAnchorOf, mintLandfall, whileYouWereGone,
 } from './src/worldgen/hydrate.js';
@@ -70,16 +92,34 @@ export {
   bakeCartridge, mountCartridge, catalogEntry,
   CARTRIDGE_VERSION, CARTRIDGE_MIGRATIONS,
 } from './src/worldgen/cartridge.js';
+// Entity-id ⇄ cell addressing over a cartridge: what does the world say about
+// entity X, and how to write an answer back. The fold base for session replay
+// and the revision format (exported below) both speak this addressing.
+export {
+  cellsOf, entityIdsOf, projectCells,
+  REVISION_VERSION, REVISION_MIGRATIONS, REVISION_CELLS,
+  makeRevision, mountRevision, applyRevision, applyRevisions,
+  resolvedDigest, classifyRevision, revisionConflicts,
+} from './src/worldgen/revision.js';
+// Fronts: the world's own pressure — wars and shaky crowns mint clocks, and a
+// filled clock changes the world through ledger patches replay can fold.
+export {
+  mintWorldClocks, warClockFired, successionFired, advanceWorld,
+  WAR_CLOCK_SEGMENTS, SUCCESSION_SEGMENTS, SUCCESSION_TURNS,
+} from './src/worldgen/fronts.js';
 export { mintWorldSkeleton, adoptFlatWorld, CLIMATE_BANDS, SYLLABLES, STUB_HOOKS } from './src/worldgen/skeleton.js';
 export {
   WORLD_SEED_SCHEMA, REGION_SCHEMA, NPC_SCHEMA, FACTION_SCHEMA,
   BEAT_SCHEMA, RED_THREAD_SCHEMA, FACTIONS_SCHEMA, SETTLEMENT_SCHEMA,
   CONTINENT_OUTLINE_SCHEMA, CONTINENTS_OUTLINE_SCHEMA, PROVINCE_OUTLINE_SCHEMA,
-  CROWN_SCHEMA, LEGEND_SCHEMA,
+  CROWN_SCHEMA, LEGEND_SCHEMA, WORLD_NPC_SCHEMA,
 } from './src/worldgen/schemas.js';
 export {
   mintEras, mintLegendStubs, mintCrownStub, mintLore,
+  mintFactionStubs, mintWarState, bindCrownsToFactions, mintNpcStubs,
   ERA_NAMES, LEGEND_TITLE_A, LEGEND_TITLE_B, CROWN_TITLES, LEGITIMACIES,
+  FACTION_NAME_A, FACTION_NAME_B, WAR_CAUSES, WAR_INTENSITIES,
+  NPC_GIVEN_NAMES, NPC_VOICES, NPC_WANTS,
 } from './src/worldgen/lore.js';
 
 // ── Dungeon ────────────────────────────────────────────────────────────────────
@@ -103,6 +143,7 @@ export {
 } from './src/narrative/acts.js';
 export {
   REP_MIN, REP_MAX, THRESHOLDS, clampRep, reputationOf, adjustReputation,
+  adjustReputationWithRipples,
   standing, standingFor, priceModifier, adjustPrice, isHostile,
 } from './src/narrative/factions.js';
 
@@ -138,3 +179,34 @@ export {
   openCold, coldPut, coldGet, coldKeys, coldAll, coldDelete,
   appendSegment, readSegments, segmentKey, splitSave,
 } from './src/persistence/idb.js';
+
+// ── AI prompt scaffolding (the kernel roadmap's 4.0.0 row, landed host-side) ──
+// Structured narration templates over the engine's deterministic output:
+// provider-agnostic prompts with cache keys, the parseable reply schema,
+// and adapters for the three major API shapes. The kernel never imports
+// this — its boundary stays intact; this repo IS the host toolkit.
+export {
+  PROMPT_KINDS, narrationPrompt, narrationCacheKey,
+  NARRATION_SCHEMA, parseNarration, toAnthropic, toOpenAI, toLocal,
+} from './src/llm/prompts.js';
+
+// ── Initiative tracker reference UI (the kernel roadmap's 4.1.0 row) ────────
+// A pure view model + a web component registered only where custom
+// elements exist (defineInitiativeTracker is a clean no-op in node).
+// Reference example, not part of the engine — the boundary holds.
+export {
+  initiativeViewModel, advanceTurn, defineInitiativeTracker,
+  rollEncounterInitiative,
+} from './src/ui/initiative.js';
+
+// ── Grant redemption (closing the keyless-deployment gap) ───────────────────
+// On a keyless MCP server the image gate hands the HOST a render grant;
+// this is the redemption counter — expiry-checked, provider-injected,
+// with the refund verdict the server's refund path needs.
+export { grantIsLive, redeemImageGrant } from './src/llm/redeem.js';
+
+// ── Narration end-to-end (0.29.0) — closes the 0.26.0 island ────────────────
+// narrate(): engine result → prompt → this repo's OWN chatCompletion
+// (fallback chains, token accounting) → parsed narration, with an
+// injectable LRU cache so identical resolutions stop costing tokens.
+export { narrate, makeNarrationCache } from './src/llm/narrate.js';

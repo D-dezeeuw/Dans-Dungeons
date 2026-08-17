@@ -93,9 +93,26 @@
   },
   "setup": {
     "gameName": "Dan's Dungeons",
-    "needKey": "To play, you need a free OpenRouter API key.",
+    "needKey": "To play, you need a free OpenRouter API key — or a tenant key from whoever hosts your table.",
     "signUp": "Sign up at openrouter.ai → API Keys.",
     "pasteKey": "Paste your OpenRouter API key:",
+    "pasteCredential": "Paste your OpenRouter API key or tenant key:",
+    "notAProviderKey": "That is not an OpenRouter key. Trying it as a tenant key…",
+    "tenantUrlWhy": "A tenant key belongs to one hosted table, so I need its address.",
+    "tenantUrlAsk": "Address of your table's server (e.g. https://boh.example.com):",
+    "tenantNoUrl": "Without a server address a tenant key cannot be checked.",
+    "tenantConnecting": "Connecting to your table…",
+    "tenantConnected": "Connected to your table on the {{tier}} tier. Your host covers the AI; there is no key to add.",
+    "tenantFreeTier": "On the free tier, scene images and speech stay off. Ask your host to raise the tier if you want them.",
+    "tenantTierChanged": "Your host moved this table from {{from}} to {{to}}.",
+    "tenantUpgradeAsk": "This table is on the {{tier}} tier. Only your host can change that — ask them, then reopen settings.",
+    "tenant": {
+      "rejected": "Your table's server does not recognise that tenant key. Ask your host for a fresh one.",
+      "unreachable": "Your table's server did not answer. Check the address and your connection, then try again.",
+      "notARelay": "Something answered at that address, but it is not a bag-of-holding server.",
+      "relayOff": "That tenant key works, but your table's server does not provide the AI. Paste an OpenRouter key instead.",
+      "badUrl": "That server address could not be read. It should look like https://boh.example.com."
+    },
     "defaultUrl": "Default base URL: {{url}}",
     "customUrl": "Custom base URL (press Enter to use the default):",
     "keySaved": "Key saved. You can change it later with /settings.",
@@ -1228,6 +1245,8 @@
   "error": {
     "auth": "Your API key was rejected (401). Open Settings and check the key, or sign in again.",
     "credit": "Your OpenRouter account is out of credit (402). Top it up at openrouter.ai — retrying will not help until you do.",
+    "tableBudget": "Your table's AI allowance for this window is used up (402). It refills on its own — try again later, or ask your host for a higher tier.",
+    "tableNoAi": "Your table's server does not provide the AI (503). Open Settings and paste your own OpenRouter key to keep playing.",
     "refused": "The model refused this request (403). Rephrase what you typed, or pick a different model in Settings.",
     "noModel": "That model is no longer available (404). Pick another in Settings — the defaults heal themselves on the next reload.",
     "tooLong": "This turn was too long for the model (413). Try saying it in fewer words.",
@@ -1242,7 +1261,8 @@
     "near": "Budget notice: ${{spent}} of your ${{cap}} session budget is spent.",
     "over": "Budget notice: you have passed your ${{cap}} session budget (${{spent}} spent). Play continues — adjust the cap in Settings if you want a different limit.",
     "label": "Session budget (USD)",
-    "none": "no cap"
+    "none": "no cap",
+    "hosted": "Your host's table covers this. The number is tokens used, not money you owe."
   },
   "spells": {
     "cantrip": "Cantrip",

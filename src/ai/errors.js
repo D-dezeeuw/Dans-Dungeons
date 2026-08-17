@@ -27,11 +27,35 @@ function isTransportFailure(err) {
   return /abort|timed? ?out|network|failed to fetch|load failed|connection/i.test(msg);
 }
 
+// A hosted table's relay refuses with the same statuses a provider uses, but
+// two of them mean something different and the difference is the whole point of
+// telling the player anything: 402 is "your table's allowance for today is
+// spent, and it refills" — not "top up your wallet", which the player cannot do
+// because it is not their wallet. The relay names itself in the body (`type`),
+// which the library carries through as `err.body`.
+function relayType(err) {
+  const body = String(err?.body ?? '');
+  const m = /"type"\s*:\s*"([a-z_]+)"/.exec(body);
+  return m ? m[1] : null;
+}
+
 // { key, retryable, status } for a failed AI call.
 //   key       — i18n key under `error.*` naming cause AND next step
 //   retryable — whether trying the same turn again could plausibly work
 export function describeAiError(err) {
   const status = statusOf(err);
+  const relay = relayType(err);
+
+  // The table's token budget, not the player's credit. Retrying tomorrow works,
+  // which makes this the one "not retryable now" that carries a promise.
+  if (status === 402 && relay === 'budget_exhausted') {
+    return { key: 'error.tableBudget', retryable: false, status };
+  }
+  // The deployment stopped relaying inference (or never did). Nothing the player
+  // types fixes it; a provider key would.
+  if (status === 503 && relay === 'relay_unconfigured') {
+    return { key: 'error.tableNoAi', retryable: false, status };
+  }
 
   switch (status) {
     // The key is wrong, expired, or revoked. Retrying is pointless until it changes.

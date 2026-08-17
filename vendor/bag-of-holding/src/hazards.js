@@ -28,6 +28,22 @@ export const DISEASES = Object.freeze({
       Object.freeze({ ability: 'con', dc: 13, onFailure: Object.freeze({ conditions: ['incapacitated'] }) })
     ]),
     recoveryDc: 13
+  }),
+  // Completing SRD § Diseases (since 2.17.0): the third and last SRD
+  // disease. Sight Rot resists ordinary recovery saves — the `cure`
+  // field says what actually clears it; hosts gate healing on it.
+  'sight-rot': Object.freeze({
+    id: 'sight-rot', name: 'Sight Rot',
+    onsetSave: Object.freeze({ ability: 'con', dc: 15 }),
+    // Stage 1 is narrative (vision blurs; -1 to sight-based work is
+    // the host's call); the mechanical cliff is stage 2.
+    onFailure: Object.freeze({}),
+    incubationDays: 1,
+    stages: Object.freeze([
+      Object.freeze({ ability: 'con', dc: 15, onFailure: Object.freeze({ conditions: ['blinded'] }) })
+    ]),
+    // Deliberately NO recoveryDc: mundane rest never clears it.
+    cure: 'magical-healing-or-eyebright-salve'
   })
 });
 
@@ -60,6 +76,72 @@ export const POISONS = Object.freeze({
     save: Object.freeze({ ability: 'con', dc: 16 }),
     onFailure: Object.freeze({ damageDice: '1d6', damageType: 'poison' }),
     durationRounds: 600
+  }),
+
+  // === Registry back-fill (since 2.17.0) ===
+  // The 1.15 row shipped the mechanics with a starter registry of four;
+  // these eight complete a working SRD § Poisons spread — every vector
+  // now has multiple entries across the DC range, so an encounter
+  // builder can pick by delivery method AND tier.
+  'assassins-blood': Object.freeze({
+    id: 'assassins-blood', name: "Assassin's Blood",
+    vector: 'ingested',
+    save: Object.freeze({ ability: 'con', dc: 10 }),
+    onFailure: Object.freeze({ damageDice: '1d12', damageType: 'poison', conditions: ['poisoned'] }),
+    onSuccess: Object.freeze({ damageDice: '1d12', damageType: 'poison', halved: true }),
+    durationRounds: 14400
+  }),
+  'burnt-othur-fumes': Object.freeze({
+    id: 'burnt-othur-fumes', name: 'Burnt Othur Fumes',
+    vector: 'inhaled',
+    save: Object.freeze({ ability: 'con', dc: 13 }),
+    onFailure: Object.freeze({ damageDice: '3d6', damageType: 'poison', repeatSave: true }),
+    durationRounds: 10
+  }),
+  'crawler-mucus': Object.freeze({
+    id: 'crawler-mucus', name: 'Crawler Mucus',
+    vector: 'contact',
+    save: Object.freeze({ ability: 'con', dc: 13 }),
+    onFailure: Object.freeze({ conditions: ['poisoned', 'paralyzed'] }),
+    durationRounds: 10
+  }),
+  'essence-of-ether': Object.freeze({
+    id: 'essence-of-ether', name: 'Essence of Ether',
+    vector: 'inhaled',
+    save: Object.freeze({ ability: 'con', dc: 15 }),
+    onFailure: Object.freeze({ conditions: ['poisoned', 'unconscious'] }),
+    durationRounds: 4800
+  }),
+  'midnight-tears': Object.freeze({
+    id: 'midnight-tears', name: 'Midnight Tears',
+    vector: 'ingested',
+    save: Object.freeze({ ability: 'con', dc: 17 }),
+    onFailure: Object.freeze({ damageDice: '9d6', damageType: 'poison', delayedUntil: 'midnight' }),
+    onSuccess: Object.freeze({ damageDice: '9d6', damageType: 'poison', halved: true, delayedUntil: 'midnight' }),
+    durationRounds: 0
+  }),
+  'purple-worm-poison': Object.freeze({
+    id: 'purple-worm-poison', name: 'Purple Worm Poison',
+    vector: 'injury',
+    save: Object.freeze({ ability: 'con', dc: 19 }),
+    onFailure: Object.freeze({ damageDice: '12d6', damageType: 'poison' }),
+    onSuccess: Object.freeze({ damageDice: '12d6', damageType: 'poison', halved: true }),
+    durationRounds: 0
+  }),
+  'torpor': Object.freeze({
+    id: 'torpor', name: 'Torpor',
+    vector: 'ingested',
+    save: Object.freeze({ ability: 'con', dc: 15 }),
+    onFailure: Object.freeze({ conditions: ['incapacitated'] }),
+    durationRounds: 46080
+  }),
+  'wyvern-poison': Object.freeze({
+    id: 'wyvern-poison', name: 'Wyvern Poison',
+    vector: 'injury',
+    save: Object.freeze({ ability: 'con', dc: 15 }),
+    onFailure: Object.freeze({ damageDice: '7d6', damageType: 'poison' }),
+    onSuccess: Object.freeze({ damageDice: '7d6', damageType: 'poison', halved: true }),
+    durationRounds: 0
   })
 });
 

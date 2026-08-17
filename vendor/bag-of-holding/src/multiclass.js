@@ -162,8 +162,8 @@ export function tools(record) {
 
 /**
  * Predicate: is the actor proficient with the named tool? Used by
- * a future `Checks.toolCheck` helper or host-side ad-hoc tool
- * advantage logic.
+ * `Checks.toolCheck` / `Equipment.toolCheck` and host-side ad-hoc
+ * tool advantage logic.
  */
 export function isProficientWithTool(record, tool) {
   return Array.isArray(record.tools) && record.tools.includes(tool);

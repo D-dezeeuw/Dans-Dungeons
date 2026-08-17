@@ -5,19 +5,37 @@
 // first turn or between campaigns, touches only appState.ai / settings, and has
 // no relationship at all with the play loop it used to sit above.
 //
-// Three jobs: get a key (OAuth, paste, or a build-injected demo credential),
-// apply the tier that key can afford, and heal model ids that the provider has
-// since delisted — because `ai.models` is persisted, so a stale map outlives
-// any fix to the defaults and surfaces as a failed turn.
+// Three jobs: get a credential (OAuth, paste, or a build-injected demo key),
+// apply the tier that credential can afford, and heal model ids that the
+// provider has since delisted — because `ai.models` is persisted, so a stale
+// map outlives any fix to the defaults and surfaces as a failed turn.
+//
+// "A credential" is doing more work than it used to. There are two kinds now,
+// and the wizard used to only know one:
+//
+//   • a provider key — the player's own OpenRouter key. Their account pays.
+//   • a tenant token — issued by a hosted bag-of-holding-mcp deployment. The
+//     operator's account pays, inside the token's tier budget.
+//
+// A player handed a tenant token by whoever runs their table was previously
+// asked for an openrouter.ai key they had no reason to own, and pasting the
+// token they DID own failed with an auth error, because it authenticates to the
+// deployment rather than to a provider. So the paste step now takes either: it
+// checks the string as a provider key first and, failing that, tries it as a
+// tenant token against the deployment. See ../ai/relay.js for the two shapes.
 
 import { appState, setValue, tick, commit } from '../core/state.js';
 import * as UI from '../ui/console.js';
 import { t } from '../i18n/i18n.js';
 import { checkApiKey } from './loop.js';
-import { aiConfig } from '../ai/client.js';
+import { aiConfig, connectTenant } from '../ai/client.js';
 import { modelsForTier } from '../ai/tiers.js';
 import { demoKey, demoBaseUrl, hasDemoTier } from '../ai/demo-key.js';
 import { redirectToOpenRouter } from '../ai/auth.js';
+import {
+  defaultTenantUrl, looksLikeTenantToken, looksLikeProviderKey,
+  pricingTierFor, relayServesImages,
+} from '../ai/relay.js';
 import { fetchModelIds, healModels } from 'bag-of-holding-client';
 
 const DEFAULT_BASE_URL = 'https://openrouter.ai/api/v1';
@@ -49,8 +67,134 @@ export function applyTier(tier) {
   commit();
 }
 
-export async function setupKey() {
-  UI.clear();
+/** Is this session playing on a hosted table rather than the player's own key? */
+export function isTenantSession() {
+  return appState.ai?.credential === 'tenant';
+}
+
+/**
+ * Adopt a live tenant connection: where to call, what to call it with, which
+ * models that tier may use, and which features it can actually serve.
+ *
+ * The model map comes from the relay rather than from our own tier table. The
+ * deployment decides which ids a tier may reach, and spending a turn to
+ * discover that our default was refused is a turn the player waited for.
+ *
+ * Speech stays off whatever the tier: the relay carries completions, not
+ * `audio/*`. A Text-to-Speech switch that 404s on every press is worse than one
+ * that was never offered.
+ */
+function applyTenantConnection({ serverUrl, token, baseUrl, tier, models }) {
+  setValue('ai.credential', 'tenant');
+  setValue('ai.tenantUrl', serverUrl);
+  setValue('ai.relayTier', tier);
+  setValue('ai.baseUrl', baseUrl);
+  setValue('ai.key', token);
+  setValue('ai.tier', pricingTierFor(tier));
+  setValue('ai.models', { ...models });
+  setValue('settings.sceneImage', relayServesImages(tier));
+  setValue('settings.tts', false);
+  setValue('settings.stt', false);
+  commit();
+}
+
+/** Back to BYOK: a provider key, the provider's URL, and no tenant left over. */
+function applyProviderKey(key) {
+  setValue('ai.credential', 'openrouter');
+  setValue('ai.tenantUrl', null);
+  setValue('ai.relayTier', null);
+  setValue('ai.key', key);
+  if (appState.ai?.baseUrl?.includes('/mcp/')) setValue('ai.baseUrl', DEFAULT_BASE_URL);
+  commit();
+}
+
+/**
+ * Where a tenant token is a tenant OF. A build can name a deployment
+ * (DD_TENANT_URL); otherwise the player is asked, because the token alone says
+ * nothing about which host issued it.
+ */
+async function askTenantUrl() {
+  const built = defaultTenantUrl();
+  if (built) return built;
+  UI.appendEntry('system', t('setup.tenantUrlWhy'));
+  const typed = await UI.prompt(t('setup.tenantUrlAsk'));
+  return typed.trim();
+}
+
+/**
+ * Take one pasted string and work out what it is.
+ *
+ * Order matters and follows the two failure costs. A provider key is checked
+ * first because it is the common case and the check is one request that cannot
+ * spend anything. A tenant token needs a deployment URL, so asking for one
+ * before we know the string even IS a token would be a question most players
+ * should never see.
+ *
+ * The shape test only reorders those two checks — a 64-hex string is a minted
+ * tenant token and is never a provider key, so trying OpenRouter first would
+ * mean a guaranteed-useless round trip and, offline, a false positive:
+ * `checkApiKey` answers "not obviously rejected" when it cannot reach anyone.
+ *
+ * Returns true when the session is now playable.
+ */
+async function adoptCredential(pasted) {
+  const value = pasted.trim();
+  if (value === '') return false;
+
+  const tenantFirst = looksLikeTenantToken(value) && !looksLikeProviderKey(value);
+
+  if (!tenantFirst) {
+    // Try it as a provider key: point at the provider and ask.
+    setValue('ai.baseUrl', DEFAULT_BASE_URL);
+    setValue('ai.key', value);
+    tick();
+    if (await checkApiKey()) {
+      applyProviderKey(value);
+      UI.appendEntry('system', t('setup.keySaved'));
+      return true;
+    }
+    UI.appendEntry('system', t('setup.notAProviderKey'));
+  }
+
+  const serverUrl = await askTenantUrl();
+  if (serverUrl === '') {
+    UI.appendEntry('error', t('setup.tenantNoUrl'));
+    return false;
+  }
+
+  UI.appendEntry('system', t('setup.tenantConnecting'));
+  const live = await connectTenant(serverUrl, value);
+  if (live.ok) {
+    applyTenantConnection({ serverUrl, token: value, baseUrl: live.baseUrl, tier: live.tier, models: live.models });
+    UI.appendEntry('system', t('setup.tenantConnected', { tier: live.tier }));
+    if (!relayServesImages(live.tier)) UI.appendEntry('system', t('setup.tenantFreeTier'));
+    return true;
+  }
+
+  // Every refusal names what to do next, because "that did not work" on a setup
+  // screen with one input is a dead end.
+  UI.appendEntry('error', t(`setup.tenant.${live.reason === 'not-a-relay' ? 'notARelay'
+    : live.reason === 'unreachable' ? 'unreachable'
+    : live.reason === 'relay-off' ? 'relayOff'
+    : live.reason === 'bad-url' ? 'badUrl'
+    : 'rejected'}`));
+  if (tenantFirst) {
+    // A 64-hex string that no deployment claims is not a provider key either,
+    // so there is nothing left to try and saying so beats a silent retry.
+    setValue('ai.key', '');
+    commit();
+  }
+  return false;
+}
+
+/**
+ * `clear: false` keeps the transcript when the wizard runs itself again after a
+ * refusal. Clearing there wiped the one line that said what was wrong — the
+ * player saw their credential vanish and the opening question return, which
+ * reads as the wizard breaking rather than as an answer.
+ */
+export async function setupKey({ clear = true } = {}) {
+  if (clear) UI.clear();
   UI.appendEntry('gm',     t('setup.gameName'));
   UI.appendEntry('system', '');
 
@@ -79,20 +223,35 @@ export async function setupKey() {
   }
 
   if (choice === 'paste') {
-    // Manual key paste (existing flow).
+    // One field, either credential. The wizard works out which — see
+    // `adoptCredential`: provider key first, tenant token second.
     UI.appendEntry('system', '');
     UI.appendEntry('system', t('setup.needKey'));
     UI.appendEntry('system', t('setup.signUp'));
     UI.appendEntry('system', '');
-    const key = await UI.prompt(t('setup.pasteKey'));
-    setValue('ai.key', key.trim());
+    const pasted = await UI.prompt(t('setup.pasteCredential'));
+    const adopted = await adoptCredential(pasted);
+    tick();
 
-    UI.appendEntry('system', '');
-    UI.appendEntry('system', t('setup.defaultUrl', { url: DEFAULT_BASE_URL }));
-    const customUrl = await UI.prompt(t('setup.customUrl'));
-    if (customUrl.trim()) setValue('ai.baseUrl', customUrl.trim());
-    UI.appendEntry('system', '');
-    UI.appendEntry('system', t('setup.keySaved'));
+    // A tenant connection brought its own base URL, its own tier and its own
+    // model list — asking about any of those would be asking the player to
+    // second-guess their operator.
+    if (adopted && isTenantSession()) return;
+
+    if (adopted) {
+      UI.appendEntry('system', '');
+      UI.appendEntry('system', t('setup.defaultUrl', { url: DEFAULT_BASE_URL }));
+      const customUrl = await UI.prompt(t('setup.customUrl'));
+      if (customUrl.trim()) setValue('ai.baseUrl', customUrl.trim());
+    } else {
+      // Nothing usable was pasted. Leaving the player at a "now what" prompt is
+      // the one outcome this screen must not produce, so ask again — below the
+      // refusal, not on a screen wiped clean of it.
+      UI.appendEntry('system', '');
+      UI.appendEntry('system', t('setup.reRunSetup'));
+      await setupKey({ clear: false });
+      return;
+    }
   }
 
   if (choice === 'try') {
@@ -116,8 +275,45 @@ export async function setupKey() {
   }
 }
 
+/**
+ * Re-check a tenant connection against its deployment.
+ *
+ * Worth doing on every boot, not just when something looks wrong: this is the
+ * only way the app learns that the operator suspended the table, revoked the
+ * token, or moved it to a tier that now includes pictures. Returns the verdict
+ * so a caller can decide whether to keep playing.
+ */
+async function refreshTenantConnection() {
+  const serverUrl = appState.ai?.tenantUrl;
+  const token = appState.ai?.key;
+  if (!serverUrl || !token) return { ok: false, reason: 'rejected' };
+
+  const live = await connectTenant(serverUrl, token);
+  if (!live.ok) return live;
+
+  const previous = appState.ai?.relayTier ?? null;
+  applyTenantConnection({ serverUrl, token, baseUrl: live.baseUrl, tier: live.tier, models: live.models });
+  if (previous && previous !== live.tier) {
+    UI.appendEntry('system', t('setup.tenantTierChanged', { from: previous, to: live.tier }));
+  }
+  return live;
+}
+
 // Upgrade to deluxe from settings — prompts for key.
 export async function upgradeToDeluxe() {
+  // On a hosted table the tier is not the player's to buy: it is whatever the
+  // operator's registry says, and pasting a provider key here would silently
+  // swap the whole campaign onto a different account. Re-check instead — an
+  // upgrade the operator has already made lands right here.
+  if (isTenantSession()) {
+    const live = await refreshTenantConnection();
+    if (!live.ok) { UI.appendEntry('error', t('setup.tenant.rejected')); return; }
+    UI.appendEntry('system', pricingTierFor(live.tier) === 'deluxe'
+      ? t('tier.upgraded')
+      : t('setup.tenantUpgradeAsk', { tier: live.tier }));
+    return;
+  }
+
   const key = await UI.prompt(t('setup.pasteKey'));
   if (!key.trim()) return;
 
@@ -161,6 +357,27 @@ async function reAuthKey() {
 export async function ensureKey() {
   // No key at all — first visit. Run setup.
   if (!appState.ai?.key) { await setupKey(); tick(); return; }
+
+  // Returning player on a hosted table: ask the deployment, because the answer
+  // can have changed without them touching anything. A suspended or revoked
+  // token is the case that matters — every turn would otherwise fail with a
+  // 404 the player cannot interpret.
+  if (isTenantSession()) {
+    const live = await refreshTenantConnection();
+    tick();
+    if (!live.ok) {
+      UI.appendEntry('error', t(live.reason === 'unreachable'
+        ? 'setup.tenant.unreachable'
+        : 'setup.tenant.rejected'));
+      // Unreachable is probably the player's own connection, and dropping a
+      // working token over one failed probe would be its own outage. Only a
+      // refusal sends them back to setup.
+      if (live.reason !== 'unreachable') { setValue('ai.key', ''); await setupKey(); tick(); }
+      return;
+    }
+    await healStaleModels();
+    return;
+  }
 
   // Returning player with deluxe key — validate it.
   if ((appState.ai?.tier ?? 'free') === 'deluxe') {

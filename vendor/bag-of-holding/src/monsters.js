@@ -220,3 +220,74 @@ export function saveBonus(monster, ability) {
   const score = monster.abilityScores?.[ability] ?? 10;
   return Math.floor((score - 10) / 2);
 }
+// === Mythic Actions (Bestiary III, 2.9.0) — appended to src/monsters.js ===
+//
+// The 1.10 header promised "Legendary / Lair / Mythic Actions"; legendary
+// and lair shipped, mythic never got its consumer — there was no data to
+// drive it. Bestiary III is that data, so the mechanics land with it,
+// analogous to the legendary pool with one addition: a mythic pool is
+// SEALED until its trigger fires (the classic shape: the first time the
+// monster drops to 0 HP, the second phase begins). The host owns
+// narrating the trigger; the engine owns the bookkeeping.
+//
+//   monster.mythicActions: {
+//     trigger,          // free text for the host ('firstDeath' by convention)
+//     uses,             // per-round pool once active (default 3)
+//     options: [{ id, name, cost, attackRef? }]
+//   }
+
+/** Initial state for a monster's Mythic Action pool. Null when the
+ *  monster has no mythic phase. Starts SEALED (`active: false`). */
+export function freshMythicState(monster) {
+  if (!monster.mythicActions) return null;
+  const max = monster.mythicActions.uses ?? 3;
+  return { active: false, used: 0, max };
+}
+
+/**
+ * The trigger fired (the host decides when — by convention the first
+ * time the monster would die): unseal the mythic pool. Idempotent.
+ */
+export function activateMythic(actor, monster) {
+  if (!monster.mythicActions) {
+    return { ok: false, reason: 'monster has no Mythic Actions' };
+  }
+  const pool = actor.mythic ?? freshMythicState(monster);
+  if (pool.active) return { ok: true, actor, alreadyActive: true };
+  return { ok: true, actor: { ...actor, mythic: { ...pool, active: true } } };
+}
+
+/**
+ * Spend from the mythic pool. Refuses while sealed — a second phase
+ * that leaks into the first is a boss fight with no first act.
+ */
+export function useMythicAction(actor, monster, optionId, cost = 1) {
+  if (!monster.mythicActions) {
+    return { ok: false, reason: 'monster has no Mythic Actions' };
+  }
+  const pool = actor.mythic ?? freshMythicState(monster);
+  if (!pool.active) {
+    return { ok: false, reason: 'mythic phase not yet triggered' };
+  }
+  if (pool.max - pool.used < cost) {
+    return { ok: false, reason: `not enough mythic uses: ${pool.max - pool.used} left` };
+  }
+  const option = monster.mythicActions.options?.find((o) => o.id === optionId);
+  if (!option) {
+    return { ok: false, reason: `unknown mythic option: ${optionId}` };
+  }
+  return {
+    ok: true,
+    option,
+    actor: { ...actor, mythic: { ...pool, used: pool.used + cost } }
+  };
+}
+
+/** Refresh the per-round mythic pool (turn start, like legendary).
+ *  Stays sealed if never activated. */
+export function refreshMythicActions(actor, monster) {
+  const fresh = freshMythicState(monster);
+  if (!fresh) return actor;
+  const wasActive = actor.mythic?.active ?? false;
+  return { ...actor, mythic: { ...fresh, active: wasActive } };
+}
