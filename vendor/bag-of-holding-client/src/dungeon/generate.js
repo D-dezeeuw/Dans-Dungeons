@@ -17,6 +17,7 @@
 //     crOf(id) -> number,              // optional; defaults to statBlockFor(id).cr
 //     overlays,                        // theme → { atmosphere, enemies:[id] }; default DUNGEON_OVERLAYS
 //     defaultEnemyIds: [id],           // fallback pool when no overlay matches
+//     maxEnemies,                      // optional cap on non-boss enemies; default scales with rooms
 //     content: { houseStyles, roomPools, treasures, keys, loot,
 //                domainTreasures, domainKeys, enemyName(id), enemyIntro(id,name,style) },
 //   }) -> { currentRoom, exitRoomId, rooms, npcs }
@@ -36,23 +37,33 @@ export const DUNGEON_OVERLAYS = Object.freeze({
   'cult sanctum':         { atmosphere: 'Candle wax pools on every surface. Chanting echoes from deeper within.', enemies: ['acolyte', 'cultist', 'shadow', 'specter', 'cult-fanatic'] },
   'beast lair':           { atmosphere: 'Claw marks gouge the stone. The stench of animal musk is overwhelming.', enemies: ['giant-rat', 'wolf', 'black-bear', 'dire-wolf', 'owlbear'] },
   'arcane ruin':          { atmosphere: 'Faint runes pulse along the walls. The air crackles with residual magic.', enemies: ['flying-sword', 'animated-armor', 'imp', 'specter', 'gibbering-mouther'] },
-  'flooded cavern':       { atmosphere: 'Water drips from the ceiling. The floor is slick and treacherous.',     enemies: ['giant-rat', 'constrictor-snake', 'cave-spider', 'crocodile', 'giant-spider'] },
+  // Overlay ids resolve against the kernel registry (2.6.0 added the
+  // eight blocks these pools had referenced into the void for months;
+  // `cave-spider` was invented, renamed here to the SRD-listed
+  // `giant-wolf-spider`). The last five holdouts — fungal-zombie,
+  // stone-sentinel, myconid-sovereign, young-drake, lesser-demon —
+  // shipped in the kernel's Bestiary I (2.7.0): a host that mounts it
+  // (`createEngine({ extraMonsters: BESTIARY_I })`) resolves every
+  // pool in full. Against a bare-SRD engine the statBlockFor guard
+  // below still filters them and the highest surviving CR stands in
+  // as the vault boss — degraded, never empty.
+  'flooded cavern':       { atmosphere: 'Water drips from the ceiling. The floor is slick and treacherous.',     enemies: ['giant-rat', 'constrictor-snake', 'giant-wolf-spider', 'crocodile', 'giant-spider'] },
   'haunted manor':        { atmosphere: 'Dust motes drift through pale light. A door creaks on its own.',        enemies: ['zombie', 'shadow', 'specter', 'ghoul', 'wight'] },
   'abandoned mine':       { atmosphere: 'Rotting timber props sag under the weight of earth. Pickaxes rust in corners.', enemies: ['kobold', 'swarm-of-rats', 'giant-spider', 'ghoul', 'ogre'] },
   'dragon hoard':         { atmosphere: 'Scorch marks blacken the walls. The heat is unnatural.',                enemies: ['kobold', 'skeleton', 'magma-mephit', 'hell-hound', 'young-drake'] },
   'vampire castle':       { atmosphere: 'Velvet drapes hang in tatters. The scent of old blood lingers.',        enemies: ['zombie', 'shadow', 'specter', 'ghoul', 'vampire-spawn'] },
   'elemental nexus':      { atmosphere: 'Sparks of raw energy arc between the walls. The ground hums.',          enemies: ['flying-sword', 'magma-mephit', 'ice-mephit', 'imp', 'will-o-wisp'] },
-  'fungal depths':        { atmosphere: 'Bioluminescent mushrooms cast an eerie glow. Spores drift lazily.',     enemies: ['violet-fungus', 'cave-spider', 'fungal-zombie', 'giant-spider', 'myconid-sovereign'] },
+  'fungal depths':        { atmosphere: 'Bioluminescent mushrooms cast an eerie glow. Spores drift lazily.',     enemies: ['violet-fungus', 'giant-wolf-spider', 'fungal-zombie', 'giant-spider', 'myconid-sovereign'] },
   'clockwork vault':      { atmosphere: 'Gears click and whir behind the walls. The floor vibrates rhythmically.', enemies: ['kobold', 'flying-sword', 'animated-armor', 'stone-sentinel'] },
   'planar rift':          { atmosphere: 'Reality shimmers at the edges. Colours that shouldn\'t exist bleed through.', enemies: ['shadow', 'imp', 'specter', 'will-o-wisp', 'gibbering-mouther'] },
   'sunken temple':        { atmosphere: 'Waterlogged stone and barnacle-crusted pillars. Fish bones crunch underfoot.', enemies: ['zombie', 'constrictor-snake', 'crocodile', 'specter', 'ghoul'] },
   'frozen tomb':          { atmosphere: 'Ice coats every surface. Your breath crystallizes instantly.',          enemies: ['skeleton', 'zombie', 'ice-mephit', 'specter', 'wight'] },
-  'spider nest':          { atmosphere: 'Silk threads catch the light everywhere. Husks of drained prey line the walls.', enemies: ['spider', 'giant-rat', 'cave-spider', 'giant-spider', 'ankheg'] },
+  'spider nest':          { atmosphere: 'Silk threads catch the light everywhere. Husks of drained prey line the walls.', enemies: ['spider', 'giant-rat', 'giant-wolf-spider', 'giant-spider', 'ankheg'] },
   'bandit fortress':      { atmosphere: 'Crude barricades and stolen goods are piled in every corner.',          enemies: ['bandit', 'scout', 'spy', 'bandit-captain', 'veteran'] },
   'fey glade gone wrong': { atmosphere: 'Flowers bloom in impossible colours. The laughter you hear isn\'t human.', enemies: ['wolf', 'worg', 'dire-wolf', 'will-o-wisp', 'owlbear'] },
   'demonic hellgate':     { atmosphere: 'The stone is warm to the touch. Symbols of binding cover every surface.', enemies: ['cultist', 'imp', 'cult-fanatic', 'hell-hound', 'lesser-demon'] },
   'ancient library':      { atmosphere: 'Shelves of rotting tomes stretch into shadow. Pages flutter with no wind.', enemies: ['flying-sword', 'shadow', 'animated-armor', 'specter', 'gibbering-mouther'] },
-  'petrified giant':      { atmosphere: 'The walls are organic — veins of stone pulse faintly. You\'re inside something.', enemies: ['swarm-of-rats', 'cave-spider', 'animated-armor', 'stone-sentinel'] },
+  'petrified giant':      { atmosphere: 'The walls are organic — veins of stone pulse faintly. You\'re inside something.', enemies: ['swarm-of-rats', 'giant-wolf-spider', 'animated-armor', 'stone-sentinel'] },
   'living dungeon':       { atmosphere: 'The corridors shift when you\'re not looking. The dungeon is alive.',   enemies: ['violet-fungus', 'shadow', 'animated-armor', 'gibbering-mouther'] },
   'dream prison':         { atmosphere: 'The geometry is wrong. Stairs lead sideways. Gravity is a suggestion.', enemies: ['shadow', 'specter', 'will-o-wisp', 'gibbering-mouther', 'banshee'] },
 });
@@ -257,7 +268,14 @@ export function generateDungeon(seed, opts = {}) {
 
     npcs.boss = buildEnemyNpc('boss', `room-${spineLen - 1}`, bossId, style, c, statBlockFor, { isBoss: true });
 
-    const enemyCount = rrandInt(1, Math.min(3, totalRooms - 2), rng);
+    // Enemy density scales with the dungeon instead of pinning at 3 — a
+    // 100-room delve used to ship one enemy per 23 rooms. Default keeps
+    // small dungeons byte-identical (max stays 3 below 32 rooms, so the
+    // rng draw is unchanged); `maxEnemies` is the host's dial.
+    const enemyCap = Math.max(1, Math.min(
+      opts.maxEnemies ?? Math.max(3, Math.floor(totalRooms / 8)),
+      totalRooms - 2));
+    const enemyCount = rrandInt(1, enemyCap, rng);
     const enemyRooms = rshuffle(Array.from({ length: totalRooms }, (_, i) => i).filter(i => i !== 0 && i !== spineLen - 1), rng).slice(0, enemyCount);
     for (let e = 0; e < enemyRooms.length; e++) {
       const frac = depthFraction(enemyRooms[e]);

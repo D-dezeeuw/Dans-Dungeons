@@ -39,10 +39,11 @@ import { modFromScore } from './checks.js';
  * Refresh tags for a resource counter.
  *   - `'short'` — refills on a Short Rest (and Long Rest).
  *   - `'long'`  — refills only on a Long Rest.
- *   - `'day'`   — refills only on a Long Rest, but tracked so a
- *                 future "Slow Natural Healing" / per-day pack can
- *                 split the contract from `'long'` without breaking
- *                 existing classes.
+ *   - `'day'`   — refills only on a Long Rest, but tracked so
+ *                 per-day packs (and rest variants like 2.15.0's
+ *                 `longRestHpRecovery: 'none'` Slow Natural Healing
+ *                 knob) can split the contract from `'long'`
+ *                 without breaking existing classes.
  */
 export const REFRESH_KINDS = Object.freeze(['short', 'long', 'day']);
 
@@ -159,7 +160,7 @@ export function refreshResources(actor, kind) {
     }
     // Partial recovery on Short Rest for `'long'`-tagged resources
     // that declare a `shortRestRecovery` count (Barbarian Rage,
-    // future Bard Font of Inspiration, etc.).
+    // Bard Font of Inspiration since 1.3.2, etc.).
     if (kind === 'short' && r.refreshes === 'long' && r.shortRestRecovery && r.used > 0) {
       const reduced = Math.max(0, r.used - r.shortRestRecovery);
       if (reduced !== r.used) {

@@ -1,12 +1,12 @@
 {
   "package": "@zeeuw/bag-of-holding",
-  "version": "2.5.1",
-  "commit": "abbcece",
+  "version": "3.10.1",
+  "commit": "8d8d0b5",
   "source": "../bag-of-holding",
-  "syncedAt": "2026-08-12",
+  "syncedAt": "2026-08-17",
   "patchedFiles": [],
   "fingerprint": {
-    "files": 57,
-    "digest": "c437122340d45bd5"
+    "files": 90,
+    "digest": "8e9702fe5e2bc546"
   }
 }

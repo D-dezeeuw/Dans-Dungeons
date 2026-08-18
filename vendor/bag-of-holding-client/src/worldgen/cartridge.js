@@ -6,11 +6,12 @@
 // the same cartridge get byte-identical lore. A session is a patch ledger over
 // this immutable base; nothing here is ever written after the bake.
 //
-// The cartridge deliberately bakes nothing beyond the tree + lore + slices —
-// no coordinates, no extra flags — so the envelope survives every phase of
-// doc 18 unchanged. Mounting an old cartridge in a newer client runs the
-// envelope migration chain; the migrated shape lives in the session, the
-// artifact stays untouched.
+// The cartridge bakes the tree + lore + slices, and (since v2) four content
+// collections — factions, npcs, warState, routes — that the worldgen depth
+// phases fill; nothing speculative beyond those, no coordinates, no extra
+// flags. Mounting an old cartridge in a newer client runs the envelope
+// migration chain; the migrated shape lives in the session, the artifact
+// stays untouched.
 //
 // A cartridge also records its SETTING. A host that re-skins the genre passes
 // its archetype tables, naming banks and stub hooks here, and the bake honours
@@ -26,11 +27,21 @@ import { deriveBlueprint } from './blueprint.js';
 import { hydrateNode } from './hydrate.js';
 import { wrapEnvelope, loadEnvelope, digest } from '../persistence/envelope.js';
 
-export const CARTRIDGE_VERSION = 1;
+export const CARTRIDGE_VERSION = 2;
 
-// Migrations from older cartridge formats. v1 is the first, so the chain is
-// empty; every future format change adds a step here, never edits artifacts.
-export const CARTRIDGE_MIGRATIONS = Object.freeze({});
+// Migrations from older cartridge formats. Each step MATERIALIZES the fields
+// its target version adds — an identity migration (`d => d`) would pass
+// loadEnvelope and then hand v2 readers `undefined` where they expect `[]`,
+// which is strictly worse than refusing. The four v2 collections land empty
+// here and get content from the depth phases (factions as tree entities, NPCs
+// with voice/wants, war state, red-thread routes); doing the format change
+// once, ahead of them, is what lets all five phases ship without ever touching
+// this file again. Key order matters: the digest is computed over
+// JSON.stringify(data), so the migration appends the new keys in exactly the
+// order bakeCartridge emits them.
+export const CARTRIDGE_MIGRATIONS = Object.freeze({
+  1: (d) => ({ ...d, factions: [], npcs: [], warState: null, routes: [] }),
+});
 
 // Bake a world: skeleton + lore + the derived blueprint slices for every
 // continent and province, with every continent/province minting its region
@@ -39,13 +50,27 @@ export const CARTRIDGE_MIGRATIONS = Object.freeze({});
 // hydrate real prose into continent/province outlines — the "detail ≤ 1"
 // cartridge that makes cold landings instant — instead of each one staying
 // at its deterministic hook text.
-export async function bakeCartridge(seed, { complete = null, eraCount = null, setting = null } = {}) {
+export async function bakeCartridge(seed, {
+  complete = null, eraCount = null, setting = null,
+  // The generation dials (all null = today's defaults, byte-identical):
+  // world size via the skeleton, power density via the lore. These are the
+  // knobs an admin surface exposes — one options bag, no hand-rolled bakes.
+  continents = null, provincesPer = null,
+  factionCount = null, npcsPerFaction = null, legendCount = null,
+} = {}) {
   const { id: settingId = null, tables = null, syllables = null, hooks = null } = setting ?? {};
-  const sk = mintWorldSkeleton(seed, { syllables, hooks });
+  const sk = mintWorldSkeleton(seed, { continents, provincesPer, syllables, hooks });
   let geo = sk.geo;
-  const lore = mintLore(sk, seed, { eraCount });
 
+  // The world blueprint rolls BEFORE the lore so its faction archetypes feed
+  // the faction stubs — a host's setting tables re-skin the powers the same
+  // way they re-skin everything else. Order is safe: both are pure and draw
+  // from independent seeded streams.
   const world = deriveBlueprint(null, seed, 'world', { tables });
+  const lore = mintLore(sk, seed, {
+    eraCount, factionSlots: world.factionSlots,
+    factionCount, npcsPerFaction, legendCount,
+  });
   const slices = { [`world`]: world };
   for (const cId of sk.continents) {
     const cNode = geo.nodes[cId];
@@ -79,15 +104,24 @@ export async function bakeCartridge(seed, { complete = null, eraCount = null, se
     if (!out.provisional) outlines[id] = out.result;
   }
 
+  const { factions = [], warState = null, npcs = [], ...loreCore } = lore;
   const data = {
     seed,
     settingId,
     geo,
     continents: sk.continents,
     provinces: sk.provinces,
-    lore,
+    lore: loreCore,
     slices,
     outlines,
+    // v2 collections. Factions, the war state and the powers' faces are
+    // minted at genesis (the powers precede the player, and they have names);
+    // routes stay empty until their phase. Key order is part of the format —
+    // same keys, same order as MIGRATIONS[1] materializes for v1 artifacts.
+    factions,
+    npcs,
+    warState,
+    routes: [],
   };
   const body = wrapEnvelope(data, CARTRIDGE_VERSION);
   return { ...body, c: digest(JSON.stringify(data)) };

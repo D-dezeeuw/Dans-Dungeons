@@ -41,6 +41,15 @@ Every feature request follows this loop (no PRs — direct merge to `main`):
   stays runnable with an empty `node_modules`). Runtime libraries (Spektrum, bag-of-holding, bag-of-holding-client) are **vendored** under `vendor/` — nothing loads from a CDN. Sync them with `node scripts/vendor-sync.js`, which stamps a `VENDOR.json` manifest; `--check` fails CI when vendored files drift from it. Never hand-patch `vendor/` — patch the sibling repo and re-sync.
 - **esbuild bundles for prod.** `node build.js` produces `vendor/app.bundle.js`, stamps the git hash into `vendor/app.version` and `sw.js`. GitHub Pages serves the bundle.
 - **BYOK, and no secrets in the bundle.** The player provides their own OpenRouter key, stored in `localStorage`, sent only to the configured base URL. A shared demo key can be injected at build time via `DD_DEMO_KEY` (see `src/ai/demo-key.js`) but defaults to `null`; a browser bundle cannot keep a secret, so any such key must be treated as public.
+- **…or a tenant key.** The setup step also takes a token from a hosted
+  `bag-of-holding-mcp` deployment (`src/ai/relay.js` + `connectTenant` in
+  `src/ai/client.js`): the base URL becomes that deployment's relay
+  (`/mcp/<token>/v1`), the operator's account pays inside the tier's token
+  budget, and `ai.credential` says which of the two a session is on. Speech
+  stays off on a hosted table whatever the tier — the relay carries
+  completions, not `audio/*` — and the cost meter shows tokens, not the host's
+  money. `DD_TENANT_URL` names a default deployment at build time; it is not a
+  credential.
 - **Model ids rot.** Defaults live in the client library and are healed against the provider catalog at boot; `node scripts/check-models.js` (weekly in CI) fails when a configured id is delisted.
 
 ### Module map
@@ -55,7 +64,7 @@ src/
 │   └── utils.js          escHtml and other small helpers
 ├── game/
 │   ├── flow.js           Game lifecycle FSM: play loop, towns, travel, end states
-│   ├── session-setup.js  Key acquisition (OAuth/paste/demo), tier, model healing
+│   ├── session-setup.js  Credential acquisition (OAuth/provider key/tenant key/demo), tier, model healing
 │   ├── views.js          Read-only screens: /story, region map, quests, inventory
 │   ├── loop.js           Turn engine: classify → resolve → narrate → commit
 │   ├── preclassify.js    Deterministic intent shortcuts before the LLM classifier
@@ -99,6 +108,7 @@ src/
 │   ├── errors.js         AI error taxonomy: retryable vs terminal, user wording
 │   ├── tiers.js          Pricing tier → model set (tables live in the client lib)
 │   ├── demo-key.js       Optional build-injected demo credential (null by default)
+│   ├── relay.js          Tenant-key shapes, tier mapping, probe reading (pure)
 │   ├── auth.js           OpenRouter OAuth redirect + code exchange
 │   ├── spend.js          Real cumulative spend (outside replayable history)
 │   ├── tts.js            Text-to-speech playback (provider call in the client lib)

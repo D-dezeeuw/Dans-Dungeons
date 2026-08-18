@@ -60,7 +60,27 @@ export const DEFAULT_RULES = Object.freeze({
    *  - `'half'` (default) matches SRD 5.2 § Long Rest.
    *  - `'all'`  — heroic packs restore them all.
    *  - `'none'` — gritty packs (DMG Slow Natural Healing). */
-  longRestHitDiceRecovery: 'half'
+  longRestHitDiceRecovery: 'half',
+
+  /** How much HP comes back on a Long Rest (since 2.15.0).
+   *  - `'full'` (default) — SRD baseline: hp to max.
+   *  - `'none'` — Slow Natural Healing proper: no free hp; the table
+   *    heals by spending Hit Dice (which still recover per the knob
+   *    above). */
+  longRestHpRecovery: 'full',
+
+  /** When true, spending a Hit Die requires the actor to have been
+   *  tended with a Healer's Kit first (`actor.healersKitTended`,
+   *  stamped by the host when a kit charge is spent). Off by default
+   *  (the DMG "Healer's Kit Dependency" variant). Since 2.15.0. */
+  hitDiceRequireHealersKit: false,
+
+  /** Rest pacing (since 2.15.0). `'standard'` = 1-hour short /
+   *  8-hour long; `'gritty'` = 8-hour short / week-long long (the
+   *  DMG Gritty Realism variant). Consumed by `Rest.restDurations` —
+   *  the engine keeps no clock, so the knob's consumer is the
+   *  query the host schedules by. */
+  restDurationScale: 'standard'
 });
 
 const isIntegerInRange = (v, min, max) =>
@@ -133,6 +153,19 @@ export function buildRules(extras = {}) {
       throw new Error("rules.longRestHitDiceRecovery must be 'half', 'all', or 'none'");
     }
   }
+  if (extras.longRestHpRecovery !== undefined) {
+    if (!['full', 'none'].includes(extras.longRestHpRecovery)) {
+      throw new Error("rules.longRestHpRecovery must be 'full' or 'none'");
+    }
+  }
+  if (extras.hitDiceRequireHealersKit !== undefined && typeof extras.hitDiceRequireHealersKit !== 'boolean') {
+    throw new Error('rules.hitDiceRequireHealersKit must be a boolean');
+  }
+  if (extras.restDurationScale !== undefined) {
+    if (!['standard', 'gritty'].includes(extras.restDurationScale)) {
+      throw new Error("rules.restDurationScale must be 'standard' or 'gritty'");
+    }
+  }
 
   return Object.freeze({
     critOn: Object.freeze([...(extras.critOn ?? DEFAULT_RULES.critOn)]),
@@ -143,6 +176,9 @@ export function buildRules(extras = {}) {
     proficiencyByLevel: extras.proficiencyByLevel == null ? DEFAULT_RULES.proficiencyByLevel : Object.freeze({ ...extras.proficiencyByLevel }),
     deathSaveDC: extras.deathSaveDC ?? DEFAULT_RULES.deathSaveDC,
     deathSaveSuccessesRequired: extras.deathSaveSuccessesRequired ?? DEFAULT_RULES.deathSaveSuccessesRequired,
-    longRestHitDiceRecovery: extras.longRestHitDiceRecovery ?? DEFAULT_RULES.longRestHitDiceRecovery
+    longRestHitDiceRecovery: extras.longRestHitDiceRecovery ?? DEFAULT_RULES.longRestHitDiceRecovery,
+    longRestHpRecovery: extras.longRestHpRecovery ?? DEFAULT_RULES.longRestHpRecovery,
+    hitDiceRequireHealersKit: extras.hitDiceRequireHealersKit ?? DEFAULT_RULES.hitDiceRequireHealersKit,
+    restDurationScale: extras.restDurationScale ?? DEFAULT_RULES.restDurationScale
   });
 }

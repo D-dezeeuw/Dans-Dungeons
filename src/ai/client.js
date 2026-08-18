@@ -7,8 +7,10 @@
 
 import { appState, addValue } from '../core/state.js';
 import { checkKey as libCheckKey, call as libCall, chatStream,
-         repairJson as libRepair, chatCompletion as libChat } from 'bag-of-holding-client';
+         repairJson as libRepair, chatCompletion as libChat,
+         probeRelay, tenantConfig, relayBaseUrl } from 'bag-of-holding-client';
 import { DEFAULT_MODELS, FREE_FALLBACKS } from './tiers.js';
+import { interpretProbe } from './relay.js';
 import { addSpend } from './spend.js';
 
 const APP_TITLE = "Dan's Dungeons";
@@ -41,6 +43,29 @@ const cfg = aiConfig;
 // ─── Historical surface (kept stable for the other ai/* + game modules) ───────
 
 export function checkKey()                  { return libCheckKey(cfg()); }
+
+/**
+ * Ask a hosted deployment whether this tenant token can play, and on what.
+ *
+ * The I/O half of ../ai/relay.js — here rather than there because this is the
+ * module that already owns talking to a provider, and because a module that
+ * imports the client library cannot be reached by `node --test` (the bare
+ * specifier resolves through an esbuild alias). The decisions stay pure in
+ * relay.js; this only carries them over the network.
+ */
+export async function connectTenant(serverUrl, token) {
+  let config;
+  let baseUrl;
+  try {
+    baseUrl = relayBaseUrl(serverUrl, token);
+    config = tenantConfig({ serverUrl, token });
+  } catch {
+    // A URL that cannot even be formed — nothing was asked of the network.
+    return { ok: false, reason: 'bad-url' };
+  }
+  const verdict = interpretProbe(await probeRelay(config));
+  return verdict.ok ? { ...verdict, baseUrl } : verdict;
+}
 export function _call(opts)                 { return libCall(cfg(opts?.tier), opts); }
 export function _callStream(opts, onChunk)  { return chatStream(cfg(opts?.tier), opts, onChunk, { field: 'narration' }); }
 export function repairJson(raw, baseOpts, messages) { return libRepair(cfg(baseOpts?.tier), raw, { ...baseOpts, messages }); }

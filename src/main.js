@@ -46,17 +46,30 @@ async function boot() {
   const renderSpend = (s) => {
     const el = document.getElementById('cost-meter');
     if (!el) return;
-    el.textContent   = s.tokens > 0 ? '$' + s.costUsd.toFixed(4) + ' · ' + s.tokens.toLocaleString() + ' tok' : '';
+    // On a hosted table the money is the host's, not the player's. Showing them
+    // a running dollar figure they do not owe — and warning them against a cap
+    // that meters somebody else's account — would be worse than showing
+    // nothing. Tokens are the number that still means something to them: it is
+    // what their table's allowance is counted in.
+    const hosted = appState.ai?.credential === 'tenant';
+    const tokens = s.tokens.toLocaleString() + ' tok';
+    el.textContent   = s.tokens > 0 ? (hosted ? tokens : '$' + s.costUsd.toFixed(4) + ' · ' + tokens) : '';
     el.style.display = s.tokens > 0 ? '' : 'none';
     // The per-tier split lives in the tooltip: the running total never showed
     // that a sketch costs many times the paragraph it illustrates.
     const parts = TIERS
       .filter(k => (s.byTier?.[k]?.tokens ?? 0) > 0 || (s.byTier?.[k]?.costUsd ?? 0) > 0)
-      .map(k => `${k}: $${(s.byTier[k].costUsd).toFixed(4)}`);
-    el.title = parts.length ? parts.join(' · ') : '';
+      .map(k => hosted
+        ? `${k}: ${(s.byTier[k].tokens ?? 0).toLocaleString()} tok`
+        : `${k}: $${(s.byTier[k].costUsd).toFixed(4)}`);
+    el.title = hosted
+      ? [t('budget.hosted'), ...parts].join(' · ')
+      : (parts.length ? parts.join(' · ') : '');
 
     // Soft budget cap: warn once per threshold, never interrupt a campaign.
-    const warn = budgetWarningDue();
+    // Not on a hosted table — the cap is denominated in the player's money, and
+    // there is none of it being spent here.
+    const warn = hosted ? null : budgetWarningDue();
     if (warn) UI.appendEntry('system', t(warn.level >= 100 ? 'budget.over' : 'budget.near', {
       spent: warn.spentUsd.toFixed(2), cap: warn.capUsd.toFixed(2),
     }));

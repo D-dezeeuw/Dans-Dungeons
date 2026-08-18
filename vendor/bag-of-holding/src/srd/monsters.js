@@ -772,5 +772,203 @@ export default {
     conditionImmunities: ['charmed', 'exhaustion', 'frightened', 'paralyzed', 'poisoned'],
     languages: ['the languages it knew in life'],
     traits: ['Magic Resistance', 'Rejuvenation', 'Spellcasting (Wis)']
+  },
+
+  // === 2.6.0 additions: SRD-listed blocks that downstream creature
+  // pools (the client's dungeon overlays) already referenced by id.
+  // These ids used to resolve to nothing — the overlay silently
+  // filtered them and rooms lost their intended enemies. All eight
+  // names are SRD-listed; numbers transcribed from the 2014 (5.1)
+  // blocks unless marked verified — same EDITION HONESTY rule as
+  // the rest of this file.
+  bugbear: {
+    id: 'bugbear', name: 'Bugbear',
+    cr: 1, ac: 16, hp: 27,
+    size: 'medium', speed: 30,
+    abilityScores: { str: 15, dex: 14, con: 13, int: 8, wis: 11, cha: 9 },
+    attacks: [
+      { name: 'Morningstar', attackBonus: 4, damage: '2d8+2', damageType: 'piercing' },
+      { name: 'Javelin', attackBonus: 4, damage: '1d6+2', damageType: 'piercing' }
+    ],
+    senses: { darkvision: 60 },
+    skills: { stealth: 6 },
+    traits: ['Brute', 'Surprise Attack']
+  },
+  shadow: {
+    id: 'shadow', name: 'Shadow',
+    cr: 0.5, ac: 12, hp: 16,
+    size: 'medium', speed: 40,
+    abilityScores: { str: 6, dex: 14, con: 13, int: 6, wis: 10, cha: 8 },
+    attacks: [{ name: 'Strength Drain', attackBonus: 4, damage: '2d6+2', damageType: 'necrotic' }],
+    senses: { darkvision: 60 },
+    skills: { stealth: 4 },
+    damageImmunities: ['necrotic', 'poison'],
+    conditionImmunities: ['exhaustion', 'frightened', 'grappled', 'paralyzed', 'petrified', 'poisoned', 'prone', 'restrained'],
+    traits: ['Amorphous', 'Shadow Stealth', 'Sunlight Weakness']
+  },
+  'giant-rat': {
+    id: 'giant-rat', name: 'Giant Rat',
+    cr: 0.125, ac: 12, hp: 7,
+    size: 'small', speed: 30,
+    abilityScores: { str: 7, dex: 15, con: 11, int: 2, wis: 10, cha: 4 },
+    attacks: [{ name: 'Bite', attackBonus: 4, damage: '1d4+2', damageType: 'piercing' }],
+    senses: { darkvision: 60 },
+    traits: ['Keen Smell', 'Pack Tactics']
+  },
+  'animated-armor': {
+    id: 'animated-armor', name: 'Animated Armor',
+    cr: 1, ac: 18, hp: 33,
+    size: 'medium', speed: 25,
+    abilityScores: { str: 14, dex: 11, con: 13, int: 1, wis: 3, cha: 1 },
+    attacks: [{ name: 'Slam', attackBonus: 4, damage: '1d6+2', damageType: 'bludgeoning' }],
+    multiattack: { attacks: [
+      { name: 'Slam', attackRef: 0 },
+      { name: 'Slam', attackRef: 0 }
+    ] },
+    senses: { blindsight: 60 },
+    damageImmunities: ['poison', 'psychic'],
+    conditionImmunities: ['blinded', 'charmed', 'deafened', 'exhaustion', 'frightened', 'paralyzed', 'petrified', 'poisoned'],
+    traits: ['Antimagic Susceptibility', 'False Appearance']
+  },
+  'flying-sword': {
+    // SRD 5.2 names this "Animated Flying Sword"; the id stays
+    // `flying-sword` because downstream pools reference it.
+    id: 'flying-sword', name: 'Animated Flying Sword',
+    cr: 0.25, ac: 17, hp: 17,
+    size: 'small', speed: 0,
+    flySpeed: 50,
+    abilityScores: { str: 12, dex: 15, con: 11, int: 1, wis: 5, cha: 1 },
+    attacks: [{ name: 'Longsword', attackBonus: 3, damage: '1d8+1', damageType: 'slashing' }],
+    senses: { blindsight: 60 },
+    damageImmunities: ['poison', 'psychic'],
+    conditionImmunities: ['blinded', 'charmed', 'deafened', 'exhaustion', 'frightened', 'paralyzed', 'petrified', 'poisoned'],
+    traits: ['Antimagic Susceptibility', 'False Appearance']
+  },
+  'will-o-wisp': {
+    id: 'will-o-wisp', name: 'Will-o\'-Wisp',
+    cr: 2, ac: 19, hp: 22,
+    size: 'tiny', speed: 0,
+    flySpeed: 50,
+    abilityScores: { str: 1, dex: 28, con: 10, int: 13, wis: 14, cha: 11 },
+    attacks: [{ name: 'Shock', attackBonus: 4, damage: '2d8', damageType: 'lightning' }],
+    senses: { darkvision: 120 },
+    damageImmunities: ['lightning', 'poison'],
+    conditionImmunities: ['exhaustion', 'grappled', 'paralyzed', 'poisoned', 'prone', 'restrained', 'unconscious'],
+    traits: ['Consume Life', 'Ephemeral', 'Incorporeal Movement', 'Variable Illumination']
+  },
+  'gibbering-mouther': {
+    id: 'gibbering-mouther', name: 'Gibbering Mouther',
+    cr: 2, ac: 9, hp: 67,
+    size: 'medium', speed: 10,
+    abilityScores: { str: 10, dex: 8, con: 16, int: 3, wis: 10, cha: 6 },
+    // Blinding Spittle is a save-based effect with no damage — modelled
+    // as a trait; the host narrates the blind, the engine has no zero-
+    // damage attack shape.
+    attacks: [{ name: 'Bite', attackBonus: 2, damage: '5d6', damageType: 'piercing' }],
+    senses: { darkvision: 60 },
+    conditionImmunities: ['prone'],
+    traits: ['Aberrant Ground', 'Gibbering', 'Blinding Spittle (save-based)']
+  },
+  'giant-wolf-spider': {
+    // The SRD-listed stand-in for the invented `cave-spider` id the
+    // client overlays used to carry (renamed client-side in 0.25.0).
+    id: 'giant-wolf-spider', name: 'Giant Wolf Spider',
+    cr: 0.25, ac: 13, hp: 11,
+    size: 'medium', speed: 40,
+    abilityScores: { str: 12, dex: 16, con: 13, int: 3, wis: 12, cha: 4 },
+    attacks: [{ name: 'Bite', attackBonus: 3, damage: '1d6+1', damageType: 'piercing' }],
+    senses: { blindsight: 10, darkvision: 60 },
+    skills: { stealth: 7 },
+    traits: ['Spider Climb', 'Web Sense', 'Web Walker']
+  },
+
+  // === 3.10.0 additions: the second SRD gap sweep. A cross-repo
+  // check (mcp repo, overlay-resolution test) found these five
+  // SRD-listed ids still referenced by the client's dungeon overlay
+  // pools with no block in ANY registry — base, Bestiary I-III or
+  // Quiet Stair. Same EDITION HONESTY rule: numbers transcribed from
+  // the 2014 (5.1) blocks unless marked verified.
+  'swarm-of-rats': {
+    id: 'swarm-of-rats', name: 'Swarm of Rats',
+    cr: 0.25, ac: 10, hp: 24,
+    size: 'medium', speed: 30,
+    abilityScores: { str: 9, dex: 11, con: 9, int: 2, wis: 10, cha: 3 },
+    // The swarm's bite halves (2d6 → 1d6) below half HP — modelled as
+    // a trait; the engine has no HP-conditional attack shape.
+    attacks: [{ name: 'Bites', attackBonus: 2, damage: '2d6', damageType: 'piercing' }],
+    senses: { darkvision: 30 },
+    damageResistances: ['bludgeoning', 'piercing', 'slashing'],
+    conditionImmunities: ['charmed', 'frightened', 'grappled', 'paralyzed', 'petrified', 'prone', 'restrained', 'stunned'],
+    traits: ['Keen Smell', 'Swarm (occupies another creature\'s space; cannot regain HP or gain temp HP; Bites halve below half HP)']
+  },
+  'magma-mephit': {
+    id: 'magma-mephit', name: 'Magma Mephit',
+    cr: 0.5, ac: 11, hp: 22,
+    size: 'small', speed: 30,
+    flySpeed: 30,
+    abilityScores: { str: 8, dex: 12, con: 12, int: 7, wis: 10, cha: 10 },
+    // Claws carry a fire rider (+1d4 fire) and Fire Breath is a
+    // save-based cone — both modelled as traits, same rule as the
+    // gibbering mouther's spittle.
+    attacks: [{ name: 'Claws', attackBonus: 3, damage: '1d4+1', damageType: 'slashing' }],
+    senses: { darkvision: 60 },
+    damageVulnerabilities: ['cold'],
+    damageImmunities: ['fire', 'poison'],
+    languages: ['Primordial'],
+    // 5.1 gives it innate Heat Metal 1/day; that spell is not in the
+    // registry yet, so it rides as a trait rather than a dangling id.
+    traits: ['Death Burst (2d6 fire on death, DC 11 Dex half)', 'False Appearance', 'Claws carry +1d4 fire', 'Fire Breath (recharge 6, 15-ft cone, 2d6 fire, DC 11 Dex half)', 'Innate: Heat Metal 1/day (spell not yet in registry)']
+  },
+  'ice-mephit': {
+    id: 'ice-mephit', name: 'Ice Mephit',
+    cr: 0.5, ac: 11, hp: 21,
+    size: 'small', speed: 30,
+    flySpeed: 30,
+    abilityScores: { str: 7, dex: 13, con: 10, int: 9, wis: 11, cha: 12 },
+    attacks: [{ name: 'Claws', attackBonus: 3, damage: '1d4+1', damageType: 'slashing' }],
+    senses: { darkvision: 60 },
+    skills: { perception: 2, stealth: 3 },
+    damageVulnerabilities: ['bludgeoning', 'fire'],
+    damageImmunities: ['cold', 'poison'],
+    languages: ['Primordial'],
+    innateSpellcasting: { '1day': ['fog-cloud'] },
+    traits: ['Death Burst (radius frost, DC 10 Con or 2d6 cold)', 'False Appearance', 'Claws carry +1d4 cold', 'Frost Breath (recharge 6, 15-ft cone, 2d4 cold, DC 10 Dex half)']
+  },
+  'vampire-spawn': {
+    id: 'vampire-spawn', name: 'Vampire Spawn',
+    cr: 5, ac: 15, hp: 82,
+    size: 'medium', speed: 30,
+    abilityScores: { str: 16, dex: 16, con: 16, int: 11, wis: 10, cha: 12 },
+    saves: { dex: 6, wis: 3 },
+    attacks: [
+      { name: 'Bite', attackBonus: 6, damage: '1d6+3', damageType: 'piercing' },
+      { name: 'Claws', attackBonus: 6, damage: '2d4+3', damageType: 'slashing' }
+    ],
+    // Multiattack: two attacks, only one of which can be a Bite; the
+    // Bite also drains 2d6 necrotic (host-narrated rider).
+    multiattack: { attacks: [
+      { name: 'Claws', attackRef: 1 },
+      { name: 'Bite', attackRef: 0 }
+    ] },
+    senses: { darkvision: 60 },
+    skills: { perception: 3, stealth: 6 },
+    damageResistances: ['necrotic', 'nonmagical bludgeoning, piercing, and slashing'],
+    traits: ['Regeneration (10 HP at turn start unless in sunlight or running water)', 'Spider Climb', 'Vampire Weaknesses (sunlight, running water, forbiddance, stake)', 'Bite drains 2d6 necrotic and heals the spawn']
+  },
+  'violet-fungus': {
+    id: 'violet-fungus', name: 'Violet Fungus',
+    cr: 0.25, ac: 5, hp: 18,
+    size: 'medium', speed: 5,
+    abilityScores: { str: 3, dex: 1, con: 10, int: 1, wis: 3, cha: 1 },
+    attacks: [{ name: 'Rotting Touch', attackBonus: 2, damage: '1d8', damageType: 'necrotic' }],
+    // 5.1 rolls 1d4 Rotting Touches per turn; the engine's fixed
+    // multiattack shape pins two, the median.
+    multiattack: { attacks: [
+      { name: 'Rotting Touch', attackRef: 0 },
+      { name: 'Rotting Touch', attackRef: 0 }
+    ] },
+    senses: { blindsight: 30 },
+    conditionImmunities: ['blinded', 'deafened', 'frightened'],
+    traits: ['False Appearance', 'Blind beyond blindsight radius']
   }
 };

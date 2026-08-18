@@ -27,10 +27,17 @@ await esbuild.build({
   // (src/ai/demo-key.js). They come from the environment and default to null,
   // so a normal build — and everything CI publishes — ships NO credential.
   // Never hardcode a key here: a browser bundle cannot keep a secret.
+  //
+  // TENANT_URL is not a credential and is the one of the three that may safely
+  // ship: it names the hosted deployment this build offers by default, so a
+  // player pasting a tenant key is not asked which server it belongs to. The
+  // URL alone opens nothing — every unknown token there is a 404. Unset, a
+  // tenant player is simply asked for their host's address.
   define: {
     __APP_VERSION__: JSON.stringify(version),
     DEMO_KEY:        JSON.stringify(process.env.DD_DEMO_KEY      ?? null),
     DEMO_BASE_URL:   JSON.stringify(process.env.DD_DEMO_BASE_URL ?? null),
+    TENANT_URL:      JSON.stringify(process.env.DD_TENANT_URL    ?? null),
   },
   logLevel: 'info',
 });

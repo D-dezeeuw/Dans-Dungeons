@@ -79,6 +79,9 @@ describe('every capability has a consumer', () => {
     ['settingSlice',      'src/settings/index.js',          'one pack→library mapping for live genesis and baked worlds alike'],
     ['packAuthors',       'src/settings/index.js',          'a pack that writes its own treasures owning its vault'],
     ['packTagline',       'src/settings/packs.js',          'the wizard naming what each world is'],
+    ['interpretProbe',    'src/ai/relay.js',                'a tenant key being checked against its table'],
+    ['connectTenant',     'src/ai/client.js',               'the wizard accepting a tenant key, not just a provider key'],
+    ['pricingTierFor',    'src/ai/relay.js',                'a hosted table\'s tier deciding what the app unlocks'],
   ];
 
   for (const [symbol, definedIn, powers] of WIRED) {

@@ -523,6 +523,22 @@ export function ability(state, actor, args = {}) {
   if (!['search', 'study', 'influence'].includes(kind)) {
     return { allowed: false, reason: 'args.kind must be search / study / influence' };
   }
+  return abilityAction(state, actor, kind);
+}
+
+/**
+ * SRD § Combat — Influence, as a NAMED verb. `ability({ kind:
+ * 'influence' })` has been the mechanism since 1.7.0, but Help got a
+ * named verb and Influence got a string constant — asymmetric for the
+ * pair the social-scene surface leads with. Same semantics: spend the
+ * action, log it, hand the CHA/WIS check back to the host.
+ * (Search/Study stay on `ability`; nothing headlines them.)
+ */
+export function influence(state, actor) {
+  return abilityAction(state, actor, 'influence');
+}
+
+function abilityAction(state, actor, kind) {
   const r = spend(state, actor.id, 'action');
   if (!r.allowed) return r;
   return {

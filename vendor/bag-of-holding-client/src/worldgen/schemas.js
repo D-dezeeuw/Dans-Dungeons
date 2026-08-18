@@ -103,6 +103,27 @@ export const NPC_SCHEMA = {
   additionalProperties: false,
 };
 
+// The face of a power — a WORLD npc (data.npcs), distinct from the
+// settlement-scoped NPC_SCHEMA above: kings and leaders link to entities by
+// id (`seatOf` a crown, `leads` a faction) and carry a voice the DM performs
+// and wants the engine can check, not an innkeeper's greeting.
+export const WORLD_NPC_SCHEMA = {
+  type: 'object',
+  properties: {
+    id:          { type: 'string' },
+    name:        { type: 'string' },
+    role:        { type: 'string', enum: ['sovereign', 'leader'] },
+    voice:       { type: 'string' },
+    wants:       { type: 'array', items: { type: 'string' } },
+    seatOf:      { type: ['string', 'null'] },
+    leads:       { type: ['string', 'null'] },
+    description: { type: 'string' },
+    digest:      { type: 'string' },
+  },
+  required: ['id', 'name', 'role', 'voice', 'wants', 'seatOf', 'leads', 'description', 'digest'],
+  additionalProperties: false,
+};
+
 export const FACTION_SCHEMA = {
   type: 'object',
   properties: {
@@ -128,6 +149,7 @@ export const BEAT_SCHEMA = {
     prerequisites:         { type: 'array', items: { type: 'string' } },
     setRequiredFlags:      { type: 'array', items: { type: 'string' } },
     preferredLocation:     { type: ['string', 'null'] },
+    cast:                  { type: 'array', items: { type: 'string' } },
     requiredArchetypes: {
       type: 'array',
       items: {
@@ -142,7 +164,7 @@ export const BEAT_SCHEMA = {
     },
     successors: { type: 'array', items: { type: 'string' } },
   },
-  required: ['id', 'dramaticPurpose', 'targetPlaytimeMinutes', 'prerequisites', 'setRequiredFlags', 'preferredLocation', 'requiredArchetypes', 'successors'],
+  required: ['id', 'dramaticPurpose', 'targetPlaytimeMinutes', 'prerequisites', 'setRequiredFlags', 'preferredLocation', 'cast', 'requiredArchetypes', 'successors'],
   additionalProperties: false,
 };
 
@@ -249,7 +271,10 @@ export const CROWN_SCHEMA = {
         type: 'object',
         properties: {
           factionId: { type: 'string' },
-          stance:    { type: 'string', enum: ['ally', 'rival', 'puppet', 'defiant'] },
+          // 'sovereign' — this crown IS the faction's throne, the stored fact
+          // that makes "the King of Faction A" a bindable target. At most one
+          // sovereign per crown (enforced at genesis by bindCrownsToFactions).
+          stance:    { type: 'string', enum: ['sovereign', 'ally', 'rival', 'puppet', 'defiant'] },
         },
         required: ['factionId', 'stance'],
         additionalProperties: false,

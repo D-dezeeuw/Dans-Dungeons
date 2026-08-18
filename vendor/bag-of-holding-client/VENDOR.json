@@ -1,12 +1,12 @@
 {
   "package": "@zeeuw/bag-of-holding-client",
-  "version": "0.14.0",
-  "commit": "0383203",
+  "version": "0.35.0",
+  "commit": "8c5948f",
   "source": "../bag-of-holding-client",
-  "syncedAt": "2026-08-12",
+  "syncedAt": "2026-08-17",
   "patchedFiles": [],
   "fingerprint": {
-    "files": 35,
-    "digest": "57bad80ead1bba2e"
+    "files": 44,
+    "digest": "317d170a8c1924da"
   }
 }

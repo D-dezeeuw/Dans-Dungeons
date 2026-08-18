@@ -36,9 +36,18 @@ import { refreshResources } from './mechanics.js';
  * actor has no Hit Dice left to spend, matching "spent none"
  * semantics rather than throwing on the boundary case.
  */
-export function spendHitDie(actor, rng = Math.random) {
+export function spendHitDie(actor, rng = Math.random, rules = DEFAULT_RULES) {
   if (!Number.isInteger(actor.hitDie) || actor.hitDie < 1) {
     throw new Error('spendHitDie: actor.hitDie must be a positive integer');
+  }
+  // Healer's Kit Dependency variant (since 2.15.0): untended wounds
+  // don't close. The host stamps `healersKitTended` when a kit charge
+  // is spent on the actor; without it, the die stays unspent.
+  if (rules.hitDiceRequireHealersKit === true && actor.healersKitTended !== true) {
+    return {
+      healed: 0, hpAfter: actor.hp ?? 0, actor,
+      reason: "healer's kit dependency: the actor has not been tended this rest"
+    };
   }
   const total = actor.hitDiceTotal ?? actor.level ?? 0;
   const used = actor.hitDiceUsed ?? 0;
@@ -108,7 +117,11 @@ export function longRest(actor, rules = DEFAULT_RULES, opts = {}) {
   // doesn't strand them at a lower value than they started with.
   const hpMax = actor.hpMax ?? actor.hp ?? 0;
 
-  let next = { ...actor, hp: hpMax, hitDiceUsed: nextUsed };
+  // Slow Natural Healing (since 2.15.0): `longRestHpRecovery: 'none'`
+  // withholds the free hp — the table heals by spending the Hit Dice
+  // that still recover below.
+  const hp = rules.longRestHpRecovery === 'none' ? (actor.hp ?? 0) : hpMax;
+  let next = { ...actor, hp, hitDiceUsed: nextUsed };
 
   if (next.deathSaves) next = { ...next, deathSaves: freshDeathSaves() };
   next = exhaustion.reduce(next, 1);
@@ -140,4 +153,16 @@ export function shortRest(actor) {
   }
   next = refreshResources(next, 'short');
   return next;
+}
+
+/**
+ * Rest durations in hours under the current rules (since 2.15.0).
+ * The engine keeps no clock — this is the query the host schedules
+ * by. `'standard'` = SRD baseline (1 / 8); `'gritty'` = the Gritty
+ * Realism variant (8-hour short rest, week-long long rest).
+ */
+export function restDurations(rules = DEFAULT_RULES) {
+  return rules.restDurationScale === 'gritty'
+    ? { shortRestHours: 8, longRestHours: 168 }
+    : { shortRestHours: 1, longRestHours: 8 };
 }

@@ -93,9 +93,26 @@
   },
   "setup": {
     "gameName": "Dan's Dungeons",
-    "needKey": "Om te spelen heb je een gratis OpenRouter API-sleutel nodig.",
+    "needKey": "Om te spelen heb je een gratis OpenRouter API-sleutel nodig — of een tenant-sleutel van wie jouw tafel host.",
     "signUp": "Meld je aan op openrouter.ai → API Keys.",
     "pasteKey": "Plak je OpenRouter API-sleutel:",
+    "pasteCredential": "Plak je OpenRouter API-sleutel of tenant-sleutel:",
+    "notAProviderKey": "Dit is geen OpenRouter-sleutel. Ik probeer het als tenant-sleutel…",
+    "tenantUrlWhy": "Een tenant-sleutel hoort bij één gehoste tafel, dus ik heb het adres ervan nodig.",
+    "tenantUrlAsk": "Adres van de server van je tafel (bijv. https://boh.example.com):",
+    "tenantNoUrl": "Zonder serveradres kan een tenant-sleutel niet gecontroleerd worden.",
+    "tenantConnecting": "Verbinden met je tafel…",
+    "tenantConnected": "Verbonden met je tafel op het {{tier}}-niveau. Je host betaalt de AI; je hoeft geen sleutel toe te voegen.",
+    "tenantFreeTier": "Op het gratis niveau blijven scènebeelden en spraak uit. Vraag je host om een hoger niveau als je die wilt.",
+    "tenantTierChanged": "Je host heeft deze tafel van {{from}} naar {{to}} verplaatst.",
+    "tenantUpgradeAsk": "Deze tafel zit op het {{tier}}-niveau. Alleen je host kan dat wijzigen — vraag het hen en open daarna Instellingen opnieuw.",
+    "tenant": {
+      "rejected": "De server van je tafel kent die tenant-sleutel niet. Vraag je host om een nieuwe.",
+      "unreachable": "De server van je tafel gaf geen antwoord. Controleer het adres en je verbinding en probeer het opnieuw.",
+      "notARelay": "Er antwoordde iets op dat adres, maar het is geen bag-of-holding-server.",
+      "relayOff": "Die tenant-sleutel werkt, maar de server van je tafel levert de AI niet. Plak in plaats daarvan een OpenRouter-sleutel.",
+      "badUrl": "Dat serveradres kon niet gelezen worden. Het hoort te lijken op https://boh.example.com."
+    },
     "defaultUrl": "Standaard basis-URL: {{url}}",
     "customUrl": "Aangepaste basis-URL (druk op Enter voor standaard):",
     "keySaved": "Sleutel opgeslagen. Je kunt deze later wijzigen met /settings.",
@@ -1225,6 +1242,8 @@
   "error": {
     "auth": "Je API-sleutel is geweigerd (401). Open Instellingen en controleer de sleutel, of log opnieuw in.",
     "credit": "Je OpenRouter-tegoed is op (402). Vul het aan op openrouter.ai — opnieuw proberen helpt pas daarna.",
+    "tableBudget": "Het AI-tegoed van je tafel is voor nu op (402). Het vult zichzelf weer aan — probeer het later opnieuw, of vraag je host om een hoger niveau.",
+    "tableNoAi": "De server van je tafel levert de AI niet (503). Open Instellingen en plak je eigen OpenRouter-sleutel om verder te spelen.",
     "refused": "Het model heeft dit verzoek geweigerd (403). Herformuleer wat je typte, of kies een ander model in Instellingen.",
     "noModel": "Dat model bestaat niet meer (404). Kies een ander in Instellingen — de standaardmodellen herstellen zichzelf bij de volgende herlaadbeurt.",
     "tooLong": "Deze beurt was te lang voor het model (413). Zeg het in minder woorden.",
@@ -1239,7 +1258,8 @@
     "near": "Budgetmelding: ${{spent}} van je sessiebudget van ${{cap}} is besteed.",
     "over": "Budgetmelding: je bent over je sessiebudget van ${{cap}} heen (${{spent}} besteed). Het spel gaat gewoon door — pas de limiet aan in Instellingen.",
     "label": "Sessiebudget (USD)",
-    "none": "geen limiet"
+    "none": "geen limiet",
+    "hosted": "De tafel van je host betaalt dit. Het getal is verbruikte tokens, geen geld dat je schuldig bent."
   },
   "spells": {
     "cantrip": "Cantrip",

@@ -32,16 +32,27 @@ keeping the AI honest.
   exports and imports as a single `.dnd.json` file. No accounts, no servers,
   no telemetry.
 
-## Bring your own key
+## Bring your own key — or your table's
 
 The game talks to [OpenRouter](https://openrouter.ai) with a key you supply —
 connect your account in one click, or paste a key. Free models are available and
 the classifier/narrator defaults are chosen to work on them; a Deluxe tier
 switches to stronger paid models and unlocks scene images.
 
+If somebody else hosts your table on a
+[bag-of-holding-mcp](https://github.com/D-dezeeuw/bag-of-holding-mcp)
+deployment, paste the **tenant key** they gave you instead. The setup step takes
+either: it checks what you pasted as a provider key first and, failing that, as
+a tenant key against your table's server. A tenant key needs no OpenRouter
+account — your host covers the AI, inside the allowance of the tier they put you
+on, and the game shows tokens used rather than a price you are not paying. (A
+build can name a default server with `DD_TENANT_URL`; otherwise you are asked
+for your host's address once.)
+
 Builds ship **no credential of any kind**. (A shared demo key can be injected at
 build time via `DD_DEMO_KEY`, but a browser bundle cannot keep a secret, so any
-such key must be treated as public and rate-limited behind a proxy.)
+such key must be treated as public and rate-limited behind a proxy. A tenant
+server URL is not a credential — every unknown token there is a 404.)
 
 ## What it is not
 
